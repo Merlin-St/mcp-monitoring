@@ -31,8 +31,8 @@ run_full_mcp_analysis = None
 # --- Local Imports for Analysis and Config ---
 try:
     # Attempt to import the specific analysis function and config variable
-    from local_mcp_analysis import run_full_mcp_analysis as imported_run_full_mcp_analysis
-    from bulk_mcp_config import ALL_SERVERS_DETAILS_COMPLETE_JSON as BULK_MCP_DETAILS_JSON_FILE
+    from smithery_local_mcp_analysis import run_full_mcp_analysis as imported_run_full_mcp_analysis
+    from smithery_bulk_mcp_config import ALL_SERVERS_DETAILS_COMPLETE_JSON as BULK_MCP_DETAILS_JSON_FILE
     
     run_full_mcp_analysis = imported_run_full_mcp_analysis # Assign successfully imported function
     logger.info("Successfully imported 'run_full_mcp_analysis' and configurations from 'mcp_monitoring_smithery'.")

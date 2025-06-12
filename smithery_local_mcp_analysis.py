@@ -34,19 +34,19 @@ BULK_MCP_DETAILS_JSON_FILE = "all_mcp_server_details_complete.json" # Default pa
 # Import directly from bulk_mcp_config.py as it's in the same directory
 # when running streamlit from mcp_monitoring_smithery
 try:
-    from bulk_mcp_config import ( # MODIFIED HERE
+    from smithery_bulk_mcp_config import ( # MODIFIED HERE
         FINANCE_SECTOR_KEYWORDS_CONFIG as FS_CONFIG,
         THREAT_MODEL_KEYWORDS_CONFIG as TM_CONFIG,
         FINANCE_AFFORDANCE_KEYWORDS_CONFIG as FA_CONFIG,
         ALL_SERVERS_DETAILS_COMPLETE_JSON as IMPORTED_BULK_FILE_PATH
     )
-    logger.info("Successfully imported keyword configurations and data file path from local 'bulk_mcp_config.py'.")
+    logger.info("Successfully imported keyword configurations and data file path from local 'smithery_bulk_mcp_config.py'.")
     FS_CONFIG = FS_CONFIG if FS_CONFIG is not None else {}
     TM_CONFIG = TM_CONFIG if TM_CONFIG is not None else {}
     FA_CONFIG = FA_CONFIG if FA_CONFIG is not None else {}
     BULK_MCP_DETAILS_JSON_FILE = IMPORTED_BULK_FILE_PATH
 except ImportError as e:
-    logger.error(f"Could not import configurations from local 'bulk_mcp_config.py'. Error: {e}. "
+    logger.error(f"Could not import configurations from local 'smithery_bulk_mcp_config.py'. Error: {e}. "
                    "Analysis will proceed with empty keyword sets and default data file path. THIS WILL RESULT IN NO MATCHES.")
     FS_CONFIG = {}
     TM_CONFIG = {}
