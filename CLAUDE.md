@@ -9,33 +9,33 @@ This is a **financial system resilience monitoring tool** that analyzes MCP (Mod
 ## Core Architecture
 
 **Data Flow:**
-1. **Collection**: `run_bulk_mcp_download.py` → API calls via `mcp_api_handler.py` → JSON data files
-2. **Analysis**: `local_mcp_analysis.py` processes server data with financial risk categorization
-3. **Visualization**: `local_mcp_dashboard.py` provides Streamlit web interface
+1. **Collection**: `smithery_run_bulk_mcp_download.py` → API calls via `smithery_mcp_api_handler.py` → JSON data files
+2. **Analysis**: `smithery_local_mcp_analysis.py` processes server data with financial risk categorization
+3. **Visualization**: `smithery_local_mcp_dashboard.py` provides Streamlit web interface
 
-**Key Configuration**: `bulk_mcp_config.py` contains API settings, financial sector keywords, and AI threat model definitions.
+**Key Configuration**: `smithery_bulk_mcp_config.py` contains API settings, financial sector keywords, and AI threat model definitions.
 
 ## Common Commands
 
 ### Data Collection
 ```bash
 # Download all MCP server data from Smithery Registry
-python run_bulk_mcp_download.py
+python smithery_run_bulk_mcp_download.py
 ```
 
 ### Data Analysis
 ```bash
 # Run analysis on collected data
-python local_mcp_analysis.py
+python smithery_local_mcp_analysis.py
 
 # Quick data validation check
-python quickcheck_bulk_mcp_data.py
+python smithery_quickcheck_bulk_mcp_data.py
 ```
 
 ### Web Dashboard
 ```bash
 # Launch Streamlit dashboard
-streamlit run local_mcp_dashboard.py
+streamlit run smithery_local_mcp_dashboard.py
 ```
 
 ## Key Dependencies
@@ -66,5 +66,5 @@ The system categorizes servers by:
 
 ## Known Issues
 
-- `mcp_api_handler.py:4` has broken import: `from hf_models_monitoring_test.config_utils` - this module path needs to be updated
-- No formal testing framework - validation is done through `quickcheck_bulk_mcp_data.py` and built-in test execution in analysis scripts
+- `smithery_mcp_api_handler.py:4` has broken import: `from hf_models_monitoring_test.config_utils` - this module path needs to be updated
+- No formal testing framework - validation is done through `smithery_quickcheck_bulk_mcp_data.py` and built-in test execution in analysis scripts

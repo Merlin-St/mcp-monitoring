@@ -9,9 +9,9 @@ from urllib.parse import urlencode
 import concurrent.futures
 
 # Import logger and constants from config_utils
-from hf_models_monitoring_test.config_utils import (
-    logger, MCP_API_BASE_URL, MCP_REQUEST_TIMEOUT, 
-    API_DELAY, MCP_PAGE_SIZE, MCP_MAX_WORKERS
+from smithery_bulk_mcp_config import (
+    bulk_logger as logger, MCP_API_BASE_URL, MCP_REQUEST_TIMEOUT, 
+    API_DELAY_BULK as API_DELAY, MCP_PAGE_SIZE_BULK as MCP_PAGE_SIZE, MCP_MAX_WORKERS_BULK as MCP_MAX_WORKERS
 )
 
 # --- Smithery API Interaction Functions ---
