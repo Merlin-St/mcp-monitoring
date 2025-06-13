@@ -1,1 +1,30 @@
+# Core HTTP libraries
 requests>=2.31.0
+aiohttp>=3.9.0
+
+# Data analysis and visualization
+pandas>=1.5.0
+plotly>=5.17.0
+matplotlib>=3.7.0
+
+# Web scraping
+selenium>=4.15.0
+
+# Natural language processing
+nltk>=3.8.0
+
+# Web dashboard
+streamlit>=1.28.0
+
+# Standard library extensions (usually included with Python)
+# json - built-in
+# os - built-in  
+# time - built-in
+# logging - built-in
+# re - built-in
+# csv - built-in
+# datetime - built-in
+# base64 - built-in
+# concurrent.futures - built-in
+# argparse - built-in
+# io - built-in

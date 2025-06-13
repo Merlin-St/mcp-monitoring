@@ -2,41 +2,114 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Environment Setup
+
+**IMPORTANT**: Always activate the virtual environment before running Python scripts:
+```bash
+source ~/si_setup/.venv/bin/activate
+```
+
 ## Project Overview
 
-This is a **financial system resilience monitoring tool** that analyzes MCP (Model Control Protocol) servers from the Smithery Registry to identify AI-related risks in financial systems. The project consists of data collection, analysis, and visualization components.
+This is a **MCP Server Monitoring Dashboard** that provides comprehensive analysis of Model Context Protocol (MCP) servers across multiple data sources. The project monitors MCP server ecosystem growth, tool availability, and finance-specific capabilities to answer key research questions about AI tool proliferation in financial systems.
 
-## Core Architecture
+### Research Questions (RQs)
+1. **Which tools are available for AI power-users in finance currently?**
+2. **What is the uptake for these tools over time?**
+3. **How many new tools are made available over time?**
 
-**Data Flow:**
-1. **Collection**: `smithery_run_bulk_mcp_download.py` → API calls via `smithery_mcp_api_handler.py` → JSON data files
-2. **Analysis**: `smithery_local_mcp_analysis.py` processes server data with financial risk categorization
-3. **Visualization**: `smithery_local_mcp_dashboard.py` provides Streamlit web interface
+### Project Goals
+- Understand most consequential available tools for agents to externals or open-source local tools
+- Initial picture of finance sector tool availability
+- Monitor MCP server creation and usage trends over time
+- Classify servers by sectors, finance use cases, autonomy levels, and consequentiality
 
-**Key Configuration**: `smithery_bulk_mcp_config.py` contains API settings, financial sector keywords, and AI threat model definitions.
+## Data Collection Strategy (3 Approaches)
 
-## Common Commands
-
-### Data Collection
+### 1. Smithery MCP Server Database
 ```bash
 # Download all MCP server data from Smithery Registry
 python smithery_run_bulk_mcp_download.py
 ```
 
-### Data Analysis
+### 2. GitHub Repository Scanning
 ```bash
-# Run analysis on collected data
-python smithery_local_mcp_analysis.py
+# Scan GitHub for 'mcp server' repositories
+python github_mcp_repo_collector.py
 
-# Quick data validation check
-python smithery_quickcheck_bulk_mcp_data.py
+# Options:
+python github_mcp_repo_collector.py --test          # Test mode (10 repos)
+python github_mcp_repo_collector.py --graphql       # Use GraphQL API
+# Default: REST API with daily date-based searches
 ```
 
-### Web Dashboard
+### 3. Official ModelContextProtocol/Servers List
 ```bash
-# Launch Streamlit dashboard
-streamlit run smithery_local_mcp_dashboard.py
+# Scrape official MCP servers list
+python officiallist_url_scraping.py
 ```
+
+## Core Architecture
+
+**Data Flow:**
+1. **Collection**: Three parallel data collection streams → JSON data files
+2. **Analysis**: Unified analysis processing server data with financial risk categorization
+3. **Visualization**: Streamlit dashboard with 2 graphs & 2 tables
+
+**Key Files:**
+
+**Data Collection:**
+- `smithery_run_bulk_mcp_download.py` - Smithery API collection entry point
+- `smithery_bulk_mcp_downloader.py` - Core Smithery download logic
+- `smithery_mcp_api_handler.py` - Smithery API interaction handler
+- `github_mcp_repo_collector.py` - GitHub repository scanning
+- `github_mcp_repo_searcher.py` - GitHub search functionality
+- `officiallist_url_scraping.py` - Official list scraping
+- `officiallist_html_fetcher.py` - HTML content fetching
+- `officiallist_url_extractor.py` - URL extraction from HTML
+
+**Dashboard & Analysis:**
+- `dashboard_smithery_local_mcp.py` - Main Smithery-focused dashboard
+- `dashboard_smithery_local_mcp_analysis.py` - Smithery data analysis
+- `dashboard_unified_mcp.py` - Unified multi-source dashboard
+- `dashboard_unified_mcp_data_processor.py` - Unified data processing
+- `dashboard_finance_mcp.py` - Finance-specific dashboard
+- `dashboard_launch.py` - Dashboard launcher utility
+
+**Utilities:**
+- `smithery_quickcheck_bulk_mcp_data.py` - Data validation
+- `dashboard_verify_data.py` - Data verification
+- `smithery_bulk_mcp_config.py` - Configuration management
+
+## Analysis & Classification
+
+The system extracts and classifies:
+
+### Data Extraction
+- **Tools** available in each server
+- **Usage statistics** over time (stars, forks, creation dates)
+- **Creation date** and growth trends
+- **Official/unofficial** status
+
+### Classification Categories
+- **Sectors**: Finance, Banking, Trading, Insurance, Payments
+- **Finance Use Cases**: Payment execution, market data, risk analysis
+- **Autonomy Levels**: Information gathering, execution capabilities, agent interactions
+- **Consequentiality**: Risk assessment for financial system impact
+
+## Dashboard Outputs
+
+### 2 Graphs
+1. **MCP servers creation and usage over time** - Shows trend analysis with sub-graphs focusing on:
+   - Servers executing payments
+   - Other finance servers
+   - Clickable example MCP servers
+
+2. **Finance tool availability trends** - Growth of finance-specific capabilities
+
+### 2 Tables
+1. **Overview of all tools relevant to automatic payments**
+2. **Overview table of all MCP servers and tools** - Filterable by sector, use case, autonomy level
 
 ## Key Dependencies
 
@@ -46,25 +119,96 @@ streamlit run smithery_local_mcp_dashboard.py
 - `streamlit` - web dashboard
 - `plotly` - visualizations
 - `nltk` - text processing (auto-downloads required data)
+- `aiohttp` - async HTTP requests for GitHub API
+- `selenium` - web scraping for official list
 
 **API Authentication:**
-- Smithery API token must be available at `~/.cache/smithery-api/token`
-- Token is automatically read by the configuration system
+- Smithery API token: `~/.cache/smithery-api/token`
+- GitHub token: `GH_TOKEN` environment variable
 
 ## Data Files
 
-- `all_mcp_server_summaries.json` - MCP server summary data (input for analysis)
-- `all_mcp_server_details_complete.json` - Full server details (generated by bulk download)
-- `bulk_mcp_download.log` - Download process logs
+### Smithery Data Files
+- `smithery_all_mcp_server_summaries.json` - Complete Smithery server data
 
-## Financial Risk Analysis
+### GitHub Data Files
+- `github_mcp_repositories.json` - Complete GitHub repository data
+- `github_mcp_repositories_partial.json` - Partial/in-progress data
+- `github_mcp_collection_summary.json` - Collection statistics
 
-The system categorizes servers by:
-- **Finance Sectors**: Banking, Trading, Insurance, Payments
-- **AI Threat Models**: 10 categories including oversight correlation risk, trading algorithm bugs, AI-enhanced cyberattacks
-- **Affordances**: Execution capabilities, information gathering, agent interactions
+### Official List Data Files
+- `officiallist_mcp_servers_full.json` - Complete official server list
+- `officiallist_mcp_servers.json` - Processed official server data
+- `officiallist_history.json` - Historical tracking data
+- `officiallist_monthly_history.json` - Monthly snapshots
+- `officiallist_urls.json` - Extracted URLs
+
+### Dashboard Data Files
+- `dashboard_mcp_servers_unified.json` - Unified dashboard data
+- `dashboard_mcp_servers_unified_summary.json` - Dashboard summary
+
+### Test Data Files
+- `officiallist_mcp_servers_test*.json` - Test datasets
+- `officiallist_urls_test*.json` - Test URL datasets
+- `officiallist_test_results.json` - Test results
+
+## Development Guidelines
+
+### Environment
+- **Always use**: `source ~/si_setup/.venv/bin/activate` before running Python
+- All commands assume virtual environment is activated
+
+### Logging Standards
+- **ALWAYS use logging instead of print() statements** for all terminal output
+- Configure logging with both file and console handlers for development visibility
+- Use appropriate log levels:
+  - `logger.info()` for progress and status messages
+  - `logger.warning()` for rate limits and recoverable issues
+  - `logger.error()` for errors and exceptions
+  - `logger.debug()` for detailed debugging information
+- Log files should be named descriptively (e.g., `github_mcp_collection.log`, `bulk_mcp_download.log`)
+
+### Code Quality
+- Replace all print() statements with appropriate logging calls
+- Maintain existing functionality while improving observability
+- Use structured logging format with timestamps for better analysis
+
+## Rate Limiting
+
+### GitHub API
+- Simple rate limiting: Wait 10 seconds when <10 requests remaining
+- Automatic rate limit reset waiting when exhausted
+- No complex throttling - focus on efficiency
+
+## Common Commands
+
+### Full Data Collection Pipeline
+```bash
+source ~/si_setup/.venv/bin/activate
+
+# Collect from all 3 sources
+python smithery_run_bulk_mcp_download.py
+python github_mcp_repo_collector.py  
+python officiallist_url_scraping.py
+
+# Launch dashboards (choose one)
+streamlit run dashboard_smithery_local_mcp.py        # Smithery-focused dashboard
+streamlit run dashboard_unified_mcp.py               # Multi-source unified dashboard
+streamlit run dashboard_finance_mcp.py               # Finance-specific dashboard
+python dashboard_launch.py                           # Dashboard launcher utility
+```
+
+### Testing & Validation
+```bash
+# Quick validation
+python smithery_quickcheck_bulk_mcp_data.py
+
+# Test GitHub collection
+python github_mcp_repo_collector.py --test
+```
 
 ## Known Issues
 
 - `smithery_mcp_api_handler.py:4` has broken import: `from hf_models_monitoring_test.config_utils` - this module path needs to be updated
-- No formal testing framework - validation is done through `smithery_quickcheck_bulk_mcp_data.py` and built-in test execution in analysis scripts
+- No formal testing framework - validation is done through quickcheck scripts
+- GitHub rate limiting may require patience for full collection runs

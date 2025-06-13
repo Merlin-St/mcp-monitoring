@@ -17,7 +17,7 @@ MCP_PAGE_SIZE_BULK = 10000 # Number of items per page for Smithery API
 MCP_MAX_WORKERS_BULK = 20 # Max concurrent workers for fetching server details
 
 # Output file for storing the list of all server summaries (from /servers endpoint)
-ALL_SERVERS_SUMMARIES_JSON = "all_mcp_server_summaries.json"
+ALL_SERVERS_SUMMARIES_JSON = "smithery_all_mcp_server_summaries.json"
 # Output file for storing the full details of ALL servers (from /servers/{qualifiedName})
 ALL_SERVERS_DETAILS_COMPLETE_JSON = "all_mcp_server_details_complete.json"
 
