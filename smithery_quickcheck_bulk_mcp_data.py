@@ -9,7 +9,7 @@ import re # Import regex module for case-insensitive search
 
 # --- Configuration - Point to your output files ---
 # These names should match what's in your bulk_mcp_config.py (or equivalent)
-ALL_SERVERS_SUMMARIES_JSON = "all_mcp_server_summaries.json"
+ALL_SERVERS_SUMMARIES_JSON = "smithery_all_mcp_server_summaries.json"
 ALL_SERVERS_DETAILS_COMPLETE_JSON = "all_mcp_server_details_complete.json"
 
 # --- Keyword Search Configuration ---
