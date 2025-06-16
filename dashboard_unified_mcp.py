@@ -375,9 +375,9 @@ def display_finance_analysis(df):
     # Sort by stars or use count
     finance_display = finance_df.copy()
     if 'stargazers_count' in finance_display.columns:
-        finance_display = finance_display.sort_values('stargazers_count', ascending=False, na_last=True)
+        finance_display = finance_display.sort_values('stargazers_count', ascending=False, na_position='last')
     elif 'use_count' in finance_display.columns:
-        finance_display = finance_display.sort_values('use_count', ascending=False, na_last=True)
+        finance_display = finance_display.sort_values('use_count', ascending=False, na_position='last')
     
     # Display top finance servers
     cols_to_show = ['canonical_name', 'description', 'primary_source', 'stargazers_count', 'use_count', 'language']

@@ -363,9 +363,9 @@ def create_table_1_payment_tools(finance_df):
     
     # Sort by popularity (stars or use count)
     if 'stargazers_count' in payment_tools.columns:
-        payment_tools = payment_tools.sort_values('stargazers_count', ascending=False, na_last=True)
+        payment_tools = payment_tools.sort_values('stargazers_count', ascending=False, na_position='last')
     elif 'use_count' in payment_tools.columns:
-        payment_tools = payment_tools.sort_values('use_count', ascending=False, na_last=True)
+        payment_tools = payment_tools.sort_values('use_count', ascending=False, na_position='last')
     
     # Format the table
     display_df = payment_tools[display_cols].copy()
@@ -455,9 +455,9 @@ def create_table_2_all_servers_overview(df, finance_df):
     
     # Sort by popularity
     if 'stargazers_count' in filtered_df.columns:
-        filtered_df = filtered_df.sort_values('stargazers_count', ascending=False, na_last=True)
+        filtered_df = filtered_df.sort_values('stargazers_count', ascending=False, na_position='last')
     elif 'use_count' in filtered_df.columns:
-        filtered_df = filtered_df.sort_values('use_count', ascending=False, na_last=True)
+        filtered_df = filtered_df.sort_values('use_count', ascending=False, na_position='last')
     
     if len(filtered_df) > 0:
         st.dataframe(

@@ -5,17 +5,16 @@ Comprehensive dashboard tracking **27,899 MCP servers** across 3 data sources, w
 
 ## Quick Start
 ```bash
-# Activate environment
-source ~/si_setup/.venv/bin/activate
-
 # Process data (if needed)
 python dashboard_unified_mcp_data_processor.py
 
-# Launch dashboard
-streamlit run dashboard_unified_mcp.py
-```
+# Launch dashboard in persistent tmux session (recommended)
+source ~/si_setup/.venv/bin/activate
+python dashboard_tmux_launcher.py start unified
 
-Dashboard available at: http://localhost:8501
+# Stop when done
+python dashboard_tmux_launcher.py stop unified
+```
 
 ## Data Collection (3 Sources)
 1. **Smithery API** (6,434 servers) - `smithery_run_bulk_mcp_download.py`
