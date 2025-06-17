@@ -67,6 +67,10 @@ class UnifiedMCPServer:
     owner_login: Optional[str] = None
     owner_name: Optional[str] = None
     
+    # Repository status
+    fork: Optional[bool] = None
+    archived: Optional[bool] = None
+    
     # Source metadata
     data_sources: List[str] = None
     fetch_status: Optional[str] = None
@@ -295,6 +299,10 @@ class UnifiedMCPDataProcessor:
                     if not server.owner_login and item.get('owner'):
                         server.owner_login = item['owner'].get('login')
                         server.owner_name = item['owner'].get('name')
+                    if server.fork is None:
+                        server.fork = item.get('fork')
+                    if server.archived is None:
+                        server.archived = item.get('archived')
                 else:
                     # Create new server
                     owner = item.get('owner', {})
@@ -316,6 +324,8 @@ class UnifiedMCPDataProcessor:
                         readme_content=item.get('readme_content'),
                         owner_login=owner.get('login'),
                         owner_name=owner.get('name'),
+                        fork=item.get('fork'),
+                        archived=item.get('archived'),
                         data_sources=['github']
                     )
                     self.unified_servers[server_id] = server
@@ -450,6 +460,8 @@ class UnifiedMCPDataProcessor:
                     'topics': server.topics,
                     'owner_login': server.owner_login,
                     'owner_name': server.owner_name,
+                    'fork': server.fork,
+                    'archived': server.archived,
                     'data_sources': server.data_sources,
                     'primary_source': getattr(server, 'primary_source', None),
                     'is_finance_related': getattr(server, 'is_finance_related', False),
