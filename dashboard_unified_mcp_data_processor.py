@@ -48,6 +48,8 @@ class UnifiedMCPServer:
     # Descriptive info
     description: Optional[str] = None
     readme_content: Optional[str] = None
+    html_content: Optional[str] = None
+    embedding_text: Optional[str] = None
     
     # Dates
     created_at: Optional[datetime] = None
@@ -361,6 +363,8 @@ class UnifiedMCPDataProcessor:
                         server.html_length = item.get('html_length')
                     if not server.fetch_timestamp:
                         server.fetch_timestamp = item.get('fetch_timestamp')
+                    if not server.html_content:
+                        server.html_content = item.get('html_content')
                     # Handle new format from full file
                     if not hasattr(server, 'is_github') or server.is_github is None:
                         server.is_github = item.get('is_github', False)
@@ -373,6 +377,7 @@ class UnifiedMCPDataProcessor:
                         name=item.get('name', ''),
                         description=item.get('description'),
                         url=item.get('url'),
+                        html_content=item.get('html_content'),
                         fetch_status=item.get('fetch_status'),
                         html_length=item.get('html_length'),
                         fetch_timestamp=item.get('fetch_timestamp'),
@@ -409,6 +414,9 @@ class UnifiedMCPDataProcessor:
                 
                 server.is_finance_related = any(keyword in text_to_check for keyword in finance_keywords)
                 
+                # Create embedding text
+                server.embedding_text = self.create_embedding_text(server)
+                
                 # Determine primary source
                 if len(server.data_sources) == 1:
                     server.primary_source = server.data_sources[0]
@@ -430,6 +438,50 @@ class UnifiedMCPDataProcessor:
             except Exception as e:
                 logger.error(f"Error enhancing metadata for {server.id}: {e}")
                 continue
+    
+    def create_embedding_text(self, server: UnifiedMCPServer) -> str:
+        """Create preprocessed text for embeddings from server data"""
+        try:
+            # Combine relevant text fields
+            text_parts = []
+            
+            # Add name and description
+            if server.name:
+                text_parts.append(server.name)
+            if server.description:
+                text_parts.append(server.description)
+            
+            # Add README content (truncated to avoid excessive length)
+            if server.readme_content:
+                readme_text = server.readme_content[:2000]  # Limit to 2000 chars
+                text_parts.append(readme_text)
+            
+            # Add topics
+            if server.topics:
+                text_parts.append(' '.join(server.topics))
+            
+            # Add language
+            if server.language:
+                text_parts.append(f"Language: {server.language}")
+            
+            # Clean and combine text
+            combined_text = ' '.join(text_parts)
+            
+            # Basic text cleaning
+            import re
+            # Remove excessive whitespace
+            combined_text = re.sub(r'\s+', ' ', combined_text)
+            # Remove special characters that might interfere with embedding
+            combined_text = re.sub(r'[^\w\s\-\.\,\!\?]', ' ', combined_text)
+            # Truncate if too long (embeddings often have token limits)
+            if len(combined_text) > 3000:
+                combined_text = combined_text[:3000]
+            
+            return combined_text.strip()
+            
+        except Exception as e:
+            logger.warning(f"Error creating embedding text for server {server.id}: {e}")
+            return f"{server.name or ''} {server.description or ''}".strip()
     
     def save_unified_data(self, output_file: str = "dashboard_mcp_servers_unified.json"):
         """Save unified data to JSON file"""
@@ -469,7 +521,10 @@ class UnifiedMCPDataProcessor:
                     'html_length': server.html_length,
                     'fetch_timestamp': server.fetch_timestamp,
                     'is_github': getattr(server, 'is_github', None),
-                    'extracted_date': getattr(server, 'extracted_date', None)
+                    'extracted_date': getattr(server, 'extracted_date', None),
+                    'readme_content': server.readme_content,
+                    'html_content': server.html_content,
+                    'embedding_text': server.embedding_text
                 }
                 # Remove None values to reduce file size
                 server_dict = {k: v for k, v in server_dict.items() if v is not None}
