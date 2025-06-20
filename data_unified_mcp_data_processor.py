@@ -18,6 +18,7 @@ from datetime import datetime
 from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass
 from pathlib import Path
+from naics_classification_config import NAICS_KEYWORDS
 
 # Configure logging
 logging.basicConfig(
@@ -47,6 +48,9 @@ class UnifiedMCPServer:
     
     # Descriptive info
     description: Optional[str] = None
+    official_description: Optional[str] = None
+    smithery_description: Optional[str] = None
+    github_description: Optional[str] = None
     readme_content: Optional[str] = None
     html_content: Optional[str] = None
     embedding_text: Optional[str] = None
@@ -244,6 +248,9 @@ class UnifiedMCPDataProcessor:
                         server.use_count = item.get('useCount')
                     if not server.homepage:
                         server.homepage = item.get('homepage')
+                    # Store Smithery description
+                    if item.get('description'):
+                        server.smithery_description = item.get('description')
                 else:
                     # Create new server
                     server = UnifiedMCPServer(
@@ -252,6 +259,7 @@ class UnifiedMCPDataProcessor:
                         qualified_name=item.get('qualifiedName'),
                         display_name=item.get('displayName'),
                         description=item.get('description'),
+                        smithery_description=item.get('description'),
                         homepage=item.get('homepage'),
                         created_at=self.parse_datetime(item.get('createdAt')),
                         use_count=item.get('useCount'),
@@ -305,6 +313,9 @@ class UnifiedMCPDataProcessor:
                         server.fork = item.get('fork')
                     if server.archived is None:
                         server.archived = item.get('archived')
+                    # Store GitHub description
+                    if item.get('description'):
+                        server.github_description = item.get('description')
                 else:
                     # Create new server
                     owner = item.get('owner', {})
@@ -312,6 +323,7 @@ class UnifiedMCPDataProcessor:
                         id=server_id,
                         name=item.get('name', ''),
                         description=item.get('description'),
+                        github_description=item.get('description'),
                         url=github_url,
                         github_url=github_url,
                         repository_url=github_url,
@@ -370,12 +382,16 @@ class UnifiedMCPDataProcessor:
                         server.is_github = item.get('is_github', False)
                     if not hasattr(server, 'extracted_date') or server.extracted_date is None:
                         server.extracted_date = item.get('extracted_date')
+                    # Store Official description
+                    if item.get('description'):
+                        server.official_description = item.get('description')
                 else:
                     # Create new server - handle both file formats
                     server = UnifiedMCPServer(
                         id=server_id,
                         name=item.get('name', ''),
                         description=item.get('description'),
+                        official_description=item.get('description'),
                         url=item.get('url'),
                         html_content=item.get('html_content'),
                         fetch_status=item.get('fetch_status'),
@@ -396,15 +412,9 @@ class UnifiedMCPDataProcessor:
         """Enhance metadata and classify servers"""
         logger.info("Enhancing metadata and classifying servers...")
         
-        finance_keywords = [
-            'finance', 'trading', 'payment', 'bank', 'stock', 'forex', 'crypto',
-            'money', 'price', 'market', 'investment', 'portfolio', 'wallet',
-            'financial', 'fintech', 'trading', 'alphavantage', 'coinbase'
-        ]
-        
         for server in self.unified_servers.values():
             try:
-                # Classify as finance-related
+                # Create text to check for classification
                 text_to_check = ' '.join(filter(None, [
                     server.name,
                     server.description,
@@ -412,10 +422,13 @@ class UnifiedMCPDataProcessor:
                     ' '.join(server.topics) if server.topics else ''
                 ])).lower()
                 
-                server.is_finance_related = any(keyword in text_to_check for keyword in finance_keywords)
+                # Classify by all NAICS sectors
+                for sector_code, keywords in NAICS_KEYWORDS.items():
+                    sector_match = any(keyword in text_to_check for keyword in keywords)
+                    setattr(server, f'is_sector_{sector_code}', sector_match)
                 
-                # Create embedding text
-                server.embedding_text = self.create_embedding_text(server)
+                # Maintain backward compatibility for finance classification
+                server.is_finance_related = getattr(server, 'is_sector_52', False)
                 
                 # Determine primary source
                 if len(server.data_sources) == 1:
@@ -435,34 +448,37 @@ class UnifiedMCPDataProcessor:
                     server.id
                 )
                 
+                # Set canonical description with priority: officiallist > smithery > github
+                server.canonical_description = (
+                    getattr(server, 'official_description', None) or
+                    getattr(server, 'smithery_description', None) or
+                    getattr(server, 'github_description', None) or
+                    server.description or
+                    ""
+                )
+                
+                # Create embedding text (must be last operation, uses canonical fields)
+                server.embedding_text = self.create_embedding_text(server)
+                
             except Exception as e:
                 logger.error(f"Error enhancing metadata for {server.id}: {e}")
                 continue
     
     def create_embedding_text(self, server: UnifiedMCPServer) -> str:
-        """Create preprocessed text for embeddings from server data"""
+        """Create preprocessed text for embeddings using only canonical name and description"""
         try:
-            # Combine relevant text fields
+            # Only use canonical fields for embedding text
             text_parts = []
             
-            # Add name and description
-            if server.name:
-                text_parts.append(server.name)
-            if server.description:
-                text_parts.append(server.description)
+            # Add canonical name
+            canonical_name = getattr(server, 'canonical_name', None)
+            if canonical_name:
+                text_parts.append(canonical_name)
             
-            # Add README content (truncated to avoid excessive length)
-            if server.readme_content:
-                readme_text = server.readme_content[:2000]  # Limit to 2000 chars
-                text_parts.append(readme_text)
-            
-            # Add topics
-            if server.topics:
-                text_parts.append(' '.join(server.topics))
-            
-            # Add language
-            if server.language:
-                text_parts.append(f"Language: {server.language}")
+            # Add canonical description
+            canonical_description = getattr(server, 'canonical_description', None)
+            if canonical_description:
+                text_parts.append(canonical_description)
             
             # Clean and combine text
             combined_text = ' '.join(text_parts)
@@ -473,15 +489,13 @@ class UnifiedMCPDataProcessor:
             combined_text = re.sub(r'\s+', ' ', combined_text)
             # Remove special characters that might interfere with embedding
             combined_text = re.sub(r'[^\w\s\-\.\,\!\?]', ' ', combined_text)
-            # Truncate if too long (embeddings often have token limits)
-            if len(combined_text) > 3000:
-                combined_text = combined_text[:3000]
             
             return combined_text.strip()
             
         except Exception as e:
             logger.warning(f"Error creating embedding text for server {server.id}: {e}")
-            return f"{server.name or ''} {server.description or ''}".strip()
+            # Fallback to basic name and description if canonical fields not available
+            return f"{getattr(server, 'canonical_name', server.name or '')} {getattr(server, 'canonical_description', server.description or '')}".strip()
     
     def save_unified_data(self, output_file: str = "dashboard_mcp_servers_unified.json"):
         """Save unified data to JSON file"""
@@ -494,10 +508,14 @@ class UnifiedMCPDataProcessor:
                 server_dict = {
                     'id': server.id,
                     'canonical_name': getattr(server, 'canonical_name', server.name),
+                    'canonical_description': getattr(server, 'canonical_description', ''),
                     'name': server.name,
                     'qualified_name': server.qualified_name,
                     'display_name': server.display_name,
                     'description': server.description,
+                    'official_description': getattr(server, 'official_description', None),
+                    'smithery_description': getattr(server, 'smithery_description', None),
+                    'github_description': getattr(server, 'github_description', None),
                     'url': server.url,
                     'homepage': server.homepage,
                     'github_url': server.github_url,
@@ -526,6 +544,11 @@ class UnifiedMCPDataProcessor:
                     'html_content': server.html_content,
                     'embedding_text': server.embedding_text
                 }
+                
+                # Add all sector classifications
+                for sector_code in NAICS_KEYWORDS.keys():
+                    sector_attr = f'is_sector_{sector_code}'
+                    server_dict[sector_attr] = getattr(server, sector_attr, False)
                 # Remove None values to reduce file size
                 server_dict = {k: v for k, v in server_dict.items() if v is not None}
                 serializable_data.append(server_dict)
@@ -555,6 +578,7 @@ class UnifiedMCPDataProcessor:
             source_counts = {}
             primary_source_counts = {}
             finance_count = 0
+            sector_counts = {}
             
             for server in data:
                 # Count data sources
@@ -566,9 +590,17 @@ class UnifiedMCPDataProcessor:
                 if primary:
                     primary_source_counts[primary] = primary_source_counts.get(primary, 0) + 1
                 
-                # Count finance-related
+                # Count finance-related (backward compatibility)
                 if server.get('is_finance_related'):
                     finance_count += 1
+                
+                # Count by sector
+                for sector_code in NAICS_KEYWORDS.keys():
+                    sector_attr = f'is_sector_{sector_code}'
+                    if server.get(sector_attr, False):
+                        if sector_code not in sector_counts:
+                            sector_counts[sector_code] = 0
+                        sector_counts[sector_code] += 1
             
             # Language distribution
             language_counts = {}
@@ -583,9 +615,18 @@ class UnifiedMCPDataProcessor:
                 for topic in server.get('topics', []):
                     topic_counts[topic] = topic_counts.get(topic, 0) + 1
             
+            # Create sector summary with names
+            from naics_classification_config import NAICS_SECTORS
+            sector_summary = {}
+            for sector_code, count in sector_counts.items():
+                sector_name = NAICS_SECTORS.get(sector_code, f"Sector {sector_code}")
+                sector_summary[f"{sector_code} - {sector_name}"] = count
+            
             summary = {
                 'total_servers': total_servers,
                 'finance_related_servers': finance_count,
+                'sector_distribution': dict(sorted(sector_summary.items(), key=lambda x: x[1], reverse=True)),
+                'sector_counts_raw': sector_counts,
                 'source_coverage': source_counts,
                 'primary_source_distribution': primary_source_counts,
                 'top_languages': dict(sorted(language_counts.items(), key=lambda x: x[1], reverse=True)[:10]),
