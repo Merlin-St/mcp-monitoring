@@ -1,0 +1,17 @@
+2025-06-19 17:29:02,142 - INFO - GPU available: NVIDIA A10G
+2025-06-19 17:29:02,142 - INFO - GPU memory: 23.70 GB
+2025-06-19 17:29:02,142 - INFO - Free GPU memory: 23.70 GB
+2025-06-19 17:29:05,678 - INFO - Successfully loaded 27,899 records from dashboard_mcp_servers_unified.json
+2025-06-19 17:29:06,608 - INFO - Data preparation completed in 0.9 seconds
+2025-06-19 17:29:06,643 - INFO - Prepared 27,600 servers with meaningful embedding text for processing.
+2025-06-19 17:29:06,644 - INFO - Generating embeddings for 27600 texts with batch size 64
+2025-06-19 17:31:30,186 - INFO - Generated embeddings with shape: (27600, 768)
+2025-06-19 17:31:30,187 - INFO - Embedding generation completed in 143.5 seconds
+2025-06-19 17:31:30,187 - INFO - Speed: 192.3 texts/second
+2025-06-19 17:31:30,187 - INFO - Starting BERTopic modeling...
+2025-06-19 17:32:47,950 - INFO - BERTopic modeling completed in 77.8 seconds
+2025-06-19 17:32:47,952 - INFO - Found 12 topics (including outliers)
+2025-06-19 17:32:48,098 - INFO - Topic labeling complete.
+2025-06-19 17:32:50,123 - INFO - Visualization created in 2.2 seconds
+2025-06-19 17:32:50,123 - INFO - Interactive visualization saved to embed_visualization.html
+2025-06-19 17:32:51,266 - INFO - Results with topic analysis saved to embed_results.json
