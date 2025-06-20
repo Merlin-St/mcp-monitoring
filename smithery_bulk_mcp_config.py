@@ -6,7 +6,6 @@ import logging
 import os
 
 # --- API and File Configuration ---
-# IMPORTANT: Set SMITHERY_API_TOKEN environment variable or replace "your-smithery-api-token-here"
 with open(os.path.expanduser("~/.cache/smithery-api/token")) as f:
     SMITHERY_API_TOKEN = f.read().strip() # IMPORTANT: Set this environment variable in the setup file as aws secret
 MCP_API_BASE_URL = "https://registry.smithery.ai"

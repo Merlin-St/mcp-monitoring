@@ -11,8 +11,13 @@ matplotlib>=3.7.0
 # Web scraping
 selenium>=4.15.0
 
-# Natural language processing
+# Natural language processing and embeddings
 nltk>=3.8.0
+sentence-transformers>=2.2.0
+umap-learn>=0.5.7
+numba>=0.59.0
+llvmlite>=0.42.0
+hdbscan>=0.8.33
 
 # Web dashboard
 streamlit>=1.28.0
@@ -23,3 +28,5 @@ lxml>=4.9.0
 
 # Testing (optional)
 pytest>=7.4.0
+
+bertopic
