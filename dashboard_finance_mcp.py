@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 import re
 import numpy as np
 from pathlib import Path
+from naics_classification_config import NAICS_KEYWORDS
 
 # Page configuration
 st.set_page_config(
@@ -48,6 +49,9 @@ def load_and_analyze_finance_data():
     for col in ['created_at', 'updated_at']:
         if col in df.columns:
             df[col] = pd.to_datetime(df[col], errors='coerce')
+    
+    # Get finance keywords from central configuration
+    finance_keywords_base = NAICS_KEYWORDS[52]  # Finance and Insurance sector
     
     # Enhanced finance classification with specific categories
     finance_keywords = {

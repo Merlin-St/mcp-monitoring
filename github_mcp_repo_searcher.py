@@ -9,44 +9,14 @@ import re
 from typing import Dict, List, Tuple
 import csv
 from datetime import datetime
+from naics_classification_config import NAICS_KEYWORDS
 
 class FinanceMCPSearcher:
     def __init__(self, data_file: str = 'mcp_repositories.json'):
         self.data_file = data_file
         self.repositories = []
-        self.finance_keywords = [
-            # Core finance terms
-            'finance', 'financial', 'fintech', 'banking', 'bank', 'payment', 'payments',
-            'money', 'currency', 'monetary', 'fiscal', 'treasury', 'accounting',
-            
-            # Trading and markets
-            'trading', 'trader', 'trade', 'market', 'markets', 'stock', 'stocks',
-            'equity', 'equities', 'exchange', 'ticker', 'portfolio', 'investment',
-            'investing', 'investor', 'asset', 'assets', 'securities', 'commodity',
-            'commodities', 'forex', 'fx', 'derivative', 'derivatives', 'option',
-            'options', 'futures', 'hedge', 'alpha', 'beta', 'quant', 'quantitative',
-            
-            # Crypto and blockchain
-            'crypto', 'cryptocurrency', 'bitcoin', 'ethereum', 'blockchain',
-            'defi', 'decentralized finance', 'wallet', 'token', 'tokens',
-            'ledger', 'smart contract', 'web3', 'nft', 'dao', 'dex',
-            
-            # Financial data providers
-            'yahoo finance', 'yfinance', 'alpha vantage', 'alphavantage',
-            'bloomberg', 'reuters', 'nasdaq', 'nyse', 'coinbase', 'binance',
-            'kraken', 'polygon', 'coingecko', 'coinmarketcap',
-            
-            # Financial metrics
-            'price', 'pricing', 'valuation', 'revenue', 'profit', 'loss',
-            'balance sheet', 'income statement', 'cash flow', 'financial statement',
-            'earnings', 'dividend', 'yield', 'return', 'roi', 'irr', 'npv',
-            
-            # Other financial terms
-            'budget', 'budgeting', 'expense', 'expenses', 'transaction',
-            'transactions', 'invoice', 'invoicing', 'billing', 'subscription',
-            'tax', 'taxes', 'audit', 'compliance', 'risk', 'credit', 'debit',
-            'loan', 'mortgage', 'insurance', 'pension', 'retirement'
-        ]
+        # Get finance keywords from central configuration
+        self.finance_keywords = NAICS_KEYWORDS[52]  # Finance and Insurance sector
         
         # Compile regex patterns for efficient searching
         self.keyword_patterns = [
