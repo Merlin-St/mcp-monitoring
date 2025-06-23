@@ -1,10 +1,13 @@
 # MCP Server Monitoring Dashboard
 
 ## Overview
-Comprehensive dashboard tracking **27,899 MCP servers** across 3 data sources, with focus on **966 finance-related servers**. Analyzes AI tool proliferation and finance sector adoption.
+Comprehensive dashboard tracking **27,899 MCP servers** across 3 data sources, with focus on **966 finance-related servers**. Analyzes AI tool proliferation and finance sector adoption using advanced ML techniques.
 
-## Quick Start
+## 🚀 Quick Start
 ```bash
+# Activate environment
+source ~/si_setup/.venv/bin/activate
+
 # Process data (if needed)
 python dashboard_unified_mcp_data_processor.py
 
@@ -14,6 +17,13 @@ python dashboard_tmux_launcher.py start unified
 # Stop when done
 python dashboard_tmux_launcher.py stop unified
 ```
+
+## 🔬 ML Analysis Features
+- **Semantic Embeddings**: High-quality text analysis using sentence-transformers
+- **NAICS Classification**: Automated sector classification across 20 industries
+- **Topic Modeling**: BERTopic for discovering server themes and clusters
+- **Interactive Visualizations**: 2D/3D embeddings with clustering analysis
+- **GPU Acceleration**: Optimized for CUDA with caching for fast iterations
 
 ## Data Processing Pipeline: 3 Sources → Unified Dataset
 
@@ -128,10 +138,37 @@ server_dict = {
 - **Interactive Filtering**: By source, language, finance relevance
 - **Visualizations**: Growth charts, distribution analysis, technology trends
 
-## Key Files
-- `dashboard_unified_mcp.py` - Main dashboard
-- `dashboard_unified_mcp_data_processor.py` - Data unification
+## 🧬 ML Analysis Commands
+```bash
+# Generate embeddings and sector analysis (GPU recommended)
+python embed_generate.py                     # Full dataset analysis
+python embed_generate.py --filter finance   # Finance-only analysis  
+python embed_generate.py --filter sector_52 # Finance & Insurance (NAICS 52)
+python embed_generate.py --filter sector_54 # Professional Services (NAICS 54)
+
+# Results: JSON data + interactive HTML visualizations
+```
+
+## 📁 Key Files
+### Main Dashboard
+- `dashboard_unified_mcp.py` - Main dashboard interface
+- `dashboard_unified_mcp_data_processor.py` - Data unification (27,899 servers)
 - `dashboard_mcp_servers_unified.json` - Unified dataset (27MB)
 
-## Research Focus
-Tracks AI tool ecosystem growth with specific attention to finance sector tools, autonomous capabilities, and consequential system impact.
+### ML Analysis
+- `embed_generate.py` - GPU-accelerated embedding generation
+- `naics_classification_config.py` - NAICS sector definitions
+- `embed_*.json` - Analysis results by sector/filter
+- `embed_*.html` - Interactive visualizations
+
+### Data Collection
+- `smithery_run_bulk_mcp_download.py` - Smithery API (6,434 servers)
+- `github_mcp_repo_collector.py` - GitHub scanning (21,053 repos) 
+- `officiallist_url_scraping.py` - Official list (966 servers)
+
+## 🎯 Research Focus
+Tracks AI tool ecosystem growth with specific attention to:
+- **Finance sector tools** and autonomous capabilities
+- **Consequential system impact** assessment
+- **NAICS sector classification** across 20 industries
+- **Semantic clustering** of server capabilities and use cases

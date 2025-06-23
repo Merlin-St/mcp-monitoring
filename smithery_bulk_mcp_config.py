@@ -10,7 +10,7 @@ with open(os.path.expanduser("~/.cache/smithery-api/token")) as f:
     SMITHERY_API_TOKEN = f.read().strip() # IMPORTANT: Set this environment variable in the setup file as aws secret
 MCP_API_BASE_URL = "https://registry.smithery.ai"
 MCP_REQUEST_TIMEOUT = 30  # Seconds for API request timeout
-MCP_PAGE_SIZE_BULK = 10000 # Number of items per page for Smithery API
+MCP_PAGE_SIZE_BULK = 100 # Number of items per page for Smithery API
 MCP_MAX_WORKERS_BULK = 20 # Max concurrent workers for fetching server details
 
 # Output file for storing the list of all server summaries (from /servers endpoint)

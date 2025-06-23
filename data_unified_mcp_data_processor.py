@@ -77,6 +77,12 @@ class UnifiedMCPServer:
     fork: Optional[bool] = None
     archived: Optional[bool] = None
     
+    # Tools information
+    tools: Optional[List[Dict]] = None
+    tools_count: Optional[int] = None
+    tools_names: Optional[List[str]] = None
+    tools_summary: Optional[str] = None
+    
     # Source metadata
     data_sources: List[str] = None
     fetch_status: Optional[str] = None
@@ -88,6 +94,10 @@ class UnifiedMCPServer:
             self.data_sources = []
         if self.topics is None:
             self.topics = []
+        if self.tools is None:
+            self.tools = []
+        if self.tools_names is None:
+            self.tools_names = []
 
 class UnifiedMCPDataProcessor:
     def __init__(self):
@@ -99,8 +109,8 @@ class UnifiedMCPDataProcessor:
     def load_data_files(self) -> bool:
         """Load all data files"""
         try:
-            # Load Smithery data
-            smithery_file = Path("smithery_all_mcp_server_summaries.json")
+            # Load Smithery data (detailed version with tools)
+            smithery_file = Path("smithery_all_mcp_server_details_complete.json")
             if smithery_file.exists():
                 with open(smithery_file, 'r', encoding='utf-8') as f:
                     self.smithery_data = json.load(f)
@@ -251,6 +261,13 @@ class UnifiedMCPDataProcessor:
                     # Store Smithery description
                     if item.get('description'):
                         server.smithery_description = item.get('description')
+                    
+                    # Process tools data
+                    if item.get('tools') and not server.tools:
+                        server.tools = item.get('tools')
+                        server.tools_count = len(server.tools)
+                        server.tools_names = [tool.get('name', '') for tool in server.tools if tool.get('name')]
+                        server.tools_summary = f"{server.tools_count} tools: {', '.join(server.tools_names[:3])}" + ("..." if len(server.tools_names) > 3 else "")
                 else:
                     # Create new server
                     server = UnifiedMCPServer(
@@ -265,6 +282,14 @@ class UnifiedMCPDataProcessor:
                         use_count=item.get('useCount'),
                         data_sources=['smithery']
                     )
+                    
+                    # Process tools data for new server
+                    if item.get('tools'):
+                        server.tools = item.get('tools')
+                        server.tools_count = len(server.tools)
+                        server.tools_names = [tool.get('name', '') for tool in server.tools if tool.get('name')]
+                        server.tools_summary = f"{server.tools_count} tools: {', '.join(server.tools_names[:3])}" + ("..." if len(server.tools_names) > 3 else "")
+                    
                     self.unified_servers[server_id] = server
                     
             except Exception as e:
@@ -542,7 +567,11 @@ class UnifiedMCPDataProcessor:
                     'extracted_date': getattr(server, 'extracted_date', None),
                     'readme_content': server.readme_content,
                     'html_content': server.html_content,
-                    'embedding_text': server.embedding_text
+                    'embedding_text': server.embedding_text,
+                    'tools': server.tools,
+                    'tools_count': server.tools_count,
+                    'tools_names': server.tools_names,
+                    'tools_summary': server.tools_summary
                 }
                 
                 # Add all sector classifications
