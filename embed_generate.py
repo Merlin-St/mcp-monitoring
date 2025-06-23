@@ -234,7 +234,7 @@ def create_bertopic_model(embeddings, texts, min_cluster_size=5, n_neighbors=15,
         from sklearn.cluster import KMeans
         
         # Determine number of clusters based on dataset size
-        n_clusters = min(30, max(5, len(texts) // 20))  # 5-20 clusters based on data size
+        n_clusters = min(30, max(5, len(texts) // 40))  # 5-30 clusters based on data size
         
         cluster_model = KMeans(
             n_clusters=n_clusters,

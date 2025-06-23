@@ -10,7 +10,7 @@ from smithery_bulk_mcp_config import ( # Assuming you are using smithery_bulk_mc
 )
 
 # Define the details file name locally since it's only used here
-ALL_SERVERS_DETAILS_COMPLETE_JSON = "all_mcp_server_details_complete.json"
+ALL_SERVERS_DETAILS_COMPLETE_JSON = "smithery_all_mcp_server_details_complete.json"
 # If you switched to config_utils.py, make sure to import the correct variables
 # e.g., API_DELAY_BULK_LIST as API_DELAY_BULK
 from smithery_bulk_mcp_downloader import get_all_server_summaries, get_details_for_all_servers

@@ -49,8 +49,8 @@ st.markdown("""
 @st.cache_data
 def load_unified_data():
     """Load the unified MCP server data with progress tracking"""
-    data_file = Path("dashboard_mcp_servers_unified.json")
-    summary_file = Path("dashboard_mcp_servers_unified_summary.json")
+    data_file = Path("dashboard_mcp_servers_unified_filtered.json")
+    summary_file = Path("dashboard_mcp_servers_unified_filtered_summary.json")
     
     # Create progress indicators
     progress_bar = st.progress(0)

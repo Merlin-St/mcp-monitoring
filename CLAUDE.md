@@ -69,12 +69,17 @@ python officiallist_url_scraping.py
 - `officiallist_url_extractor.py` - URL extraction from HTML
 
 **Dashboard & Analysis:**
-- `dashboard_smithery_local_mcp.py` - Main Smithery-focused dashboard
-- `dashboard_smithery_local_mcp_analysis.py` - Smithery data analysis
-- `dashboard_unified_mcp.py` - Unified multi-source dashboard
-- `dashboard_unified_mcp_data_processor.py` - Unified data processing
+- `dashboard_unified_mcp.py` - Unified multi-source dashboard (main interface)
+- `dashboard_unified_mcp_data_processor.py` - Unified data processing (27,899 servers)
 - `dashboard_finance_mcp.py` - Finance-specific dashboard
 - `dashboard_launch.py` - Dashboard launcher utility
+- `dashboard_tmux_launcher.py` - Persistent tmux session launcher
+- `data_unified_mcp_data_processor.py` - Enhanced data processing pipeline
+- `data_create_filtered_subset.py` - Create filtered subsets for analysis
+
+**ML Analysis & Embeddings:**
+- `embed_generate.py` - GPU-accelerated embedding generation with NAICS classification
+- `naics_classification_config.py` - NAICS sector definitions and keyword mappings
 
 **Utilities:**
 - `smithery_quickcheck_bulk_mcp_data.py` - Data validation
@@ -92,10 +97,17 @@ The system extracts and classifies:
 - **Official/unofficial** status
 
 ### Classification Categories
-- **Sectors**: Finance, Banking, Trading, Insurance, Payments
+- **NAICS Sectors**: Full 20-sector classification (Agriculture, Finance, Professional Services, etc.)
 - **Finance Use Cases**: Payment execution, market data, risk analysis
 - **Autonomy Levels**: Information gathering, execution capabilities, agent interactions
 - **Consequentiality**: Risk assessment for financial system impact
+
+### ML-Powered Analysis
+- **Semantic Embeddings**: High-quality text embeddings using sentence-transformers
+- **Topic Modeling**: BERTopic for discovering server clusters and themes
+- **Dimensional Reduction**: UMAP for 2D/3D visualization of server relationships
+- **Clustering**: HDBSCAN for identifying server groups and outliers
+- **Sector Classification**: Automated NAICS sector assignment using keyword matching
 
 ## Dashboard Outputs
 
@@ -121,6 +133,11 @@ The system extracts and classifies:
 - `nltk` - text processing (auto-downloads required data)
 - `aiohttp` - async HTTP requests for GitHub API
 - `selenium` - web scraping for official list
+- `sentence-transformers` - embedding generation for ML analysis
+- `umap-learn` - dimensionality reduction for visualization
+- `hdbscan` - clustering for topic analysis
+- `bertopic` - topic modeling
+- `torch` - GPU acceleration for embeddings
 
 **API Authentication:**
 - Smithery API token: `~/.cache/smithery-api/token`
@@ -144,13 +161,25 @@ The system extracts and classifies:
 - `officiallist_urls.json` - Extracted URLs
 
 ### Dashboard Data Files
-- `dashboard_mcp_servers_unified.json` - Unified dashboard data
+- `dashboard_mcp_servers_unified.json` - Unified dashboard data (27MB, 27,899 servers)
 - `dashboard_mcp_servers_unified_summary.json` - Dashboard summary
+- `dashboard_mcp_servers_unified_filtered.json` - Filtered subset for analysis
+- `dashboard_mcp_servers_unified_filtered_summary.json` - Filtered summary
+
+### Embedding & Analysis Data Files
+- `embed_results.json` - Complete embedding analysis results
+- `embed_finance_results.json` - Finance-specific embedding analysis
+- `embed_sector_52_results.json` - Finance & Insurance sector analysis (NAICS 52)
+- `embed_sector_54_results.json` - Professional Services sector analysis (NAICS 54)
+- `embed_*.html` - Interactive visualization files for each analysis
+- `embeddings_cache/` - Cached embeddings to avoid recomputation
+- `smithery_all_mcp_server_details_complete.json` - Enhanced server details
 
 ### Test Data Files
 - `officiallist_mcp_servers_test*.json` - Test datasets
 - `officiallist_urls_test*.json` - Test URL datasets
 - `officiallist_test_results.json` - Test results
+- `embed_test_*.json` - Embedding test results
 
 ## Development Guidelines
 
@@ -191,11 +220,27 @@ python smithery_run_bulk_mcp_download.py
 python github_mcp_repo_collector.py  
 python officiallist_url_scraping.py
 
+# Process unified data (27,899 servers)
+python dashboard_unified_mcp_data_processor.py
+
 # Launch dashboards (choose one)
-streamlit run dashboard_smithery_local_mcp.py        # Smithery-focused dashboard
-streamlit run dashboard_unified_mcp.py               # Multi-source unified dashboard
+streamlit run dashboard_unified_mcp.py               # Main unified dashboard (recommended)
 streamlit run dashboard_finance_mcp.py               # Finance-specific dashboard
+python dashboard_tmux_launcher.py start unified      # Persistent tmux session
 python dashboard_launch.py                           # Dashboard launcher utility
+```
+
+### ML Analysis Pipeline
+```bash
+source ~/si_setup/.venv/bin/activate
+
+# Generate embeddings and sector analysis (requires GPU for optimal performance)
+python embed_generate.py                             # Full dataset analysis
+python embed_generate.py --filter finance           # Finance-only analysis
+python embed_generate.py --filter sector_52         # Finance & Insurance sector (NAICS 52)
+python embed_generate.py --filter sector_54         # Professional Services sector (NAICS 54)
+
+# Results saved as JSON and interactive HTML visualizations
 ```
 
 ### Testing & Validation
