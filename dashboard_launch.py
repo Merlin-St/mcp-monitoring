@@ -14,7 +14,7 @@ def check_requirements():
     print("🔍 Checking requirements...")
     
     # Check if we're in the right directory
-    if not Path("dashboard_mcp_servers_unified.json").exists():
+    if not Path("data_unified.json").exists():
         print("❌ Unified data file not found!")
         print("Please run: python dashboard_unified_mcp_data_processor.py")
         return False
@@ -35,7 +35,7 @@ def check_requirements():
         return False
     
     # Check data size
-    data_size = Path("dashboard_mcp_servers_unified.json").stat().st_size / (1024*1024)
+    data_size = Path("data_unified.json").stat().st_size / (1024*1024)
     print(f"✅ Data file: {data_size:.1f} MB")
     
     return True

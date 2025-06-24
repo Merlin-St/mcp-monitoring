@@ -42,8 +42,8 @@ class TmuxDashboardManager:
     def check_data_files(self, dashboard_type):
         """Check if required data files exist"""
         required_files = {
-            'unified': 'dashboard_mcp_servers_unified.json',
-            'finance': 'dashboard_mcp_servers_unified.json',
+            'unified': 'data_unified.json',
+            'finance': 'data_unified.json',
             'smithery': 'smithery_all_mcp_server_summaries.json'
         }
         

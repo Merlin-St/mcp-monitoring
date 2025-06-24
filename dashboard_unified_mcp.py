@@ -49,8 +49,8 @@ st.markdown("""
 @st.cache_data
 def load_unified_data():
     """Load the unified MCP server data with progress tracking"""
-    data_file = Path("dashboard_mcp_servers_unified_filtered.json")
-    summary_file = Path("dashboard_mcp_servers_unified_filtered_summary.json")
+    data_file = Path("data_unified.json")
+    summary_file = Path("data_unified_summary.json")
     
     # Create progress indicators
     progress_bar = st.progress(0)
@@ -462,8 +462,8 @@ def main():
     with st.expander("🔧 Debug Information", expanded=False):
         st.write("**Current Working Directory:**", Path.cwd())
         st.write("**Data Files Status:**")
-        data_file = Path("dashboard_mcp_servers_unified.json")
-        summary_file = Path("dashboard_mcp_servers_unified_summary.json")
+        data_file = Path("data_unified.json")
+        summary_file = Path("data_unified_summary.json")
         st.write(f"- Main data file exists: {data_file.exists()}")
         if data_file.exists():
             st.write(f"- Main data file size: {data_file.stat().st_size / (1024*1024):.1f} MB")

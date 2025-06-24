@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Analyze MCP servers by NAICS industry sectors from dashboard_mcp_servers_unified.json
+Analyze MCP servers by NAICS industry sectors from data_unified.json
 """
 
 import json
@@ -15,7 +15,7 @@ def analyze_naics_sectors():
     print("Loading MCP server data...")
     
     # Load the JSON data
-    with open('dashboard_mcp_servers_unified_filtered.json', 'r') as f:
+    with open('data_unified_filtered.json', 'r') as f:
         data = json.load(f)
     
     total_servers = len(data)

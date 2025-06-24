@@ -85,6 +85,8 @@ python officiallist_url_scraping.py
 - `smithery_quickcheck_bulk_mcp_data.py` - Data validation
 - `dashboard_verify_data.py` - Data verification
 - `smithery_bulk_mcp_config.py` - Configuration management
+- `officiallist_github_fetcher.py` - GitHub metadata collection for officiallist servers
+- `verify_github_coverage.py` - Analyze GitHub coverage gaps
 
 ## Analysis & Classification
 
@@ -154,17 +156,18 @@ The system extracts and classifies:
 - `github_mcp_collection_summary.json` - Collection statistics
 
 ### Official List Data Files
-- `officiallist_mcp_servers_full.json` - Complete official server list
+- `officiallist_mcp_servers_full.json` - Complete official server list with GitHub metadata
 - `officiallist_mcp_servers.json` - Processed official server data
 - `officiallist_history.json` - Historical tracking data
 - `officiallist_monthly_history.json` - Monthly snapshots
 - `officiallist_urls.json` - Extracted URLs
+- `officiallist_github_metadata.json` - GitHub metadata for officiallist servers
 
 ### Dashboard Data Files
-- `dashboard_mcp_servers_unified.json` - Unified dashboard data (27MB, 27,899 servers)
-- `dashboard_mcp_servers_unified_summary.json` - Dashboard summary
-- `dashboard_mcp_servers_unified_filtered.json` - Filtered subset for analysis
-- `dashboard_mcp_servers_unified_filtered_summary.json` - Filtered summary
+- `data_unified.json` - Unified dashboard data (27MB, 27,899 servers)
+- `data_unified_summary.json` - Dashboard summary
+- `data_unified_filtered.json` - Filtered subset for analysis
+- `data_unified_filtered_summary.json` - Filtered summary
 
 ### Embedding & Analysis Data Files
 - `embed_results.json` - Complete embedding analysis results
@@ -219,6 +222,9 @@ source ~/si_setup/.venv/bin/activate
 python smithery_run_bulk_mcp_download.py
 python github_mcp_repo_collector.py  
 python officiallist_url_scraping.py
+
+# Enhance officiallist with GitHub metadata
+python officiallist_github_fetcher.py
 
 # Process unified data (27,899 servers)
 python dashboard_unified_mcp_data_processor.py

@@ -10,8 +10,8 @@ def verify_unified_data():
     """Verify the unified data file"""
     print("🔍 Verifying unified MCP data...")
     
-    data_file = Path("dashboard_mcp_servers_unified.json")
-    summary_file = Path("dashboard_mcp_servers_unified_summary.json")
+    data_file = Path("data_unified.json")
+    summary_file = Path("data_unified_summary.json")
     
     if not data_file.exists():
         print(f"❌ Data file not found: {data_file}")

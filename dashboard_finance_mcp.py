@@ -33,7 +33,7 @@ st.set_page_config(
 @st.cache_data
 def load_and_analyze_finance_data():
     """Load unified data and perform finance-specific analysis"""
-    data_file = Path("dashboard_mcp_servers_unified.json")
+    data_file = Path("data_unified.json")
     
     if not data_file.exists():
         st.error("Unified data file not found. Please run unified_mcp_data_processor.py first.")
