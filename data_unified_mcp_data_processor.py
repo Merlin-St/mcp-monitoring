@@ -5,7 +5,7 @@ Unified MCP Data Processor
 This script consolidates data from all 3 MCP server collection sources:
 1. Smithery API (smithery_all_mcp_server_summaries.json)
 2. GitHub repositories (github_mcp_repositories.json)  
-3. Official MCP servers list (officiallist_mcp_servers.json)
+3. Official MCP servers list (officiallist_mcp_servers_full.json)
 
 It merges, deduplicates, and creates a comprehensive unified dataset.
 """
@@ -127,9 +127,8 @@ class UnifiedMCPDataProcessor:
             else:
                 logger.warning("GitHub data file not found")
                 
-            # Load Official list data - try full file first, fallback to processed file
+            # Load Official list data - only use the full file with GitHub metadata
             official_full_file = Path("officiallist_mcp_servers_full.json")
-            official_file = Path("officiallist_mcp_servers.json")
             
             if official_full_file.exists():
                 with open(official_full_file, 'r', encoding='utf-8') as f:
@@ -141,12 +140,8 @@ class UnifiedMCPDataProcessor:
                     else:
                         self.official_data = full_data if isinstance(full_data, list) else []
                         logger.warning(f"Unexpected full file structure, loaded {len(self.official_data)} servers")
-            elif official_file.exists():
-                with open(official_file, 'r', encoding='utf-8') as f:
-                    self.official_data = json.load(f)
-                logger.info(f"Loaded {len(self.official_data)} Official list servers from processed dataset")
             else:
-                logger.warning("Official list data files not found")
+                logger.error("officiallist_mcp_servers_full.json not found - this is required for processing")
                 
             return True
             
@@ -393,7 +388,7 @@ class UnifiedMCPDataProcessor:
                     # Update fields from Official list if not already set
                     if not server.url:
                         server.url = item.get('url')
-                    # Handle both file formats
+                    # Handle basic officiallist fields
                     if not server.fetch_status:
                         server.fetch_status = item.get('fetch_status')
                     if not server.html_length:
@@ -410,8 +405,45 @@ class UnifiedMCPDataProcessor:
                     # Store Official description
                     if item.get('description'):
                         server.official_description = item.get('description')
+                    
+                    # Extract GitHub metadata from officiallist if available and not already set from direct GitHub source
+                    github_meta = item.get('github_metadata', {})
+                    if github_meta:
+                        # Only update if we don't have better data from direct GitHub source
+                        if not server.stargazers_count and github_meta.get('stargazers_count') is not None:
+                            server.stargazers_count = github_meta.get('stargazers_count')
+                        if not server.forks_count and github_meta.get('forks_count') is not None:
+                            server.forks_count = github_meta.get('forks_count')
+                        if not server.language and github_meta.get('language'):
+                            server.language = github_meta.get('language')
+                        if not server.languages and github_meta.get('languages'):
+                            server.languages = github_meta.get('languages')
+                        if not server.topics and github_meta.get('topics'):
+                            server.topics = github_meta.get('topics', [])
+                        if not server.readme_content and github_meta.get('readme_content'):
+                            server.readme_content = github_meta.get('readme_content')
+                        if not server.created_at and github_meta.get('created_at'):
+                            server.created_at = self.parse_datetime(github_meta.get('created_at'))
+                        if not server.updated_at and github_meta.get('updated_at'):
+                            server.updated_at = self.parse_datetime(github_meta.get('updated_at'))
+                        if not server.github_url and github_meta.get('html_url'):
+                            server.github_url = github_meta.get('html_url')
+                        if not server.repository_url and github_meta.get('html_url'):
+                            server.repository_url = github_meta.get('html_url')
+                        if server.fork is None and github_meta.get('fork') is not None:
+                            server.fork = github_meta.get('fork')
+                        if server.archived is None and github_meta.get('archived') is not None:
+                            server.archived = github_meta.get('archived')
+                        if not server.owner_login and github_meta.get('owner', {}).get('login'):
+                            server.owner_login = github_meta['owner'].get('login')
+                            server.owner_name = github_meta['owner'].get('name')
+                        # Use GitHub description as fallback if official description not available
+                        if not server.github_description and github_meta.get('description'):
+                            server.github_description = github_meta.get('description')
                 else:
-                    # Create new server - handle both file formats
+                    # Create new server - handle full file format with GitHub metadata
+                    github_meta = item.get('github_metadata', {})
+                    
                     server = UnifiedMCPServer(
                         id=server_id,
                         name=item.get('name', ''),
@@ -424,9 +456,32 @@ class UnifiedMCPDataProcessor:
                         fetch_timestamp=item.get('fetch_timestamp'),
                         data_sources=['official']
                     )
-                    # Add new fields from full file format
+                    
+                    # Add fields from full file format
                     server.is_github = item.get('is_github', False)
                     server.extracted_date = item.get('extracted_date')
+                    
+                    # Extract GitHub metadata if available
+                    if github_meta:
+                        server.stargazers_count = github_meta.get('stargazers_count')
+                        server.forks_count = github_meta.get('forks_count')
+                        server.language = github_meta.get('language')
+                        server.languages = github_meta.get('languages', {})
+                        server.topics = github_meta.get('topics', [])
+                        server.readme_content = github_meta.get('readme_content')
+                        server.created_at = self.parse_datetime(github_meta.get('created_at'))
+                        server.updated_at = self.parse_datetime(github_meta.get('updated_at'))
+                        server.github_url = github_meta.get('html_url')
+                        server.repository_url = github_meta.get('html_url')
+                        server.fork = github_meta.get('fork')
+                        server.archived = github_meta.get('archived')
+                        if github_meta.get('owner'):
+                            server.owner_login = github_meta['owner'].get('login')
+                            server.owner_name = github_meta['owner'].get('name')
+                        # Store GitHub description from metadata
+                        if github_meta.get('description'):
+                            server.github_description = github_meta.get('description')
+                    
                     self.unified_servers[server_id] = server
                     
             except Exception as e:
@@ -522,7 +577,7 @@ class UnifiedMCPDataProcessor:
             # Fallback to basic name and description if canonical fields not available
             return f"{getattr(server, 'canonical_name', server.name or '')} {getattr(server, 'canonical_description', server.description or '')}".strip()
     
-    def save_unified_data(self, output_file: str = "dashboard_mcp_servers_unified.json"):
+    def save_unified_data(self, output_file: str = "data_unified.json"):
         """Save unified data to JSON file"""
         logger.info(f"Saving unified data to {output_file}...")
         

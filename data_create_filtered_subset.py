@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Create a filtered subset of dashboard_mcp_servers_unified.json based on quality criteria:
+Create a filtered subset of data_unified.json based on quality criteria:
 - If GitHub is the only source: only include repos with stargazers_count >= 1
 - If Smithery is the only source: only include repos with use_count >= 1
 - Include all repos with multiple sources (they're likely higher quality)
@@ -24,7 +24,7 @@ def create_filtered_subset():
     """Create filtered subset based on quality criteria"""
     
     logger.info("Loading unified dashboard data...")
-    with open('dashboard_mcp_servers_unified.json', 'r') as f:
+    with open('data_unified.json', 'r') as f:
         data = json.load(f)
     
     logger.info(f"Original dataset: {len(data)} servers")
@@ -80,7 +80,7 @@ def create_filtered_subset():
     logger.info(f"Retention rate: {retention_rate:.1f}%")
     
     # Save filtered dataset
-    output_file = 'dashboard_mcp_servers_unified_filtered.json'
+    output_file = 'data_unified_filtered.json'
     with open(output_file, 'w') as f:
         json.dump(filtered_data, f, indent=2)
     
@@ -109,7 +109,7 @@ def create_filtered_subset():
         'processing_timestamp': '2025-06-20T00:00:00'
     }
     
-    summary_file = 'dashboard_mcp_servers_unified_filtered_summary.json'
+    summary_file = 'data_unified_filtered_summary.json'
     with open(summary_file, 'w') as f:
         json.dump(summary, f, indent=2)
     

@@ -438,7 +438,7 @@ def find_non_overlapping_position(center_x, center_y, used_positions, x_min, x_m
     return center_x, center_y
 
 # %%
-### 2. PARSE ARGUMENTS AND LOAD DATA FROM dashboard_mcp_servers_unified.json ###
+### 2. PARSE ARGUMENTS AND LOAD DATA FROM data_unified.json ###
 
 def setup_logging(test_mode=False, sector_mode=None):
     """Configure logging with file handler and minimal console output."""
@@ -554,7 +554,7 @@ def main():
     progress_bar = tqdm(total=total_steps, desc="Overall Progress", unit="step", 
                        bar_format='{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} steps [{elapsed}]')
     
-    unified_data_file = 'dashboard_mcp_servers_unified_filtered.json'
+    unified_data_file = 'data_unified_filtered.json'
     test_size = 1000
 
     try:
