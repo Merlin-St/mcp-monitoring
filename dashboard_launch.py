@@ -23,7 +23,7 @@ def check_requirements():
     if 'VIRTUAL_ENV' not in os.environ:
         print("❌ Virtual environment not activated!")
         print("Please run: source ~/si_setup/.venv/bin/activate")
-        return False
+    return False
     
     # Check Streamlit
     try:
@@ -76,15 +76,15 @@ def main():
     
     parser = argparse.ArgumentParser(description="Launch MCP Dashboard")
     parser.add_argument("--port", type=int, default=8501, help="Port to run on")
-    parser.add_argument("--dashboard", choices=["unified", "finance", "test"], 
-                       default="finance", help="Dashboard type to launch")
+    parser.add_argument("--dashboard", choices=["unified"], 
+                       default="unified", help="Dashboard type to launch")
+    parser.add_argument("--filtered", action="store_true", 
+                       help="Use filtered dataset (data_unified_filtered.json)")
     
     args = parser.parse_args()
     
     dashboard_files = {
-        "unified": "dashboard_unified_mcp.py",
-        "finance": "dashboard_finance_mcp.py", 
-        "test": "dashboard_test_simple.py"
+        "unified": "dashboard_unified_mcp.py"
     }
     
     dashboard_file = dashboard_files[args.dashboard]
@@ -105,6 +105,12 @@ def main():
             "--server.address", "0.0.0.0",
             "--server.headless", "true"
         ]
+        
+        # Add --filtered flag if specified
+        if args.filtered:
+            cmd.append("--")
+            cmd.append("--filtered")
+        
         subprocess.run(cmd)
     except KeyboardInterrupt:
         print(f"\n👋 {args.dashboard.title()} dashboard stopped by user")
