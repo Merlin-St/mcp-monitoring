@@ -204,6 +204,16 @@ The system extracts and classifies:
 - Maintain existing functionality while improving observability
 - Use structured logging format with timestamps for better analysis
 
+### Commit Message Guidelines
+- Write concise, direct commit messages that focus on what changed
+- Avoid overly descriptive words like "comprehensive", "detailed", "enhanced", "improved"
+- Do not mention Claude or AI assistance in commit messages
+- Use imperative mood (e.g., "Add feature" not "Added feature")
+- Keep messages under 50 characters for the title when possible
+- Examples:
+  - Good: "Fix rate limiting bug"
+  - Bad: "Comprehensive fix for detailed rate limiting issues with enhanced error handling"
+
 ## Rate Limiting
 
 ### GitHub API
