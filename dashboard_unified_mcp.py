@@ -14,7 +14,9 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from datetime import datetime, timedelta
 import logging
+import sys
 from pathlib import Path
+from naics_classification_config import NAICS_SECTORS, NAICS_SUBSECTORS
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -46,70 +48,125 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+def get_data_file_path(use_filtered=False):
+    """
+    Get the appropriate data file path based on command line arguments or parameter.
+    
+    Args:
+        use_filtered (bool): Use filtered dataset instead of full dataset
+        
+    Returns:
+        tuple: (data_file_path, summary_file_path)
+    """
+    # Check command line arguments for --filtered flag
+    if '--filtered' in sys.argv:
+        use_filtered = True
+    
+    if use_filtered:
+        data_file = Path("data_unified_filtered.json")
+        summary_file = Path("data_unified_filtered_summary.json")
+    else:
+        data_file = Path("data_unified.json") 
+        summary_file = Path("data_unified_summary.json")
+    
+    return data_file, summary_file
+
 @st.cache_data
-def load_unified_data():
-    """Load the unified MCP server data with progress tracking"""
-    data_file = Path("data_unified.json")
-    summary_file = Path("data_unified_summary.json")
+def load_unified_data(use_filtered=False):
+    """
+    Load unified MCP server data with support for filtered dataset.
+    
+    Args:
+        use_filtered (bool): Use filtered dataset instead of full dataset
+        
+    Returns:
+        pd.DataFrame: Loaded and processed MCP server data
+    """
+    data_file, summary_file = get_data_file_path(use_filtered)
+    
+    if not data_file.exists():
+        dataset_type = "filtered" if use_filtered else "full"
+        st.error(f"Unified {dataset_type} data file not found: {data_file}")
+        st.info("Please run data_unified_mcp_data_processor.py first.")
+        return pd.DataFrame()
+    
+    try:
+        # Load data
+        with open(data_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+        
+        df = pd.DataFrame(data)
+        logger.info(f"Loaded {len(df)} servers from {data_file}")
+        
+        # Convert dates if present
+        for col in ['created_at', 'updated_at']:
+            if col in df.columns:
+                df[col] = pd.to_datetime(df[col], errors='coerce')
+        
+        return df
+        
+    except Exception as e:
+        st.error(f"Error loading data from {data_file}: {str(e)}")
+        return pd.DataFrame()
+
+def load_summary_data(use_filtered=False):
+    """
+    Load summary statistics for the dataset.
+    
+    Args:
+        use_filtered (bool): Use filtered dataset summary
+        
+    Returns:
+        dict: Summary statistics
+    """
+    _, summary_file = get_data_file_path(use_filtered)
+    
+    if not summary_file.exists():
+        return {}
+    
+    try:
+        with open(summary_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except Exception as e:
+        logger.error(f"Error loading summary from {summary_file}: {str(e)}")
+        return {}
+
+def display_data_info():
+    """Display information about which dataset is being used."""
+    use_filtered = '--filtered' in sys.argv
+    
+    if use_filtered:
+        st.info("📊 Using **filtered dataset** (data_unified_filtered.json)")
+        st.caption("To use full dataset, remove --filtered flag")
+    else:
+        st.info("📊 Using **full dataset** (data_unified.json)")  
+        st.caption("To use filtered dataset, add --filtered flag")
+    
+    return use_filtered
+
+@st.cache_data
+def load_unified_data_with_progress():
+    """Load the unified MCP server data with progress tracking and filtering support"""
+    use_filtered = display_data_info()
     
     # Create progress indicators
     progress_bar = st.progress(0)
     status_text = st.empty()
     
     try:
-        status_text.text("Checking data files...")
-        progress_bar.progress(10)
-        
-        if not data_file.exists():
-            st.error(f"Unified data file not found: {data_file.absolute()}")
-            st.info("Please run the unified data processor first: `python unified_mcp_data_processor.py`")
-            return pd.DataFrame(), {}
-        
-        status_text.text(f"Loading main data file ({data_file.stat().st_size / (1024*1024):.1f} MB)...")
+        status_text.text("Loading MCP server data...")
         progress_bar.progress(25)
         
-        # Load main data with error handling
-        with open(data_file, 'r', encoding='utf-8') as f:
-            data = json.load(f)
+        # Use shared data loader
+        df = load_unified_data(use_filtered)
         
-        if not isinstance(data, list):
-            st.error(f"Data format error: Expected list, got {type(data)}")
+        if df.empty:
             return pd.DataFrame(), {}
         
         status_text.text("Loading summary data...")
-        progress_bar.progress(50)
-        
-        # Load summary
-        summary = {}
-        if summary_file.exists():
-            with open(summary_file, 'r', encoding='utf-8') as f:
-                summary = json.load(f)
-        else:
-            st.warning("Summary file not found - some metrics may be unavailable")
-        
-        status_text.text("Creating DataFrame...")
         progress_bar.progress(75)
         
-        df = pd.DataFrame(data)
-        
-        if df.empty:
-            st.error("No data found in the unified data file")
-            return pd.DataFrame(), {}
-        
-        status_text.text("Processing date columns...")
-        progress_bar.progress(90)
-        
-        # Convert date columns safely
-        date_cols = ['created_at', 'updated_at']
-        for col in date_cols:
-            if col in df.columns:
-                df[col] = pd.to_datetime(df[col], errors='coerce')
-        
-        # Ensure required columns exist
-        required_cols = ['id', 'name', 'primary_source', 'data_sources']
-        missing_cols = [col for col in required_cols if col not in df.columns]
-        if missing_cols:
-            st.warning(f"Missing expected columns: {missing_cols}")
+        summary = load_summary_data(use_filtered)
         
         progress_bar.progress(100)
         status_text.text(f"Successfully loaded {len(df):,} servers!")
@@ -120,17 +177,11 @@ def load_unified_data():
         progress_bar.empty()
         status_text.empty()
         
-        logger.info(f"Loaded {len(df)} unified MCP servers")
         return df, summary
         
-    except json.JSONDecodeError as e:
-        st.error(f"JSON decode error: {e}")
-        st.info("The data file may be corrupted. Try regenerating it.")
-        return pd.DataFrame(), {}
     except Exception as e:
         logger.error(f"Error loading unified data: {e}")
         st.error(f"Unexpected error loading data: {e}")
-        st.info("Please check the logs and try again.")
         return pd.DataFrame(), {}
     finally:
         # Always clean up progress indicators
@@ -292,105 +343,154 @@ def display_growth_trends(df):
     
     st.plotly_chart(fig, use_container_width=True)
 
-def display_technology_analysis(df, summary):
-    """Display technology and language analysis"""
-    st.header("💻 Technology Analysis")
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Top programming languages
-        if 'top_languages' in summary and summary['top_languages']:
-            lang_data = summary['top_languages']
-            fig = px.bar(
-                x=list(lang_data.values()),
-                y=list(lang_data.keys()),
-                orientation='h',
-                title="Top Programming Languages",
-                color=list(lang_data.values()),
-                color_continuous_scale='viridis'
-            )
-            fig.update_layout(yaxis={'categoryorder': 'total ascending'})
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No language data available")
-    
-    with col2:
-        # Top topics/tags
-        if 'top_topics' in summary and summary['top_topics']:
-            topic_data = dict(list(summary['top_topics'].items())[:10])  # Top 10
-            fig = px.bar(
-                x=list(topic_data.values()),
-                y=list(topic_data.keys()),
-                orientation='h',
-                title="Top Topics/Tags",
-                color=list(topic_data.values()),
-                color_continuous_scale='plasma'
-            )
-            fig.update_layout(yaxis={'categoryorder': 'total ascending'})
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No topic data available")
 
-def display_finance_analysis(df):
-    """Display finance-specific analysis"""
-    st.header("💰 Finance-Related MCP Servers Analysis")
+
+def display_naics_classification(df):
+    """Display NAICS sectoral classification of all MCP servers"""
+    st.header("🏢 NAICS Sectoral Classification")
+    st.markdown("All MCP servers classified by North American Industry Classification System (NAICS) sectors.")
     
-    finance_df = df[df.get('is_finance_related', False) == True].copy()
+    # Display embed visualization at the top
+    embed_file = Path("embed_visualization.html")
+    if embed_file.exists():
+        st.subheader("🎯 Interactive Embedding Visualization")
+        st.markdown("Explore MCP servers in embedding space - similar servers cluster together:")
+        
+        # Read and display the HTML file
+        with open(embed_file, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        
+        # Scale down the visualization by wrapping in a div with transform
+        scaled_html = f"""
+        <div style="transform: scale(0.8); transform-origin: top left; width: 125%; height: 125%;">
+            {html_content}
+        </div>
+        """
+        st.components.v1.html(scaled_html, height=800, scrolling=False)
+        
+        st.markdown("---")
+    else:
+        st.info("💡 Run `python embed_generate.py` to generate interactive embedding visualization")
+        st.markdown("---")
     
-    if len(finance_df) == 0:
-        st.warning("No finance-related servers found in the dataset")
+    # Create a list to hold all server-sector relationships
+    classification_data = []
+    
+    for _, server in df.iterrows():
+        server_info = {
+            'Server Name': server.get('canonical_name', server.get('name', 'Unknown')),
+            'Description': server.get('canonical_description', server.get('description', ''))[:100] + '...' if server.get('canonical_description', server.get('description', '')) else '',
+            'Primary Source': server.get('primary_source', 'Unknown'),
+            'Usage Count': server.get('use_count', 0) or 0,
+            'Owner/Creator': server.get('owner_login', server.get('owner_name', 'Unknown')),
+            'Stars': server.get('stargazers_count', 0) or 0,
+            'Sectors': [],
+            'Matched Keywords': []
+        }
+        
+        # Check each NAICS sector
+        for sector_code, sector_name in NAICS_SECTORS.items():
+            if sector_code == 99:  # Skip "Unclassified"
+                continue
+                
+            is_sector_col = f'is_sector_{sector_code}'
+            keywords_col = f'sector_{sector_code}_keywords'
+            
+            if server.get(is_sector_col, False):
+                server_info['Sectors'].append(f"{sector_code}: {sector_name}")
+                keywords = server.get(keywords_col, [])
+                if keywords:
+                    server_info['Matched Keywords'].extend([f"{sector_code}: {', '.join(keywords[:3])}" + ("..." if len(keywords) > 3 else "")])
+        
+        # Only include servers that match at least one sector
+        if server_info['Sectors']:
+            classification_data.append(server_info)
+    
+    if not classification_data:
+        st.warning("No servers found with NAICS sector classifications")
         return
     
-    # Finance servers by source
-    col1, col2 = st.columns(2)
+    # Convert to DataFrame for display
+    display_df = pd.DataFrame(classification_data)
     
+    # Summary statistics
+    total_all_servers = len(df)  # Total servers in dataset
+    col1, col2, col3 = st.columns(3)
     with col1:
-        finance_by_source = finance_df['primary_source'].value_counts()
-        fig = px.pie(
-            values=finance_by_source.values,
-            names=finance_by_source.index,
-            title=f"Finance Servers by Source ({len(finance_df)} total)"
+        st.metric("Classified Servers", len(display_df))
+    with col2:
+        total_sectors = sum(len(sectors) for sectors in display_df['Sectors'])
+        st.metric("Total Sector Assignments", total_sectors)
+    with col3:
+        classification_pct = (len(display_df) / total_all_servers * 100) if total_all_servers > 0 else 0
+        st.metric("% of All Servers Classified", f"{classification_pct:.1f}%")
+    
+    # Sector distribution chart (as percentages)
+    st.subheader("📊 Sector Distribution (% of Total Servers)")
+    sector_counts = {}
+    for sectors_list in display_df['Sectors']:
+        for sector in sectors_list:
+            sector_counts[sector] = sector_counts.get(sector, 0) + 1
+    
+    if sector_counts:
+        sector_df = pd.DataFrame(list(sector_counts.items()), columns=['Sector', 'Count'])
+        sector_df['Percentage'] = (sector_df['Count'] / total_all_servers * 100).round(2)
+        sector_df = sector_df.sort_values('Percentage', ascending=True)
+        
+        fig = px.bar(
+            sector_df, 
+            x='Percentage', 
+            y='Sector',
+            orientation='h',
+            title=f"Percentage of All Servers by NAICS Sector (of {total_all_servers:,} total servers)",
+            color='Percentage',
+            color_continuous_scale='viridis',
+            text='Percentage'
+        )
+        fig.update_traces(texttemplate='%{text:.1f}%', textposition='outside')
+        fig.update_layout(
+            height=max(400, len(sector_df) * 25),
+            xaxis_title="Percentage of Total Servers (%)",
+            showlegend=False,
+            coloraxis_showscale=False
         )
         st.plotly_chart(fig, use_container_width=True)
     
+    # Filters
+    st.subheader("🔍 Filter Servers")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Sector filter
+        all_sectors = list(set([sector for sectors_list in display_df['Sectors'] for sector in sectors_list]))
+        selected_sectors = st.multiselect("Filter by Sectors", options=all_sectors)
+    
     with col2:
-        # Top finance languages
-        finance_langs = finance_df['language'].value_counts().head(8)
-        if len(finance_langs) > 0:
-            fig = px.bar(
-                x=finance_langs.values,
-                y=finance_langs.index,
-                orientation='h',
-                title="Programming Languages in Finance Servers"
-            )
-            fig.update_layout(yaxis={'categoryorder': 'total ascending'})
-            st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No language data for finance servers")
+        # Source filter
+        sources = display_df['Primary Source'].unique()
+        selected_sources = st.multiselect("Filter by Source", options=sources)
     
-    # Top finance servers by popularity
-    st.subheader("🌟 Top Finance-Related Servers")
+    # Apply filters
+    filtered_df = display_df.copy()
+    if selected_sectors:
+        filtered_df = filtered_df[filtered_df['Sectors'].apply(
+            lambda x: any(sector in x for sector in selected_sectors)
+        )]
+    if selected_sources:
+        filtered_df = filtered_df[filtered_df['Primary Source'].isin(selected_sources)]
     
-    # Sort by stars or use count
-    finance_display = finance_df.copy()
-    if 'stargazers_count' in finance_display.columns:
-        finance_display = finance_display.sort_values('stargazers_count', ascending=False, na_position='last')
-    elif 'use_count' in finance_display.columns:
-        finance_display = finance_display.sort_values('use_count', ascending=False, na_position='last')
+    # Prepare display dataframe
+    display_table = filtered_df.copy()
+    display_table['Sectors'] = display_table['Sectors'].apply(lambda x: ' | '.join(x))
+    display_table['Matched Keywords'] = display_table['Matched Keywords'].apply(lambda x: ' | '.join(x))
     
-    # Display top finance servers
-    cols_to_show = ['canonical_name', 'description', 'primary_source', 'stargazers_count', 'use_count', 'language']
-    available_cols = [col for col in cols_to_show if col in finance_display.columns]
-    
-    if available_cols:
-        st.dataframe(
-            finance_display[available_cols].head(20),
-            use_container_width=True,
-            hide_index=True
-        )
-    else:
-        st.warning("No suitable columns found for finance server display")
+    # Show the table
+    st.subheader(f"📋 MCP Servers NAICS Classification ({len(display_table)} servers)")
+    st.dataframe(
+        display_table[['Server Name', 'Description', 'Sectors', 'Matched Keywords', 'Primary Source', 'Usage Count', 'Owner/Creator', 'Stars']],
+        use_container_width=True,
+        hide_index=True
+    )
 
 def display_server_explorer(df):
     """Interactive server explorer"""
@@ -453,6 +553,227 @@ def display_server_explorer(df):
     else:
         st.info("No servers match the selected filters")
 
+def display_finance_analysis(df):
+    """Display comprehensive analysis of Finance and Insurance (NAICS 52) MCP servers"""
+    st.header("💰 Finance MCP Servers Analysis")
+    st.markdown("**Finance and Insurance (NAICS Sector 52) - Comprehensive Analysis**")
+    
+    # Filter to sector 52 servers only
+    finance_df = df[df.get('is_sector_52', False) == True].copy()
+    
+    if len(finance_df) == 0:
+        st.warning("No Finance and Insurance (Sector 52) servers found in the dataset")
+        return
+    
+    # Display embed visualization at the top
+    embed_file = Path("embed_sector_52_visualization.html")
+    if embed_file.exists():
+        st.subheader("🎯 Interactive Finance Sector Embedding Visualization")
+        st.markdown("Explore Finance and Insurance MCP servers in embedding space - similar financial services cluster together:")
+        
+        # Read and display the HTML file
+        with open(embed_file, 'r', encoding='utf-8') as f:
+            html_content = f.read()
+        
+        # Scale down the visualization by wrapping in a div with transform
+        scaled_html = f"""
+        <div style="transform: scale(0.8); transform-origin: top left; width: 125%; height: 125%;">
+            {html_content}
+        </div>
+        """
+        st.components.v1.html(scaled_html, height=800, scrolling=False)
+        
+        st.markdown("---")
+    else:
+        st.info("💡 Run `python embed_generate.py --filter sector_52` to generate interactive finance sector embedding visualization")
+        st.markdown("---")
+    
+    # Finance sector overview metrics
+    st.subheader("📊 Finance Sector Overview")
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Finance Servers", len(finance_df))
+    
+    with col2:
+        total_servers = len(df)
+        finance_pct = (len(finance_df) / total_servers * 100) if total_servers > 0 else 0
+        st.metric("% of Total Servers", f"{finance_pct:.1f}%")
+    
+    with col3:
+        avg_tools_finance = finance_df['tools_count'].mean() if 'tools_count' in finance_df.columns else 0
+        st.metric("Avg Tools per Server", f"{avg_tools_finance:.1f}")
+    
+    with col4:
+        total_stars = finance_df['stargazers_count'].sum() if 'stargazers_count' in finance_df.columns else 0
+        st.metric("Total GitHub Stars", f"{total_stars:,}")
+    
+    # Subsector 52xx Analysis
+    st.subheader("🏦 Finance Subsector Distribution (52xx)")
+    
+    # Extract subsector data for sector 52
+    subsector_data = {}
+    for _, server in finance_df.iterrows():
+        # Look for subsector columns (52xx format)
+        for col in server.index:
+            if col.startswith('is_subsector_52') and server[col]:
+                subsector_code = col.replace('is_subsector_', '')
+                # Get subsector name from NAICS config if available
+                try:
+                    subsector_num = int(subsector_code)
+                    subsector_name = f"{subsector_code}: {NAICS_SUBSECTORS.get(subsector_num, 'Unknown')}"
+                except:
+                    subsector_name = subsector_code
+                    
+                if subsector_name not in subsector_data:
+                    subsector_data[subsector_name] = 0
+                subsector_data[subsector_name] += 1
+    
+    if subsector_data:
+        # Create subsector distribution chart
+        subsector_df = pd.DataFrame(list(subsector_data.items()), columns=['Subsector', 'Count'])
+        subsector_df['Percentage'] = (subsector_df['Count'] / len(finance_df) * 100).round(2)
+        subsector_df = subsector_df.sort_values('Count', ascending=True)
+        
+        fig = px.bar(
+            subsector_df, 
+            x='Count', 
+            y='Subsector',
+            orientation='h',
+            title=f"Finance Subsector Distribution ({len(finance_df):,} servers)",
+            color='Count',
+            color_continuous_scale='viridis',
+            text='Count'
+        )
+        fig.update_traces(texttemplate='%{text} (%{customdata:.1f}%)', textposition='outside', customdata=subsector_df['Percentage'])
+        fig.update_layout(
+            height=max(400, len(subsector_df) * 30),
+            xaxis_title="Number of Servers",
+            showlegend=False,
+            coloraxis_showscale=False
+        )
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.info("No subsector classification data available for finance servers")
+    
+    # Top Finance Servers Table
+    st.subheader("⭐ Top Finance MCP Servers")
+    
+    # Calculate ranking score combining stars, tools count, and usage
+    finance_display = finance_df.copy()
+    finance_display['ranking_score'] = (
+        (finance_display.get('stargazers_count', 0) or 0) * 0.4 +
+        (finance_display.get('tools_count', 0) or 0) * 0.4 +
+        (finance_display.get('use_count', 0) or 0) * 0.2
+    )
+    
+    # Get top 10 servers
+    top_finance = finance_display.nlargest(10, 'ranking_score')
+    
+    # Prepare display table
+    display_data = []
+    for _, server in top_finance.iterrows():
+        # Get subsectors for this server
+        server_subsectors = []
+        for col in server.index:
+            if col.startswith('is_subsector_52') and server[col]:
+                subsector_code = col.replace('is_subsector_', '')
+                try:
+                    subsector_num = int(subsector_code)
+                    subsector_name = f"{subsector_code}: {NAICS_SUBSECTORS.get(subsector_num, 'Unknown')}"
+                except:
+                    subsector_name = subsector_code
+                server_subsectors.append(subsector_name)
+        
+        display_data.append({
+            'Server Name': server.get('canonical_name', server.get('name', 'Unknown')),
+            'Description': (server.get('canonical_description', server.get('description', ''))[:80] + '...' 
+                          if server.get('canonical_description', server.get('description', '')) else ''),
+            'Subsectors': ', '.join(server_subsectors) if server_subsectors else 'None',
+            'Tools': server.get('tools_count', 0) or 0,
+            'Stars': server.get('stargazers_count', 0) or 0,
+            'Usage': server.get('use_count', 0) or 0,
+            'Source': server.get('primary_source', 'Unknown')
+        })
+    
+    if display_data:
+        display_df = pd.DataFrame(display_data)
+        st.dataframe(display_df, use_container_width=True, hide_index=True)
+    else:
+        st.info("No finance servers found for ranking")
+    
+    # Tools Analysis for Finance Sector
+    st.subheader("🔧 Tools Analysis - Finance Sector")
+    
+    if 'tools_by_access' in finance_df.columns:
+        # Aggregate tools by access level
+        total_tools_by_access = {'read': 0, 'write': 0, 'execute': 0}
+        
+        for _, server in finance_df.iterrows():
+            tools_access = server.get('tools_by_access', {})
+            if isinstance(tools_access, dict):
+                for access_type in total_tools_by_access.keys():
+                    total_tools_by_access[access_type] += tools_access.get(access_type, 0)
+        
+        # Create tools distribution chart
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            # Tools by access level pie chart
+            if sum(total_tools_by_access.values()) > 0:
+                fig = px.pie(
+                    values=list(total_tools_by_access.values()),
+                    names=list(total_tools_by_access.keys()),
+                    title="Finance Sector Tools by Access Level",
+                    color_discrete_map={
+                        'read': '#4ECDC4',
+                        'write': '#FFC107', 
+                        'execute': '#FF6B6B'
+                    }
+                )
+                fig.update_traces(textposition='inside', textinfo='percent+label')
+                st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            # Tools statistics
+            total_tools = sum(total_tools_by_access.values())
+            servers_with_tools = len(finance_df[finance_df.get('tools_count', 0) > 0])
+            
+            st.metric("Total Finance Tools", f"{total_tools:,}")
+            st.metric("Servers with Tools", f"{servers_with_tools:,}")
+            if len(finance_df) > 0:
+                st.metric("Avg Tools per Finance Server", f"{total_tools/len(finance_df):.1f}")
+    
+    # Finance sector specific insights
+    st.subheader("💡 Finance Sector Insights")
+    
+    # Source distribution for finance servers
+    if 'primary_source' in finance_df.columns:
+        source_counts = finance_df['primary_source'].value_counts()
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            fig = px.pie(
+                values=source_counts.values,
+                names=source_counts.index,
+                title="Finance Servers by Data Source",
+                color_discrete_map={
+                    'smithery': '#FF6B6B',
+                    'github': '#4ECDC4',
+                    'official': '#45B7D1'
+                }
+            )
+            st.plotly_chart(fig, use_container_width=True)
+        
+        with col2:
+            st.markdown("**Key Statistics:**")
+            st.write(f"• **Total Finance Servers:** {len(finance_df):,}")
+            st.write(f"• **Most Common Subsector:** {list(subsector_data.keys())[0] if subsector_data else 'N/A'}")
+            st.write(f"• **Average Tools per Server:** {avg_tools_finance:.1f}")
+            st.write(f"• **Servers with GitHub Stars:** {len(finance_df[finance_df.get('stargazers_count', 0) > 0]):,}")
+
+
 def main():
     """Main dashboard application"""
     st.title("🤖 MCP Server Monitoring Dashboard")
@@ -480,7 +801,7 @@ def main():
     
     # Load data
     try:
-        df, summary = load_unified_data()
+        df, summary = load_unified_data_with_progress()
     except Exception as e:
         st.error(f"Critical error loading data: {e}")
         st.stop()
@@ -505,7 +826,7 @@ def main():
         st.subheader("🎛️ Navigation")
         page = st.radio(
             "Select View",
-            ["Overview", "Growth Trends", "Technology Analysis", "Finance Analysis", "Server Explorer"],
+            ["Overview", "Growth Trends", "Sector Classification", "Finance MCP Servers", "Server Explorer"],
             index=0
         )
     
@@ -517,10 +838,11 @@ def main():
     elif page == "Growth Trends":
         display_growth_trends(df)
     
-    elif page == "Technology Analysis":
-        display_technology_analysis(df, summary)
     
-    elif page == "Finance Analysis":
+    elif page == "Sector Classification":
+        display_naics_classification(df)
+    
+    elif page == "Finance MCP Servers":
         display_finance_analysis(df)
     
     elif page == "Server Explorer":

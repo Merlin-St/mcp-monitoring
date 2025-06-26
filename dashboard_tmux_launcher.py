@@ -42,9 +42,7 @@ class TmuxDashboardManager:
     def check_data_files(self, dashboard_type):
         """Check if required data files exist"""
         required_files = {
-            'unified': 'data_unified.json',
-            'finance': 'data_unified.json',
-            'smithery': 'smithery_all_mcp_server_summaries.json'
+            'unified': 'data_unified.json'
         }
         
         if dashboard_type in required_files:
@@ -91,7 +89,7 @@ class TmuxDashboardManager:
             print(f"❌ Error listing sessions: {e}")
             return []
     
-    def start_dashboard(self, dashboard_type, port=None):
+    def start_dashboard(self, dashboard_type, port=None, use_filtered=False):
         """Start dashboard in tmux session"""
         if port is None:
             port = self.default_port
@@ -114,9 +112,7 @@ class TmuxDashboardManager:
         
         # Dashboard file mapping
         dashboard_files = {
-            'unified': 'dashboard_unified_mcp.py',
-            'finance': 'dashboard_finance_mcp.py',
-            'smithery': 'dashboard_smithery_local_mcp.py'
+            'unified': 'dashboard_unified_mcp.py'
         }
         
         if dashboard_type not in dashboard_files:
@@ -129,6 +125,10 @@ class TmuxDashboardManager:
         # Prepare streamlit command
         venv_python = os.path.join(os.environ['VIRTUAL_ENV'], 'bin', 'python')
         streamlit_cmd = f"{venv_python} -m streamlit run {dashboard_file} --server.port {port} --server.address 0.0.0.0 --server.headless true"
+        
+        # Add --filtered flag if specified
+        if use_filtered:
+            streamlit_cmd += " -- --filtered"
         
         # Create tmux session
         try:
@@ -229,10 +229,12 @@ def main():
     parser.add_argument('action', choices=['start', 'stop', 'attach', 'status', 'list'],
                        help='Action to perform')
     parser.add_argument('dashboard', nargs='?', 
-                       choices=['unified', 'finance', 'smithery'],
+                       choices=['unified'],
                        help='Dashboard type (required for start/stop/attach)')
     parser.add_argument('--port', type=int, default=8501,
                        help='Port number (default: 8501)')
+    parser.add_argument('--filtered', action='store_true',
+                       help='Use filtered dataset (data_unified_filtered.json)')
     
     args = parser.parse_args()
     
@@ -243,11 +245,11 @@ def main():
     elif args.action in ['start', 'stop', 'attach']:
         if not args.dashboard:
             print("❌ Dashboard type required for this action")
-            print("   Available: unified, finance, smithery")
+            print("   Available: unified")
             return False
         
         if args.action == 'start':
-            return manager.start_dashboard(args.dashboard, args.port)
+            return manager.start_dashboard(args.dashboard, args.port, args.filtered)
         elif args.action == 'stop':
             return manager.stop_dashboard(args.dashboard, args.port)
         elif args.action == 'attach':
