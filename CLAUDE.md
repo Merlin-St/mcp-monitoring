@@ -69,11 +69,11 @@ python officiallist_url_scraping.py
 - `officiallist_url_extractor.py` - URL extraction from HTML
 
 **Dashboard & Analysis:**
-- `dashboard_unified_mcp.py` - Unified multi-source dashboard (main interface)
+- `dashboard_unified_mcp.py` - Main comprehensive dashboard (supports --filtered flag for filtered dataset)
 - `dashboard_unified_mcp_data_processor.py` - Unified data processing (27,899 servers)
-- `dashboard_finance_mcp.py` - Finance-specific dashboard
-- `dashboard_launch.py` - Dashboard launcher utility
-- `dashboard_tmux_launcher.py` - Persistent tmux session launcher
+- `dashboard_launch.py` - Simple dashboard launcher with --filtered support
+- `dashboard_tmux_launcher.py` - Persistent tmux session launcher with --filtered support
+- `dashboard_verify_data.py` - Data validation utility
 - `data_unified_mcp_data_processor.py` - Enhanced data processing pipeline
 - `data_create_filtered_subset.py` - Create filtered subsets for analysis
 
@@ -83,7 +83,6 @@ python officiallist_url_scraping.py
 
 **Utilities:**
 - `smithery_quickcheck_bulk_mcp_data.py` - Data validation
-- `dashboard_verify_data.py` - Data verification
 - `smithery_bulk_mcp_config.py` - Configuration management
 - `officiallist_github_fetcher.py` - GitHub metadata collection for officiallist servers
 - `verify_github_coverage.py` - Analyze GitHub coverage gaps
@@ -229,11 +228,13 @@ python officiallist_github_fetcher.py
 # Process unified data (27,899 servers)
 python dashboard_unified_mcp_data_processor.py
 
-# Launch dashboards (choose one)
-streamlit run dashboard_unified_mcp.py               # Main unified dashboard (recommended)
-streamlit run dashboard_finance_mcp.py               # Finance-specific dashboard
-python dashboard_tmux_launcher.py start unified      # Persistent tmux session
-python dashboard_launch.py                           # Dashboard launcher utility
+# Launch dashboards
+streamlit run dashboard_unified_mcp.py               # Main unified dashboard (full dataset)
+streamlit run dashboard_unified_mcp.py --filtered    # Main dashboard with filtered dataset
+python dashboard_launch.py                           # Simple launcher (supports --filtered)
+python dashboard_launch.py --filtered                # Simple launcher with filtered dataset
+python dashboard_tmux_launcher.py start unified      # Persistent tmux session (full dataset)
+python dashboard_tmux_launcher.py start unified --filtered  # Persistent session with filtered dataset
 ```
 
 ### ML Analysis Pipeline

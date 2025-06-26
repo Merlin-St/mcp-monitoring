@@ -14,6 +14,9 @@ python dashboard_unified_mcp_data_processor.py
 # Launch dashboard in persistent tmux session (recommended)
 python dashboard_tmux_launcher.py start unified
 
+# Use filtered dataset (smaller, faster loading)
+python dashboard_tmux_launcher.py start unified --filtered
+
 # Stop when done
 python dashboard_tmux_launcher.py stop unified
 ```
@@ -103,12 +106,17 @@ python embed_generate.py --filter sector_52 # Finance & Insurance (NAICS 52)
 ```
 
 ## 📁 Key Files
-### Main Dashboard
-- `dashboard_unified_mcp.py` - Main dashboard interface
+### Dashboard Files
+- `dashboard_unified_mcp.py` - Main comprehensive dashboard (supports --filtered flag)
+- `dashboard_launch.py` - Simple launcher with --filtered support
+- `dashboard_tmux_launcher.py` - Persistent tmux session launcher with --filtered support
+- `dashboard_verify_data.py` - Data validation utility
 
 ### Main Data
 - `dashboard_unified_mcp_data_processor.py` - Data unification (27,899 servers)
-- `data_unified.json` - Unified dataset (27MB)
+- `data_unified.json` - Full unified dataset (343MB, 27,899 servers)
+- `data_unified_filtered.json` - Filtered dataset (225MB, core fields only)
+- `data_unified_summary.json` - Dataset statistics and metadata
 
 ### ML Analysis
 - `embed_generate.py` - GPU-accelerated embedding generation

@@ -168,3 +168,536 @@
 2025-06-24 11:01:41,281 - INFO - Servers with multiple sources: 520
 2025-06-24 11:01:41,330 - INFO - Unified MCP data processing completed successfully!
 2025-06-24 11:01:41,330 - INFO - ✅ All processing completed successfully!
+2025-06-26 09:34:20,506 - INFO - Starting unified MCP data processing...
+2025-06-26 09:34:20,789 - INFO - Loaded 7503 Smithery servers
+2025-06-26 09:34:24,441 - INFO - Loaded 21053 GitHub repositories
+2025-06-26 09:34:26,479 - INFO - Loaded 966 Official list servers from full dataset
+2025-06-26 09:34:26,480 - INFO - Processing Smithery data...
+2025-06-26 09:34:26,591 - INFO - Processing GitHub data...
+2025-06-26 09:34:26,980 - INFO - Processing Official list data...
+2025-06-26 09:34:26,989 - INFO - Enhancing metadata and classifying servers...
+2025-06-26 09:34:34,455 - INFO - Saving unified data to data_unified.json...
+2025-06-26 09:34:41,191 - INFO - Successfully saved 27626 unified servers to data_unified.json
+2025-06-26 09:34:41,191 - INFO - Generating summary statistics...
+2025-06-26 09:34:41,450 - INFO - Summary statistics saved to data_unified_summary.json
+2025-06-26 09:34:41,450 - INFO - Total unified servers: 27626
+2025-06-26 09:34:41,450 - INFO - Finance-related servers: 3620
+2025-06-26 09:34:41,450 - INFO - Servers with multiple sources: 520
+2025-06-26 09:34:41,515 - INFO - Unified MCP data processing completed successfully!
+2025-06-26 09:34:41,516 - INFO - ✅ All processing completed successfully!
+2025-06-26 10:00:36,297 - INFO - Starting unified MCP data processing...
+2025-06-26 10:00:36,560 - INFO - Loaded 7503 Smithery servers
+2025-06-26 10:00:40,215 - INFO - Loaded 21053 GitHub repositories
+2025-06-26 10:00:42,258 - INFO - Loaded 966 Official list servers from full dataset
+2025-06-26 10:00:42,258 - INFO - Processing Smithery data...
+2025-06-26 10:00:42,365 - INFO - Processing GitHub data...
+2025-06-26 10:00:42,727 - INFO - Processing Official list data...
+2025-06-26 10:00:42,735 - INFO - Enhancing metadata and classifying servers...
+2025-06-26 10:09:39,087 - INFO - Starting unified MCP data processing...
+2025-06-26 10:09:39,342 - INFO - Loaded 7503 Smithery servers
+2025-06-26 10:09:42,941 - INFO - Loaded 21053 GitHub repositories
+2025-06-26 10:09:44,957 - INFO - Loaded 966 Official list servers from full dataset
+2025-06-26 10:09:44,957 - INFO - Processing Smithery data...
+2025-06-26 10:09:45,060 - INFO - Processing GitHub data...
+2025-06-26 10:09:45,421 - INFO - Processing Official list data...
+2025-06-26 10:09:45,430 - INFO - Enhancing metadata and classifying servers...
+2025-06-26 10:15:12,959 - INFO - Starting unified MCP data processing...
+2025-06-26 10:15:13,230 - INFO - Loaded 7503 Smithery servers
+2025-06-26 10:15:16,864 - INFO - Loaded 21053 GitHub repositories
+2025-06-26 10:15:18,896 - INFO - Loaded 966 Official list servers from full dataset
+2025-06-26 10:15:18,896 - INFO - Processing Smithery data...
+2025-06-26 10:15:19,008 - INFO - Processing GitHub data...
+2025-06-26 10:15:19,556 - INFO - Processing Official list data...
+2025-06-26 10:15:19,565 - INFO - Enhancing metadata and classifying servers...
+2025-06-26 10:22:19,610 - INFO - Starting unified MCP data processing...
+2025-06-26 10:22:19,875 - INFO - Loaded 7503 Smithery servers
+2025-06-26 10:22:23,518 - INFO - Loaded 21053 GitHub repositories
+2025-06-26 10:22:25,551 - INFO - Loaded 966 Official list servers from full dataset
+2025-06-26 10:22:25,551 - INFO - Processing Smithery data...
+2025-06-26 10:22:25,661 - INFO - Processing GitHub data...
+2025-06-26 10:22:26,201 - INFO - Processing Official list data...
+2025-06-26 10:22:26,210 - INFO - Enhancing metadata and classifying servers...
+2025-06-26 10:22:32,656 - INFO - Starting unified MCP data processing...
+2025-06-26 10:22:32,917 - INFO - Loaded 7503 Smithery servers
+2025-06-26 10:22:36,537 - INFO - Loaded 21053 GitHub repositories
+2025-06-26 10:22:38,565 - INFO - Loaded 966 Official list servers from full dataset
+2025-06-26 10:22:38,565 - INFO - Processing Smithery data...
+2025-06-26 10:22:38,676 - INFO - Processing GitHub data...
+2025-06-26 10:22:39,211 - INFO - Processing Official list data...
+2025-06-26 10:22:39,220 - INFO - Enhancing metadata and classifying servers...
+2025-06-26 10:23:08,033 - INFO - Processing server 1000/27626 (3.6%)
+2025-06-26 10:23:37,268 - INFO - Processing server 2000/27626 (7.2%)
+2025-06-26 10:24:05,544 - INFO - Processing server 3000/27626 (10.9%)
+2025-06-26 10:24:33,394 - INFO - Processing server 4000/27626 (14.5%)
+2025-06-26 10:25:02,283 - INFO - Processing server 5000/27626 (18.1%)
+2025-06-26 10:25:30,724 - INFO - Processing server 6000/27626 (21.7%)
+2025-06-26 10:25:57,021 - INFO - Processing server 7000/27626 (25.3%)
+2025-06-26 10:26:23,145 - INFO - Processing server 8000/27626 (29.0%)
+2025-06-26 10:26:49,140 - INFO - Processing server 9000/27626 (32.6%)
+2025-06-26 10:27:15,201 - INFO - Processing server 10000/27626 (36.2%)
+2025-06-26 10:27:41,599 - INFO - Processing server 11000/27626 (39.8%)
+2025-06-26 10:28:07,804 - INFO - Processing server 12000/27626 (43.4%)
+2025-06-26 10:28:34,357 - INFO - Processing server 13000/27626 (47.1%)
+2025-06-26 10:29:00,253 - INFO - Processing server 14000/27626 (50.7%)
+2025-06-26 10:29:26,286 - INFO - Processing server 15000/27626 (54.3%)
+2025-06-26 10:29:52,516 - INFO - Processing server 16000/27626 (57.9%)
+2025-06-26 10:30:18,688 - INFO - Processing server 17000/27626 (61.5%)
+2025-06-26 10:30:33,955 - INFO - Starting unified MCP data processing...
+2025-06-26 10:30:34,217 - INFO - Loaded 7503 Smithery servers
+2025-06-26 10:30:45,021 - INFO - Processing server 18000/27626 (65.2%)
+2025-06-26 10:31:06,908 - INFO - Starting unified MCP data processing...
+2025-06-26 10:31:07,233 - INFO - Loaded 7503 Smithery servers
+2025-06-26 10:31:11,240 - INFO - Loaded 21053 GitHub repositories
+2025-06-26 10:31:13,439 - INFO - Loaded 966 Official list servers from full dataset
+2025-06-26 10:31:13,439 - INFO - Processing Smithery data...
+2025-06-26 10:31:13,569 - INFO - Processing GitHub data...
+2025-06-26 10:31:14,182 - INFO - Processing Official list data...
+2025-06-26 10:31:14,193 - INFO - Enhancing metadata and classifying servers...
+2025-06-26 10:31:14,194 - INFO - Preparing text data for batch classification...
+2025-06-26 10:31:14,243 - INFO - Running batch NAICS classification...
+2025-06-26 10:31:14,243 - INFO - Pre-compiling NAICS patterns...
+2025-06-26 10:31:14,282 - INFO - Classifying sector 11 (1/20)
+2025-06-26 10:31:16,924 - INFO - Classifying sector 21 (2/20)
+2025-06-26 10:31:18,720 - INFO - Classifying sector 22 (3/20)
+2025-06-26 10:31:20,013 - INFO - Classifying sector 23 (4/20)
+2025-06-26 10:31:21,869 - INFO - Classifying sector 31 (5/20)
+2025-06-26 10:31:24,430 - INFO - Classifying sector 42 (6/20)
+2025-06-26 10:31:27,368 - INFO - Classifying sector 44 (7/20)
+2025-06-26 10:31:30,177 - INFO - Classifying sector 48 (8/20)
+2025-06-26 10:31:33,022 - INFO - Classifying sector 51 (9/20)
+2025-06-26 10:31:35,335 - INFO - Classifying sector 52 (10/20)
+2025-06-26 10:31:37,356 - INFO - Classifying sector 53 (11/20)
+2025-06-26 10:31:39,781 - INFO - Classifying sector 54 (12/20)
+2025-06-26 10:31:41,799 - INFO - Classifying sector 55 (13/20)
+2025-06-26 10:31:42,449 - INFO - Classifying sector 56 (14/20)
+2025-06-26 10:31:44,375 - INFO - Classifying sector 61 (15/20)
+2025-06-26 10:31:46,868 - INFO - Classifying sector 62 (16/20)
+2025-06-26 10:31:49,332 - INFO - Classifying sector 71 (17/20)
+2025-06-26 10:31:52,395 - INFO - Classifying sector 72 (18/20)
+2025-06-26 10:31:55,047 - INFO - Classifying sector 81 (19/20)
+2025-06-26 10:31:57,605 - INFO - Classifying sector 92 (20/20)
+2025-06-26 10:32:00,315 - INFO - Processing remaining metadata...
+2025-06-26 10:32:00,315 - INFO - Processing metadata batch 1 (1-1000/27626)
+2025-06-26 10:32:00,437 - INFO - Processing metadata batch 2 (1001-2000/27626)
+2025-06-26 10:32:00,520 - INFO - Processing metadata batch 3 (2001-3000/27626)
+2025-06-26 10:32:00,557 - INFO - Processing metadata batch 4 (3001-4000/27626)
+2025-06-26 10:32:00,593 - INFO - Processing metadata batch 5 (4001-5000/27626)
+2025-06-26 10:32:00,658 - INFO - Processing metadata batch 6 (5001-6000/27626)
+2025-06-26 10:32:00,704 - INFO - Processing metadata batch 7 (6001-7000/27626)
+2025-06-26 10:32:01,306 - INFO - Processing metadata batch 8 (7001-8000/27626)
+2025-06-26 10:32:02,095 - INFO - Processing metadata batch 9 (8001-9000/27626)
+2025-06-26 10:32:02,898 - INFO - Processing metadata batch 10 (9001-10000/27626)
+2025-06-26 10:32:03,578 - INFO - Processing metadata batch 11 (10001-11000/27626)
+2025-06-26 10:32:04,385 - INFO - Processing metadata batch 12 (11001-12000/27626)
+2025-06-26 10:32:05,428 - INFO - Processing metadata batch 13 (12001-13000/27626)
+2025-06-26 10:32:06,209 - INFO - Processing metadata batch 14 (13001-14000/27626)
+2025-06-26 10:32:06,806 - INFO - Processing metadata batch 15 (14001-15000/27626)
+2025-06-26 10:32:07,419 - INFO - Processing metadata batch 16 (15001-16000/27626)
+2025-06-26 10:32:08,186 - INFO - Processing metadata batch 17 (16001-17000/27626)
+2025-06-26 10:32:08,962 - INFO - Processing metadata batch 18 (17001-18000/27626)
+2025-06-26 10:32:09,542 - INFO - Processing metadata batch 19 (18001-19000/27626)
+2025-06-26 10:32:10,187 - INFO - Processing metadata batch 20 (19001-20000/27626)
+2025-06-26 10:32:10,917 - INFO - Processing metadata batch 21 (20001-21000/27626)
+2025-06-26 10:32:11,671 - INFO - Processing metadata batch 22 (21001-22000/27626)
+2025-06-26 10:32:12,249 - INFO - Processing metadata batch 23 (22001-23000/27626)
+2025-06-26 10:32:12,886 - INFO - Processing metadata batch 24 (23001-24000/27626)
+2025-06-26 10:32:13,715 - INFO - Processing metadata batch 25 (24001-25000/27626)
+2025-06-26 10:32:14,487 - INFO - Processing metadata batch 26 (25001-26000/27626)
+2025-06-26 10:32:15,613 - INFO - Processing metadata batch 27 (26001-27000/27626)
+2025-06-26 10:32:16,379 - INFO - Processing metadata batch 28 (27001-27626/27626)
+2025-06-26 10:32:16,888 - INFO - Saving unified data to data_unified.json...
+2025-06-26 10:32:30,638 - INFO - Successfully saved 27626 unified servers to data_unified.json
+2025-06-26 10:32:30,638 - INFO - Generating summary statistics...
+2025-06-26 10:32:31,007 - INFO - Summary statistics saved to data_unified_summary.json
+2025-06-26 10:32:31,007 - INFO - Total unified servers: 27626
+2025-06-26 10:32:31,007 - INFO - Finance-related servers: 1223
+2025-06-26 10:32:31,007 - INFO - Servers with extracted tools: 13646 (49.4%)
+2025-06-26 10:32:31,007 - INFO - Total extracted tools: 108031
+2025-06-26 10:32:31,007 - INFO - Tools by source: {'smithery': 18244, 'readme': 89603, 'html': 184}
+2025-06-26 10:32:31,008 - INFO - Tools by access level: {'read': 79337, 'write': 19091, 'execute': 9603}
+2025-06-26 10:32:31,008 - INFO - Servers with multiple sources: 520
+2025-06-26 10:32:31,085 - INFO - Unified MCP data processing completed successfully!
+2025-06-26 10:32:31,085 - INFO - ✅ All processing completed successfully!
+2025-06-26 11:00:52,405 - INFO - Starting unified MCP data processing...
+2025-06-26 11:00:52,658 - INFO - Loaded 7503 Smithery servers
+2025-06-26 11:00:56,216 - INFO - Loaded 21053 GitHub repositories
+2025-06-26 11:00:58,210 - INFO - Loaded 966 Official list servers from full dataset
+2025-06-26 11:00:58,210 - INFO - Processing Smithery data...
+2025-06-26 11:00:58,319 - INFO - Processing GitHub data...
+2025-06-26 11:00:58,853 - INFO - Processing Official list data...
+2025-06-26 11:00:58,861 - INFO - Enhancing metadata and classifying servers...
+2025-06-26 11:00:58,862 - INFO - Preparing text data for batch classification...
+2025-06-26 11:00:58,908 - INFO - Running batch NAICS classification...
+2025-06-26 11:00:58,908 - INFO - Pre-compiling NAICS patterns...
+2025-06-26 11:00:58,932 - INFO - Classifying sector 11 (1/20)
+2025-06-26 11:01:01,321 - INFO - Classifying sector 21 (2/20)
+2025-06-26 11:01:02,936 - INFO - Classifying sector 22 (3/20)
+2025-06-26 11:01:04,087 - INFO - Classifying sector 23 (4/20)
+2025-06-26 11:01:05,734 - INFO - Classifying sector 31 (5/20)
+2025-06-26 11:01:08,043 - INFO - Classifying sector 42 (6/20)
+2025-06-26 11:01:10,714 - INFO - Classifying sector 44 (7/20)
+2025-06-26 11:01:13,265 - INFO - Classifying sector 48 (8/20)
+2025-06-26 11:01:15,890 - INFO - Classifying sector 51 (9/20)
+2025-06-26 11:01:18,003 - INFO - Classifying sector 52 (10/20)
+2025-06-26 11:01:19,841 - INFO - Classifying sector 53 (11/20)
+2025-06-26 11:01:22,079 - INFO - Classifying sector 54 (12/20)
+2025-06-26 11:01:23,915 - INFO - Classifying sector 55 (13/20)
+2025-06-26 11:01:24,494 - INFO - Classifying sector 56 (14/20)
+2025-06-26 11:01:26,251 - INFO - Classifying sector 61 (15/20)
+2025-06-26 11:01:28,533 - INFO - Classifying sector 62 (16/20)
+2025-06-26 11:01:30,788 - INFO - Classifying sector 71 (17/20)
+2025-06-26 11:01:33,638 - INFO - Classifying sector 72 (18/20)
+2025-06-26 11:01:36,076 - INFO - Classifying sector 81 (19/20)
+2025-06-26 11:01:38,420 - INFO - Classifying sector 92 (20/20)
+2025-06-26 11:01:40,913 - INFO - Running batch NAICS subsector classification...
+2025-06-26 11:01:40,913 - INFO - Pre-compiling NAICS subsector patterns...
+2025-06-26 11:01:40,930 - INFO - Classifying subsector 1111 (1/308)
+2025-06-26 11:01:41,239 - INFO - Classifying subsector 1112 (2/308)
+2025-06-26 11:01:41,547 - INFO - Classifying subsector 1113 (3/308)
+2025-06-26 11:01:41,798 - INFO - Classifying subsector 1114 (4/308)
+2025-06-26 11:01:42,140 - INFO - Classifying subsector 1119 (5/308)
+2025-06-26 11:01:42,662 - INFO - Classifying subsector 1121 (6/308)
+2025-06-26 11:01:42,852 - INFO - Classifying subsector 1122 (7/308)
+2025-06-26 11:01:43,102 - INFO - Classifying subsector 1123 (8/308)
+2025-06-26 11:01:43,413 - INFO - Classifying subsector 1124 (9/308)
+2025-06-26 11:01:43,731 - INFO - Classifying subsector 1125 (10/308)
+2025-06-26 11:01:43,983 - INFO - Classifying subsector 1129 (11/308)
+2025-06-26 11:01:44,099 - INFO - Classifying subsector 1131 (12/308)
+2025-06-26 11:01:44,343 - INFO - Classifying subsector 1132 (13/308)
+2025-06-26 11:01:44,650 - INFO - Classifying subsector 1133 (14/308)
+2025-06-26 11:01:45,074 - INFO - Classifying subsector 1141 (15/308)
+2025-06-26 11:01:45,188 - INFO - Classifying subsector 1142 (16/308)
+2025-06-26 11:01:45,368 - INFO - Classifying subsector 1151 (17/308)
+2025-06-26 11:01:45,484 - INFO - Classifying subsector 1152 (18/308)
+2025-06-26 11:01:45,600 - INFO - Classifying subsector 1153 (19/308)
+2025-06-26 11:01:45,715 - INFO - Classifying subsector 2111 (20/308)
+2025-06-26 11:01:45,901 - INFO - Classifying subsector 2121 (21/308)
+2025-06-26 11:01:46,088 - INFO - Classifying subsector 2122 (22/308)
+2025-06-26 11:01:46,220 - INFO - Classifying subsector 2123 (23/308)
+2025-06-26 11:01:46,410 - INFO - Classifying subsector 2131 (24/308)
+2025-06-26 11:01:46,524 - INFO - Classifying subsector 2211 (25/308)
+2025-06-26 11:01:46,590 - INFO - Classifying subsector 2212 (26/308)
+2025-06-26 11:01:46,990 - INFO - Classifying subsector 2213 (27/308)
+2025-06-26 11:01:47,114 - INFO - Classifying subsector 2361 (28/308)
+2025-06-26 11:01:47,174 - INFO - Classifying subsector 2362 (29/308)
+2025-06-26 11:01:47,237 - INFO - Classifying subsector 2371 (30/308)
+2025-06-26 11:01:47,361 - INFO - Classifying subsector 2372 (31/308)
+2025-06-26 11:01:47,485 - INFO - Classifying subsector 2373 (32/308)
+2025-06-26 11:01:47,549 - INFO - Classifying subsector 2379 (33/308)
+2025-06-26 11:01:47,858 - INFO - Classifying subsector 2381 (34/308)
+2025-06-26 11:01:48,044 - INFO - Classifying subsector 2382 (35/308)
+2025-06-26 11:01:48,172 - INFO - Classifying subsector 2383 (36/308)
+2025-06-26 11:01:48,358 - INFO - Classifying subsector 2389 (37/308)
+2025-06-26 11:01:48,601 - INFO - Classifying subsector 3111 (38/308)
+2025-06-26 11:01:48,665 - INFO - Classifying subsector 3112 (39/308)
+2025-06-26 11:01:48,729 - INFO - Classifying subsector 3113 (40/308)
+2025-06-26 11:01:48,851 - INFO - Classifying subsector 3114 (41/308)
+2025-06-26 11:01:49,358 - INFO - Classifying subsector 3115 (42/308)
+2025-06-26 11:01:49,486 - INFO - Classifying subsector 3116 (43/308)
+2025-06-26 11:01:49,606 - INFO - Classifying subsector 3117 (44/308)
+2025-06-26 11:01:49,663 - INFO - Classifying subsector 3118 (45/308)
+2025-06-26 11:01:49,848 - INFO - Classifying subsector 3119 (46/308)
+2025-06-26 11:01:49,912 - INFO - Classifying subsector 3121 (47/308)
+2025-06-26 11:01:50,163 - INFO - Classifying subsector 3122 (48/308)
+2025-06-26 11:01:50,338 - INFO - Classifying subsector 3131 (49/308)
+2025-06-26 11:01:50,652 - INFO - Classifying subsector 3132 (50/308)
+2025-06-26 11:01:50,896 - INFO - Classifying subsector 3133 (51/308)
+2025-06-26 11:01:51,213 - INFO - Classifying subsector 3141 (52/308)
+2025-06-26 11:01:51,529 - INFO - Classifying subsector 3149 (53/308)
+2025-06-26 11:01:51,843 - INFO - Classifying subsector 3151 (54/308)
+2025-06-26 11:01:52,157 - INFO - Classifying subsector 3152 (55/308)
+2025-06-26 11:01:52,477 - INFO - Classifying subsector 3159 (56/308)
+2025-06-26 11:01:52,791 - INFO - Classifying subsector 3161 (57/308)
+2025-06-26 11:01:53,107 - INFO - Classifying subsector 3162 (58/308)
+2025-06-26 11:01:53,288 - INFO - Classifying subsector 3169 (59/308)
+2025-06-26 11:01:54,037 - INFO - Classifying subsector 3211 (60/308)
+2025-06-26 11:01:54,290 - INFO - Classifying subsector 3212 (61/308)
+2025-06-26 11:01:54,602 - INFO - Classifying subsector 3219 (62/308)
+2025-06-26 11:01:54,857 - INFO - Classifying subsector 3221 (63/308)
+2025-06-26 11:01:55,173 - INFO - Classifying subsector 3222 (64/308)
+2025-06-26 11:01:55,424 - INFO - Classifying subsector 3231 (65/308)
+2025-06-26 11:01:55,602 - INFO - Classifying subsector 3241 (66/308)
+2025-06-26 11:01:55,910 - INFO - Classifying subsector 3251 (67/308)
+2025-06-26 11:01:56,153 - INFO - Classifying subsector 3252 (68/308)
+2025-06-26 11:01:56,464 - INFO - Classifying subsector 3253 (69/308)
+2025-06-26 11:01:56,774 - INFO - Classifying subsector 3254 (70/308)
+2025-06-26 11:01:57,020 - INFO - Classifying subsector 3255 (71/308)
+2025-06-26 11:01:57,331 - INFO - Classifying subsector 3256 (72/308)
+2025-06-26 11:01:57,645 - INFO - Classifying subsector 3259 (73/308)
+2025-06-26 11:01:57,958 - INFO - Classifying subsector 3261 (74/308)
+2025-06-26 11:01:58,202 - INFO - Classifying subsector 3262 (75/308)
+2025-06-26 11:01:58,453 - INFO - Classifying subsector 3271 (76/308)
+2025-06-26 11:01:58,767 - INFO - Classifying subsector 3272 (77/308)
+2025-06-26 11:01:59,012 - INFO - Classifying subsector 3273 (78/308)
+2025-06-26 11:01:59,322 - INFO - Classifying subsector 3274 (79/308)
+2025-06-26 11:01:59,634 - INFO - Classifying subsector 3279 (80/308)
+2025-06-26 11:01:59,944 - INFO - Classifying subsector 3311 (81/308)
+2025-06-26 11:02:00,263 - INFO - Classifying subsector 3312 (82/308)
+2025-06-26 11:02:01,083 - INFO - Classifying subsector 3313 (83/308)
+2025-06-26 11:02:01,391 - INFO - Classifying subsector 3314 (84/308)
+2025-06-26 11:02:01,704 - INFO - Classifying subsector 3315 (85/308)
+2025-06-26 11:02:01,883 - INFO - Classifying subsector 3321 (86/308)
+2025-06-26 11:02:02,133 - INFO - Classifying subsector 3322 (87/308)
+2025-06-26 11:02:02,389 - INFO - Classifying subsector 3323 (88/308)
+2025-06-26 11:02:02,701 - INFO - Classifying subsector 3324 (89/308)
+2025-06-26 11:02:03,019 - INFO - Classifying subsector 3325 (90/308)
+2025-06-26 11:02:03,195 - INFO - Classifying subsector 3326 (91/308)
+2025-06-26 11:02:03,506 - INFO - Classifying subsector 3327 (92/308)
+2025-06-26 11:02:03,824 - INFO - Classifying subsector 3328 (93/308)
+2025-06-26 11:02:04,142 - INFO - Classifying subsector 3329 (94/308)
+2025-06-26 11:02:04,455 - INFO - Classifying subsector 3331 (95/308)
+2025-06-26 11:02:04,767 - INFO - Classifying subsector 3332 (96/308)
+2025-06-26 11:02:04,950 - INFO - Classifying subsector 3333 (97/308)
+2025-06-26 11:02:05,260 - INFO - Classifying subsector 3334 (98/308)
+2025-06-26 11:02:05,570 - INFO - Classifying subsector 3335 (99/308)
+2025-06-26 11:02:05,817 - INFO - Classifying subsector 3336 (100/308)
+2025-06-26 11:02:06,129 - INFO - Classifying subsector 3339 (101/308)
+2025-06-26 11:02:06,315 - INFO - Classifying subsector 3341 (102/308)
+2025-06-26 11:02:06,570 - INFO - Classifying subsector 3342 (103/308)
+2025-06-26 11:02:06,823 - INFO - Classifying subsector 3343 (104/308)
+2025-06-26 11:02:07,138 - INFO - Classifying subsector 3344 (105/308)
+2025-06-26 11:02:07,448 - INFO - Classifying subsector 3345 (106/308)
+2025-06-26 11:02:07,760 - INFO - Classifying subsector 3346 (107/308)
+2025-06-26 11:02:08,068 - INFO - Classifying subsector 3351 (108/308)
+2025-06-26 11:02:08,384 - INFO - Classifying subsector 3352 (109/308)
+2025-06-26 11:02:08,632 - INFO - Classifying subsector 3353 (110/308)
+2025-06-26 11:02:08,880 - INFO - Classifying subsector 3359 (111/308)
+2025-06-26 11:02:09,778 - INFO - Classifying subsector 3361 (112/308)
+2025-06-26 11:02:10,090 - INFO - Classifying subsector 3362 (113/308)
+2025-06-26 11:02:10,413 - INFO - Classifying subsector 3363 (114/308)
+2025-06-26 11:02:10,728 - INFO - Classifying subsector 3364 (115/308)
+2025-06-26 11:02:11,040 - INFO - Classifying subsector 3365 (116/308)
+2025-06-26 11:02:11,349 - INFO - Classifying subsector 3366 (117/308)
+2025-06-26 11:02:11,662 - INFO - Classifying subsector 3369 (118/308)
+2025-06-26 11:02:11,913 - INFO - Classifying subsector 3371 (119/308)
+2025-06-26 11:02:12,228 - INFO - Classifying subsector 3372 (120/308)
+2025-06-26 11:02:12,487 - INFO - Classifying subsector 3379 (121/308)
+2025-06-26 11:02:12,679 - INFO - Classifying subsector 3391 (122/308)
+2025-06-26 11:02:12,997 - INFO - Classifying subsector 3399 (123/308)
+2025-06-26 11:02:13,170 - INFO - Classifying subsector 4231 (124/308)
+2025-06-26 11:02:13,486 - INFO - Classifying subsector 4232 (125/308)
+2025-06-26 11:02:13,796 - INFO - Classifying subsector 4233 (126/308)
+2025-06-26 11:02:14,107 - INFO - Classifying subsector 4234 (127/308)
+2025-06-26 11:02:14,417 - INFO - Classifying subsector 4235 (128/308)
+2025-06-26 11:02:14,736 - INFO - Classifying subsector 4236 (129/308)
+2025-06-26 11:02:15,054 - INFO - Classifying subsector 4237 (130/308)
+2025-06-26 11:02:15,381 - INFO - Classifying subsector 4238 (131/308)
+2025-06-26 11:02:15,712 - INFO - Classifying subsector 4239 (132/308)
+2025-06-26 11:02:16,185 - INFO - Classifying subsector 4241 (133/308)
+2025-06-26 11:02:16,506 - INFO - Classifying subsector 4242 (134/308)
+2025-06-26 11:02:16,828 - INFO - Classifying subsector 4243 (135/308)
+2025-06-26 11:02:17,157 - INFO - Classifying subsector 4244 (136/308)
+2025-06-26 11:02:17,472 - INFO - Classifying subsector 4245 (137/308)
+2025-06-26 11:02:17,798 - INFO - Classifying subsector 4246 (138/308)
+2025-06-26 11:02:18,120 - INFO - Classifying subsector 4247 (139/308)
+2025-06-26 11:02:18,437 - INFO - Classifying subsector 4248 (140/308)
+2025-06-26 11:02:18,761 - INFO - Classifying subsector 4249 (141/308)
+2025-06-26 11:02:19,079 - INFO - Classifying subsector 4251 (142/308)
+2025-06-26 11:02:19,400 - INFO - Classifying subsector 4411 (143/308)
+2025-06-26 11:02:19,724 - INFO - Classifying subsector 4412 (144/308)
+2025-06-26 11:02:20,049 - INFO - Classifying subsector 4413 (145/308)
+2025-06-26 11:02:20,371 - INFO - Classifying subsector 4441 (146/308)
+2025-06-26 11:02:20,692 - INFO - Classifying subsector 4442 (147/308)
+2025-06-26 11:02:21,699 - INFO - Classifying subsector 4451 (148/308)
+2025-06-26 11:02:22,028 - INFO - Classifying subsector 4452 (149/308)
+2025-06-26 11:02:22,352 - INFO - Classifying subsector 4453 (150/308)
+2025-06-26 11:02:22,682 - INFO - Classifying subsector 4491 (151/308)
+2025-06-26 11:02:23,003 - INFO - Classifying subsector 4492 (152/308)
+2025-06-26 11:02:23,326 - INFO - Classifying subsector 4551 (153/308)
+2025-06-26 11:02:23,649 - INFO - Classifying subsector 4552 (154/308)
+2025-06-26 11:02:23,971 - INFO - Classifying subsector 4561 (155/308)
+2025-06-26 11:02:24,290 - INFO - Classifying subsector 4571 (156/308)
+2025-06-26 11:02:24,615 - INFO - Classifying subsector 4572 (157/308)
+2025-06-26 11:02:24,939 - INFO - Classifying subsector 4581 (158/308)
+2025-06-26 11:02:25,265 - INFO - Classifying subsector 4582 (159/308)
+2025-06-26 11:02:25,597 - INFO - Classifying subsector 4583 (160/308)
+2025-06-26 11:02:25,920 - INFO - Classifying subsector 4591 (161/308)
+2025-06-26 11:02:26,247 - INFO - Classifying subsector 4592 (162/308)
+2025-06-26 11:02:26,577 - INFO - Classifying subsector 4593 (163/308)
+2025-06-26 11:02:26,902 - INFO - Classifying subsector 4594 (164/308)
+2025-06-26 11:02:27,226 - INFO - Classifying subsector 4595 (165/308)
+2025-06-26 11:02:27,552 - INFO - Classifying subsector 4599 (166/308)
+2025-06-26 11:02:27,872 - INFO - Classifying subsector 4811 (167/308)
+2025-06-26 11:02:28,192 - INFO - Classifying subsector 4812 (168/308)
+2025-06-26 11:02:28,511 - INFO - Classifying subsector 4821 (169/308)
+2025-06-26 11:02:28,832 - INFO - Classifying subsector 4831 (170/308)
+2025-06-26 11:02:29,163 - INFO - Classifying subsector 4832 (171/308)
+2025-06-26 11:02:29,486 - INFO - Classifying subsector 4841 (172/308)
+2025-06-26 11:02:29,805 - INFO - Classifying subsector 4842 (173/308)
+2025-06-26 11:02:30,128 - INFO - Classifying subsector 4851 (174/308)
+2025-06-26 11:02:30,450 - INFO - Classifying subsector 4852 (175/308)
+2025-06-26 11:02:30,776 - INFO - Classifying subsector 4853 (176/308)
+2025-06-26 11:02:31,095 - INFO - Classifying subsector 4854 (177/308)
+2025-06-26 11:02:31,424 - INFO - Classifying subsector 4855 (178/308)
+2025-06-26 11:02:31,751 - INFO - Classifying subsector 4859 (179/308)
+2025-06-26 11:02:32,076 - INFO - Classifying subsector 4861 (180/308)
+2025-06-26 11:02:32,404 - INFO - Classifying subsector 4862 (181/308)
+2025-06-26 11:02:32,729 - INFO - Classifying subsector 4869 (182/308)
+2025-06-26 11:02:33,050 - INFO - Classifying subsector 4871 (183/308)
+2025-06-26 11:02:33,369 - INFO - Classifying subsector 4872 (184/308)
+2025-06-26 11:02:33,687 - INFO - Classifying subsector 4879 (185/308)
+2025-06-26 11:02:34,004 - INFO - Classifying subsector 4881 (186/308)
+2025-06-26 11:02:34,328 - INFO - Classifying subsector 4882 (187/308)
+2025-06-26 11:02:34,651 - INFO - Classifying subsector 4883 (188/308)
+2025-06-26 11:02:34,974 - INFO - Classifying subsector 4884 (189/308)
+2025-06-26 11:02:35,232 - INFO - Classifying subsector 4885 (190/308)
+2025-06-26 11:02:35,555 - INFO - Classifying subsector 4889 (191/308)
+2025-06-26 11:02:35,739 - INFO - Classifying subsector 4911 (192/308)
+2025-06-26 11:02:36,888 - INFO - Classifying subsector 4921 (193/308)
+2025-06-26 11:02:37,207 - INFO - Classifying subsector 4922 (194/308)
+2025-06-26 11:02:37,533 - INFO - Classifying subsector 4931 (195/308)
+2025-06-26 11:02:37,787 - INFO - Classifying subsector 5121 (196/308)
+2025-06-26 11:02:37,991 - INFO - Classifying subsector 5122 (197/308)
+2025-06-26 11:02:38,133 - INFO - Classifying subsector 5131 (198/308)
+2025-06-26 11:02:38,403 - INFO - Classifying subsector 5132 (199/308)
+2025-06-26 11:02:38,606 - INFO - Classifying subsector 5161 (200/308)
+2025-06-26 11:02:38,867 - INFO - Classifying subsector 5162 (201/308)
+2025-06-26 11:02:39,132 - INFO - Classifying subsector 5171 (202/308)
+2025-06-26 11:02:39,450 - INFO - Classifying subsector 5174 (203/308)
+2025-06-26 11:02:39,634 - INFO - Classifying subsector 5178 (204/308)
+2025-06-26 11:02:39,754 - INFO - Classifying subsector 5182 (205/308)
+2025-06-26 11:02:40,022 - INFO - Classifying subsector 5192 (206/308)
+2025-06-26 11:02:40,342 - INFO - Classifying subsector 5211 (207/308)
+2025-06-26 11:02:40,477 - INFO - Classifying subsector 5221 (208/308)
+2025-06-26 11:02:40,744 - INFO - Classifying subsector 5222 (209/308)
+2025-06-26 11:02:41,008 - INFO - Classifying subsector 5223 (210/308)
+2025-06-26 11:02:41,267 - INFO - Classifying subsector 5231 (211/308)
+2025-06-26 11:02:41,591 - INFO - Classifying subsector 5232 (212/308)
+2025-06-26 11:02:41,857 - INFO - Classifying subsector 5239 (213/308)
+2025-06-26 11:02:42,123 - INFO - Classifying subsector 5241 (214/308)
+2025-06-26 11:02:42,390 - INFO - Classifying subsector 5242 (215/308)
+2025-06-26 11:02:42,591 - INFO - Classifying subsector 5251 (216/308)
+2025-06-26 11:02:42,926 - INFO - Classifying subsector 5259 (217/308)
+2025-06-26 11:02:43,134 - INFO - Classifying subsector 5311 (218/308)
+2025-06-26 11:02:43,196 - INFO - Classifying subsector 5312 (219/308)
+2025-06-26 11:02:43,331 - INFO - Classifying subsector 5313 (220/308)
+2025-06-26 11:02:43,391 - INFO - Classifying subsector 5321 (221/308)
+2025-06-26 11:02:43,462 - INFO - Classifying subsector 5322 (222/308)
+2025-06-26 11:02:43,530 - INFO - Classifying subsector 5323 (223/308)
+2025-06-26 11:02:43,722 - INFO - Classifying subsector 5324 (224/308)
+2025-06-26 11:02:44,049 - INFO - Classifying subsector 5331 (225/308)
+2025-06-26 11:02:44,378 - INFO - Classifying subsector 5411 (226/308)
+2025-06-26 11:02:44,648 - INFO - Classifying subsector 5412 (227/308)
+2025-06-26 11:02:44,916 - INFO - Classifying subsector 5413 (228/308)
+2025-06-26 11:02:45,174 - INFO - Classifying subsector 5414 (229/308)
+2025-06-26 11:02:45,244 - INFO - Classifying subsector 5415 (230/308)
+2025-06-26 11:02:45,376 - INFO - Classifying subsector 5416 (231/308)
+2025-06-26 11:02:45,507 - INFO - Classifying subsector 5417 (232/308)
+2025-06-26 11:02:45,712 - INFO - Classifying subsector 5418 (233/308)
+2025-06-26 11:02:45,917 - INFO - Classifying subsector 5419 (234/308)
+2025-06-26 11:02:46,171 - INFO - Classifying subsector 5511 (235/308)
+2025-06-26 11:02:46,287 - INFO - Classifying subsector 5611 (236/308)
+2025-06-26 11:02:46,480 - INFO - Classifying subsector 5612 (237/308)
+2025-06-26 11:02:46,597 - INFO - Classifying subsector 5613 (238/308)
+2025-06-26 11:02:46,715 - INFO - Classifying subsector 5614 (239/308)
+2025-06-26 11:02:46,836 - INFO - Classifying subsector 5615 (240/308)
+2025-06-26 11:02:47,095 - INFO - Classifying subsector 5616 (241/308)
+2025-06-26 11:02:47,285 - INFO - Classifying subsector 5617 (242/308)
+2025-06-26 11:02:47,471 - INFO - Classifying subsector 5619 (243/308)
+2025-06-26 11:02:47,528 - INFO - Classifying subsector 5621 (244/308)
+2025-06-26 11:02:47,721 - INFO - Classifying subsector 5622 (245/308)
+2025-06-26 11:02:47,981 - INFO - Classifying subsector 5629 (246/308)
+2025-06-26 11:02:48,234 - INFO - Classifying subsector 6111 (247/308)
+2025-06-26 11:02:48,491 - INFO - Classifying subsector 6112 (248/308)
+2025-06-26 11:02:48,683 - INFO - Classifying subsector 6113 (249/308)
+2025-06-26 11:02:49,916 - INFO - Classifying subsector 6114 (250/308)
+2025-06-26 11:02:50,237 - INFO - Classifying subsector 6115 (251/308)
+2025-06-26 11:02:50,497 - INFO - Classifying subsector 6116 (252/308)
+2025-06-26 11:02:50,686 - INFO - Classifying subsector 6117 (253/308)
+2025-06-26 11:02:50,801 - INFO - Classifying subsector 6211 (254/308)
+2025-06-26 11:02:50,867 - INFO - Classifying subsector 6212 (255/308)
+2025-06-26 11:02:50,990 - INFO - Classifying subsector 6213 (256/308)
+2025-06-26 11:02:51,250 - INFO - Classifying subsector 6214 (257/308)
+2025-06-26 11:02:51,317 - INFO - Classifying subsector 6215 (258/308)
+2025-06-26 11:02:51,379 - INFO - Classifying subsector 6216 (259/308)
+2025-06-26 11:02:51,445 - INFO - Classifying subsector 6219 (260/308)
+2025-06-26 11:02:51,776 - INFO - Classifying subsector 6221 (261/308)
+2025-06-26 11:02:51,906 - INFO - Classifying subsector 6222 (262/308)
+2025-06-26 11:02:51,971 - INFO - Classifying subsector 6223 (263/308)
+2025-06-26 11:02:52,293 - INFO - Classifying subsector 6231 (264/308)
+2025-06-26 11:02:52,355 - INFO - Classifying subsector 6232 (265/308)
+2025-06-26 11:02:52,676 - INFO - Classifying subsector 6233 (266/308)
+2025-06-26 11:02:52,736 - INFO - Classifying subsector 6239 (267/308)
+2025-06-26 11:02:52,996 - INFO - Classifying subsector 6241 (268/308)
+2025-06-26 11:02:53,182 - INFO - Classifying subsector 6242 (269/308)
+2025-06-26 11:02:53,510 - INFO - Classifying subsector 6243 (270/308)
+2025-06-26 11:02:53,694 - INFO - Classifying subsector 6244 (271/308)
+2025-06-26 11:02:53,883 - INFO - Classifying subsector 7111 (272/308)
+2025-06-26 11:02:54,067 - INFO - Classifying subsector 7112 (273/308)
+2025-06-26 11:02:54,260 - INFO - Classifying subsector 7113 (274/308)
+2025-06-26 11:02:54,588 - INFO - Classifying subsector 7114 (275/308)
+2025-06-26 11:02:54,920 - INFO - Classifying subsector 7115 (276/308)
+2025-06-26 11:02:55,247 - INFO - Classifying subsector 7121 (277/308)
+2025-06-26 11:02:55,570 - INFO - Classifying subsector 7131 (278/308)
+2025-06-26 11:02:55,830 - INFO - Classifying subsector 7132 (279/308)
+2025-06-26 11:02:55,953 - INFO - Classifying subsector 7139 (280/308)
+2025-06-26 11:02:56,140 - INFO - Classifying subsector 7211 (281/308)
+2025-06-26 11:02:56,322 - INFO - Classifying subsector 7212 (282/308)
+2025-06-26 11:02:56,646 - INFO - Classifying subsector 7213 (283/308)
+2025-06-26 11:02:56,968 - INFO - Classifying subsector 7223 (284/308)
+2025-06-26 11:02:57,091 - INFO - Classifying subsector 7224 (285/308)
+2025-06-26 11:02:57,415 - INFO - Classifying subsector 7225 (286/308)
+2025-06-26 11:02:57,674 - INFO - Classifying subsector 8111 (287/308)
+2025-06-26 11:02:57,933 - INFO - Classifying subsector 8112 (288/308)
+2025-06-26 11:02:58,256 - INFO - Classifying subsector 8113 (289/308)
+2025-06-26 11:02:58,574 - INFO - Classifying subsector 8114 (290/308)
+2025-06-26 11:02:58,906 - INFO - Classifying subsector 8121 (291/308)
+2025-06-26 11:02:59,100 - INFO - Classifying subsector 8122 (292/308)
+2025-06-26 11:02:59,295 - INFO - Classifying subsector 8123 (293/308)
+2025-06-26 11:02:59,482 - INFO - Classifying subsector 8129 (294/308)
+2025-06-26 11:02:59,607 - INFO - Classifying subsector 8131 (295/308)
+2025-06-26 11:02:59,794 - INFO - Classifying subsector 8132 (296/308)
+2025-06-26 11:02:59,985 - INFO - Classifying subsector 8133 (297/308)
+2025-06-26 11:03:00,242 - INFO - Classifying subsector 8134 (298/308)
+2025-06-26 11:03:00,498 - INFO - Classifying subsector 8139 (299/308)
+2025-06-26 11:03:00,818 - INFO - Classifying subsector 8141 (300/308)
+2025-06-26 11:03:01,011 - INFO - Classifying subsector 9211 (301/308)
+2025-06-26 11:03:01,266 - INFO - Classifying subsector 9221 (302/308)
+2025-06-26 11:03:01,607 - INFO - Classifying subsector 9231 (303/308)
+2025-06-26 11:03:02,236 - INFO - Classifying subsector 9241 (304/308)
+2025-06-26 11:03:02,553 - INFO - Classifying subsector 9251 (305/308)
+2025-06-26 11:03:02,875 - INFO - Classifying subsector 9261 (306/308)
+2025-06-26 11:03:03,134 - INFO - Classifying subsector 9271 (307/308)
+2025-06-26 11:03:03,325 - INFO - Classifying subsector 9281 (308/308)
+2025-06-26 11:03:03,650 - INFO - Processing remaining metadata...
+2025-06-26 11:03:03,650 - INFO - Processing metadata batch 1 (1-1000/27626)
+2025-06-26 11:03:03,748 - INFO - Processing metadata batch 2 (1001-2000/27626)
+2025-06-26 11:03:03,809 - INFO - Processing metadata batch 3 (2001-3000/27626)
+2025-06-26 11:03:03,832 - INFO - Processing metadata batch 4 (3001-4000/27626)
+2025-06-26 11:03:03,855 - INFO - Processing metadata batch 5 (4001-5000/27626)
+2025-06-26 11:03:03,900 - INFO - Processing metadata batch 6 (5001-6000/27626)
+2025-06-26 11:03:03,929 - INFO - Processing metadata batch 7 (6001-7000/27626)
+2025-06-26 11:03:04,336 - INFO - Processing metadata batch 8 (7001-8000/27626)
+2025-06-26 11:03:04,869 - INFO - Processing metadata batch 9 (8001-9000/27626)
+2025-06-26 11:03:05,406 - INFO - Processing metadata batch 10 (9001-10000/27626)
+2025-06-26 11:03:05,864 - INFO - Processing metadata batch 11 (10001-11000/27626)
+2025-06-26 11:03:06,407 - INFO - Processing metadata batch 12 (11001-12000/27626)
+2025-06-26 11:03:06,927 - INFO - Processing metadata batch 13 (12001-13000/27626)
+2025-06-26 11:03:07,464 - INFO - Processing metadata batch 14 (13001-14000/27626)
+2025-06-26 11:03:07,863 - INFO - Processing metadata batch 15 (14001-15000/27626)
+2025-06-26 11:03:08,286 - INFO - Processing metadata batch 16 (15001-16000/27626)
+2025-06-26 11:03:08,835 - INFO - Processing metadata batch 17 (16001-17000/27626)
+2025-06-26 11:03:09,367 - INFO - Processing metadata batch 18 (17001-18000/27626)
+2025-06-26 11:03:09,762 - INFO - Processing metadata batch 19 (18001-19000/27626)
+2025-06-26 11:03:10,201 - INFO - Processing metadata batch 20 (19001-20000/27626)
+2025-06-26 11:03:10,696 - INFO - Processing metadata batch 21 (20001-21000/27626)
+2025-06-26 11:03:11,205 - INFO - Processing metadata batch 22 (21001-22000/27626)
+2025-06-26 11:03:12,854 - INFO - Processing metadata batch 23 (22001-23000/27626)
+2025-06-26 11:03:13,283 - INFO - Processing metadata batch 24 (23001-24000/27626)
+2025-06-26 11:03:13,863 - INFO - Processing metadata batch 25 (24001-25000/27626)
+2025-06-26 11:03:14,401 - INFO - Processing metadata batch 26 (25001-26000/27626)
+2025-06-26 11:03:14,932 - INFO - Processing metadata batch 27 (26001-27000/27626)
+2025-06-26 11:03:15,459 - INFO - Processing metadata batch 28 (27001-27626/27626)
+2025-06-26 11:03:15,831 - INFO - Saving unified data to data_unified.json...
+2025-06-26 11:03:54,615 - INFO - Successfully saved 27626 unified servers to data_unified.json
+2025-06-26 11:03:54,615 - INFO - Generating summary statistics...
+2025-06-26 11:03:56,890 - INFO - Summary statistics saved to data_unified_summary.json
+2025-06-26 11:03:56,890 - INFO - Total unified servers: 27626
+2025-06-26 11:03:56,890 - INFO - Finance-related servers: 1223
+2025-06-26 11:03:56,890 - INFO - Servers with extracted tools: 13646 (49.4%)
+2025-06-26 11:03:56,890 - INFO - Total extracted tools: 108031
+2025-06-26 11:03:56,890 - INFO - Tools by source: {'smithery': 18244, 'readme': 89603, 'html': 184}
+2025-06-26 11:03:56,891 - INFO - Tools by access level: {'read': 79337, 'write': 19091, 'execute': 9603}
+2025-06-26 11:03:56,891 - INFO - Servers with multiple sources: 520
+2025-06-26 11:03:57,798 - INFO - Unified MCP data processing completed successfully!
+2025-06-26 11:03:57,798 - INFO - ✅ All processing completed successfully!
