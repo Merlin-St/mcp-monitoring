@@ -214,6 +214,13 @@ The system extracts and classifies:
   - Good: "Fix rate limiting bug"
   - Bad: "Comprehensive fix for detailed rate limiting issues with enhanced error handling"
 
+### Git and GitHub Setup
+- **Remote Configuration**: Use SSH for authentication: `git@github.com:Merlin-St/mcp-monitoring.git`
+- **Push to GitHub**: Use `git push origin main` (requires SSH key setup via GitHub CLI)
+- **Authentication**: GitHub CLI (`gh`) should be configured with SSH protocol
+- **Check auth status**: `gh auth status` to verify SSH configuration
+- **Update remote**: `git remote set-url origin git@github.com:Merlin-St/mcp-monitoring.git` if needed
+
 ## Rate Limiting
 
 ### GitHub API

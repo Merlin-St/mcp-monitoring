@@ -570,18 +570,21 @@ def display_finance_analysis(df):
     if embed_file.exists():
         st.subheader("🎯 Interactive Finance Sector Embedding Visualization")
         st.markdown("Explore Finance and Insurance MCP servers in embedding space - similar financial services cluster together:")
+        st.caption("💡 Click to zoom in, double-click to zoom out")
         
         # Read and display the HTML file
         with open(embed_file, 'r', encoding='utf-8') as f:
             html_content = f.read()
         
-        # Scale down the visualization by wrapping in a div with transform
+        # Scale down the visualization with zoom capability, cutting from top
         scaled_html = f"""
-        <div style="transform: scale(0.8); transform-origin: top left; width: 125%; height: 125%;">
+        <div style="transform: scale(0.7); transform-origin: bottom left; width: 143%; height: 600px; overflow: hidden; cursor: zoom-in;" 
+             onclick="this.style.transform='scale(1)'; this.style.cursor='zoom-out'; this.style.height='800px';" 
+             ondblclick="this.style.transform='scale(0.7)'; this.style.cursor='zoom-in'; this.style.height='600px';">
             {html_content}
         </div>
         """
-        st.components.v1.html(scaled_html, height=800, scrolling=False)
+        st.components.v1.html(scaled_html, height=600, scrolling=False)
         
         st.markdown("---")
     else:
@@ -662,9 +665,9 @@ def display_finance_analysis(df):
     # Calculate ranking score combining stars, tools count, and usage
     finance_display = finance_df.copy()
     finance_display['ranking_score'] = (
-        (finance_display.get('stargazers_count', 0) or 0) * 0.4 +
-        (finance_display.get('tools_count', 0) or 0) * 0.4 +
-        (finance_display.get('use_count', 0) or 0) * 0.2
+        finance_display.get('stargazers_count', pd.Series(0, index=finance_display.index)).fillna(0) * 0.4 +
+        finance_display.get('tools_count', pd.Series(0, index=finance_display.index)).fillna(0) * 0.4 +
+        finance_display.get('use_count', pd.Series(0, index=finance_display.index)).fillna(0) * 0.2
     )
     
     # Get top 10 servers
@@ -701,6 +704,46 @@ def display_finance_analysis(df):
         st.dataframe(display_df, use_container_width=True, hide_index=True)
     else:
         st.info("No finance servers found for ranking")
+    
+    # Keywords Matching Table
+    st.subheader("🔑 Subsector Keywords Matching")
+    st.markdown("Keywords that matched finance servers to their respective subsectors:")
+    
+    # Collect keyword matching data
+    keyword_data = []
+    for _, server in finance_df.iterrows():
+        server_name = server.get('canonical_name', server.get('name', 'Unknown'))
+        
+        # Look for subsector keyword columns (sector_52xx_keywords)
+        for col in server.index:
+            if col.startswith('sector_52') and col.endswith('_keywords') and server[col]:
+                subsector_code = col.replace('sector_', '').replace('_keywords', '')
+                keywords = server[col]
+                if isinstance(keywords, list) and keywords:
+                    try:
+                        subsector_num = int(subsector_code)
+                        subsector_name = f"{subsector_code}: {NAICS_SUBSECTORS.get(subsector_num, 'Unknown')}"
+                    except:
+                        subsector_name = subsector_code
+                    
+                    keyword_data.append({
+                        'Server Name': server_name,
+                        'Subsector': subsector_name,
+                        'Matched Keywords': ', '.join(keywords[:5]) + ('...' if len(keywords) > 5 else ''),
+                        'Total Keywords': len(keywords),
+                        'Stars': server.get('stargazers_count', 0) or 0,
+                        'Source': server.get('primary_source', 'Unknown')
+                    })
+    
+    if keyword_data:
+        keyword_df = pd.DataFrame(keyword_data)
+        keyword_df = keyword_df.sort_values(['Subsector', 'Stars'], ascending=[True, False])
+        st.dataframe(keyword_df, use_container_width=True, hide_index=True)
+        
+        # Summary of keyword matches
+        st.caption(f"📊 **Summary**: {len(keyword_df)} keyword matches across {len(keyword_df['Server Name'].unique())} servers and {len(keyword_df['Subsector'].unique())} subsectors")
+    else:
+        st.info("No keyword matching data available for finance servers")
     
     # Tools Analysis for Finance Sector
     st.subheader("🔧 Tools Analysis - Finance Sector")
