@@ -220,6 +220,7 @@ The system extracts and classifies:
 - **Authentication**: GitHub CLI (`gh`) should be configured with SSH protocol
 - **Check auth status**: `gh auth status` to verify SSH configuration
 - **Update remote**: `git remote set-url origin git@github.com:Merlin-St/mcp-monitoring.git` if needed
+- **IMPORTANT**: Always ensure remote uses SSH, not HTTPS. If push takes too long, check `git remote -v` and update to SSH if needed.
 
 ## Rate Limiting
 
