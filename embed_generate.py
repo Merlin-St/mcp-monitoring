@@ -16,6 +16,10 @@ import time
 from tqdm import tqdm
 from bertopic import BERTopic
 from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.model_selection import train_test_split
+import gensim
+from gensim.models.coherencemodel import CoherenceModel
+from gensim.corpora import Dictionary
 import torch
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
@@ -294,7 +298,7 @@ def create_bertopic_model(embeddings, texts, min_cluster_size=5, n_neighbors=15,
     
     return topic_model, topics, probs
 
-def create_interactive_plot(df, topic_info=None):
+def create_interactive_plot(df, topic_info=None, validation_metrics=None):
     """Creates an interactive scatter plot using Plotly with direct cluster labeling."""
     import numpy as np
     
@@ -320,13 +324,21 @@ def create_interactive_plot(df, topic_info=None):
     
     df['hover_text'] = hover_text
     
+    # Create title with validation metrics if available
+    title = 'BERTopic Analysis of MCP Server Descriptions'
+    if validation_metrics:
+        title += f'<br><sub>Train Outliers: {validation_metrics.get("train_outlier_pct", "N/A"):.1f}% | '
+        title += f'Test Outliers: {validation_metrics.get("test_outlier_pct", "N/A"):.1f}% | '
+        title += f'Train Coherence: {validation_metrics.get("train_coherence", "N/A"):.3f} | '
+        title += f'Test Coherence: {validation_metrics.get("test_coherence", "N/A"):.3f}</sub>'
+    
     fig = px.scatter(
         df,
         x='x',
         y='y',
         color='topic',
         custom_data=['canonical_name', 'text', 'stargazers_count'],
-        title='BERTopic Analysis of MCP Server Descriptions',
+        title=title,
         template='plotly_dark'
     )
     
@@ -407,6 +419,52 @@ def create_interactive_plot(df, topic_info=None):
         showlegend=False  # No legend
     )
     return fig
+
+def calculate_topic_coherence(topic_model, texts, topics):
+    """Calculate topic coherence using Gensim's coherence model."""
+    try:
+        # Prepare documents for coherence calculation
+        # Remove outliers (-1 topics) for coherence calculation
+        valid_topics = [t for t in topics if t != -1]
+        valid_texts = [texts[i] for i, t in enumerate(topics) if t != -1]
+        
+        if len(valid_topics) == 0 or len(set(valid_topics)) <= 1:
+            return None, "No valid topics found for coherence calculation"
+        
+        # Tokenize documents
+        tokenized_docs = [text.lower().split() for text in valid_texts]
+        
+        # Create dictionary and corpus
+        dictionary = Dictionary(tokenized_docs)
+        
+        # Get topic words from BERTopic model
+        topic_words = []
+        topic_info = topic_model.get_topic_info()
+        
+        for topic_id in topic_info['Topic'].values:
+            if topic_id != -1:  # Skip outliers
+                words = topic_model.get_topic(topic_id)
+                if words:
+                    # Get just the words (not the probabilities)
+                    topic_word_list = [word for word, _ in words[:10]]  # Top 10 words
+                    topic_words.append(topic_word_list)
+        
+        if len(topic_words) == 0:
+            return None, "No topic words found"
+        
+        # Calculate coherence score
+        coherence_model = CoherenceModel(
+            topics=topic_words,
+            texts=tokenized_docs,
+            dictionary=dictionary,
+            coherence='c_v'  # C_V coherence measure
+        )
+        
+        coherence_score = coherence_model.get_coherence()
+        return coherence_score, f"Coherence calculated for {len(topic_words)} topics"
+        
+    except Exception as e:
+        return None, f"Coherence calculation failed: {str(e)}"
 
 def find_non_overlapping_position(center_x, center_y, used_positions, x_min, x_max, y_min, y_max, min_distance=0.3):
     """Find a position for annotation that doesn't overlap with existing ones."""
@@ -636,6 +694,144 @@ def main():
         return
 
     # %%
+    ### 3.5. TRAIN-TEST SPLIT VALIDATION FOR TOPIC MODEL STABILITY ###
+    
+    if len(df) > 100:  # Only perform validation if you have enough data
+        logger.info("Performing train-test split validation for topic model stability.")
+        
+        # 1. Split the data (80% train, 20% test)
+        indices = range(len(df))
+        train_indices, test_indices = train_test_split(indices, test_size=0.2, random_state=42)
+
+        df_train = df.iloc[train_indices].reset_index(drop=True)
+        df_test = df.iloc[test_indices].reset_index(drop=True)
+
+        embeddings_train = embeddings[train_indices]
+        embeddings_test = embeddings[test_indices]
+        
+        texts_train = df_train['text'].tolist()
+        texts_test = df_test['text'].tolist()
+
+        logger.info(f"Train set size: {len(texts_train)}, Test set size: {len(texts_test)}")
+
+        # 2. Create and train BERTopic model on training set only
+        min_cluster_size_val = max(3, min(5, len(texts_train) // 20))  # Adaptive cluster size
+        n_neighbors_val = max(2, min(10, len(texts_train) - 1))
+        
+        logger.info("Fitting topic model on TRAINING set for validation...")
+        validation_start = time.time()
+        
+        try:
+            # Create model specifically for validation (separate from main analysis)
+            topic_model_validation, train_topics, _ = create_bertopic_model(
+                embeddings_train, 
+                texts_train, 
+                min_cluster_size=min_cluster_size_val,
+                n_neighbors=n_neighbors_val,
+                clustering_algorithm=args.clustering
+            )
+            
+            # 3. Transform test set to predict topics on unseen data
+            logger.info("Transforming TEST set to predict topics...")
+            test_topics, _ = topic_model_validation.transform(texts_test, embeddings_test)
+            
+            # 4. Evaluate stability metrics
+            num_train_outliers = np.sum(np.array(train_topics) == -1)
+            num_test_outliers = np.sum(np.array(test_topics) == -1)
+            
+            train_outlier_pct = (num_train_outliers / len(texts_train)) * 100
+            test_outlier_pct = (num_test_outliers / len(texts_test)) * 100
+            
+            # Topic consistency check
+            train_topics_found = len(set(train_topics)) - (1 if -1 in train_topics else 0)
+            test_topics_assigned = len(set(test_topics)) - (1 if -1 in test_topics else 0)
+            
+            # Calculate coherence scores
+            logger.info("Calculating topic coherence scores...")
+            train_coherence, train_coh_msg = calculate_topic_coherence(topic_model_validation, texts_train, train_topics)
+            test_coherence, test_coh_msg = calculate_topic_coherence(topic_model_validation, texts_test, test_topics)
+            
+            logger.info(f"Train coherence: {train_coh_msg}")
+            logger.info(f"Test coherence: {test_coh_msg}")
+            
+            # Store validation metrics for later use
+            validation_metrics = {
+                'train_outlier_pct': train_outlier_pct,
+                'test_outlier_pct': test_outlier_pct,
+                'train_topics_found': train_topics_found,
+                'test_topics_assigned': test_topics_assigned,
+                'train_coherence': train_coherence if train_coherence is not None else 0.0,
+                'test_coherence': test_coherence if test_coherence is not None else 0.0
+            }
+            
+            validation_duration = time.time() - validation_start
+            
+            logger.info("--- Train-Test Validation Results ---")
+            logger.info(f"Training outliers: {num_train_outliers}/{len(texts_train)} ({train_outlier_pct:.1f}%)")
+            logger.info(f"Test outliers: {num_test_outliers}/{len(texts_test)} ({test_outlier_pct:.1f}%)")
+            logger.info(f"Topics found in training: {train_topics_found}")
+            logger.info(f"Unique topics assigned to test: {test_topics_assigned}")
+            logger.info(f"Validation completed in {validation_duration:.1f} seconds")
+            
+            print("\n--- Topic Model Stability Results ---")
+            print(f"Training outlier rate: {train_outlier_pct:.1f}%")
+            print(f"Test outlier rate: {test_outlier_pct:.1f}%")
+            print(f"Topics discovered: {train_topics_found}")
+            
+            # Print coherence scores
+            if train_coherence is not None:
+                print(f"Training coherence: {train_coherence:.3f}")
+            else:
+                print("Training coherence: N/A (calculation failed)")
+                
+            if test_coherence is not None:
+                print(f"Test coherence: {test_coherence:.3f}")
+            else:
+                print("Test coherence: N/A (calculation failed)")
+            
+            # Outlier rate assessment
+            if test_outlier_pct > 40:
+                print("  ⚠️  WARNING: High test outlier rate suggests topics may not generalize well")
+            elif test_outlier_pct > 25:
+                print("  ⚠️  CAUTION: Moderate outlier rate - topics may be somewhat unstable")
+            else:
+                print("  ✅ GOOD: Low outlier rate suggests stable, generalizable topics")
+                
+            if abs(test_outlier_pct - train_outlier_pct) > 15:
+                print("  ⚠️  WARNING: Large difference between train/test outlier rates")
+            else:
+                print("  ✅ GOOD: Similar outlier rates between train/test sets")
+            
+            # Coherence assessment
+            if train_coherence is not None and test_coherence is not None:
+                if test_coherence > 0.4:
+                    print("  ✅ GOOD: High topic coherence indicates meaningful topics")
+                elif test_coherence > 0.25:
+                    print("  ⚠️  MODERATE: Decent topic coherence")
+                else:
+                    print("  ⚠️  WARNING: Low topic coherence suggests unclear topics")
+                    
+                if abs(train_coherence - test_coherence) > 0.1:
+                    print("  ⚠️  WARNING: Large coherence difference between train/test")
+                else:
+                    print("  ✅ GOOD: Similar coherence between train/test sets")
+                
+            print("-------------------------------------\n")
+            
+            # Clean up validation model to free memory
+            del topic_model_validation
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+                
+        except Exception as e:
+            validation_metrics = None
+            logger.warning(f"Train-test validation failed: {str(e)}")
+            print("⚠️  Train-test validation could not be completed")
+    else:
+        validation_metrics = None
+        logger.info(f"Skipping train-test validation (only {len(df)} samples, need >100)")
+
+    # %%
     ### 4. APPLY BERTOPIC MODELING ###
 
     if not df.empty and embeddings is not None:
@@ -686,10 +882,28 @@ def main():
         
         df['topic_label'] = df['topic'].map(topic_labels)
         logger.info("Topic labeling complete.")
+        
+        # Calculate coherence for full dataset
+        logger.info("Calculating coherence for full dataset...")
+        full_coherence, full_coh_msg = calculate_topic_coherence(topic_model, df['text'].tolist(), topics)
+        logger.info(f"Full dataset coherence: {full_coh_msg}")
+        
+        # Add full dataset coherence to validation metrics if available
+        if validation_metrics is not None:
+            validation_metrics['full_coherence'] = full_coherence if full_coherence is not None else 0.0
+        else:
+            validation_metrics = {
+                'full_coherence': full_coherence if full_coherence is not None else 0.0,
+                'train_outlier_pct': 0.0,
+                'test_outlier_pct': 0.0,
+                'train_coherence': 0.0,
+                'test_coherence': 0.0
+            }
+        
         progress_bar.update(1)  # Step 4: Topic labeling complete
         
-        # Create visualization
-        fig = create_interactive_plot(df, topic_info)
+        # Create visualization with validation metrics
+        fig = create_interactive_plot(df, topic_info, validation_metrics)
         
         # Save figure as HTML file
         filename_suffix = ""
@@ -713,6 +927,7 @@ def main():
             'topic_info': topic_info.to_dict('records'),
             'topic_labels': {str(k): v for k, v in topic_labels.items()},
             'num_topics': len(topic_info) - 1,  # Exclude outliers
+            'validation_metrics': validation_metrics,
             'servers': results
         }
         
@@ -723,6 +938,8 @@ def main():
         # Print topic summary
         print(f"\nTopic Analysis Summary:")
         print(f"Found {len(topic_info) - 1} topics (excluding outliers)")
+        if full_coherence is not None:
+            print(f"Full dataset coherence: {full_coherence:.3f}")
         for topic_id, label in sorted(topic_labels.items()):
             if topic_id != -1:
                 count = len(df[df['topic'] == topic_id])
