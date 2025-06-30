@@ -362,11 +362,13 @@ def display_naics_classification(df):
         
         # Scale down the visualization by wrapping in a div with transform
         scaled_html = f"""
-        <div style="transform: scale(0.8); transform-origin: top left; width: 125%; height: 125%;">
-            {html_content}
+        <div style="display: flex; justify-content: center; align-items: center; height: 100%; width: 100%;">
+            <div style="transform: scale(0.8); transform-origin: top left; width: 125%; height: 125%;">
+                {html_content}
+            </div>
         </div>
         """
-        st.components.v1.html(scaled_html, height=800, scrolling=False)
+        st.components.v1.html(scaled_html, height=900, scrolling=False)
         
         st.markdown("---")
     else:
@@ -570,7 +572,6 @@ def display_finance_analysis(df):
     if embed_file.exists():
         st.subheader("🎯 Interactive Finance Sector Embedding Visualization")
         st.markdown("Explore Finance and Insurance MCP servers in embedding space - similar financial services cluster together:")
-        st.caption("💡 Click to zoom in, double-click to zoom out")
         
         # Read and display the HTML file
         with open(embed_file, 'r', encoding='utf-8') as f:
@@ -578,13 +579,14 @@ def display_finance_analysis(df):
         
         # Scale down the visualization with zoom capability, cutting from top
         scaled_html = f"""
-        <div style="transform: scale(0.7); transform-origin: bottom left; width: 143%; height: 600px; overflow: hidden; cursor: zoom-in;" 
-             onclick="this.style.transform='scale(1)'; this.style.cursor='zoom-out'; this.style.height='800px';" 
-             ondblclick="this.style.transform='scale(0.7)'; this.style.cursor='zoom-in'; this.style.height='600px';">
-            {html_content}
+        <div style="display: flex; justify-content: center; align-items: center; height: 100%; width: 100%;">
+            <div style="transform: scale(0.8); transform-origin: top left; width: 125%; height: 125%;">
+                {html_content}
+            </div>
         </div>
         """
-        st.components.v1.html(scaled_html, height=600, scrolling=False)
+        
+        st.components.v1.html(scaled_html, height=900, scrolling=False)
         
         st.markdown("---")
     else:
@@ -786,6 +788,158 @@ def display_finance_analysis(df):
             st.metric("Servers with Tools", f"{servers_with_tools:,}")
             if len(finance_df) > 0:
                 st.metric("Avg Tools per Finance Server", f"{total_tools/len(finance_df):.1f}")
+    
+    # All Tools Table for Finance Servers
+    st.subheader("🔧 All Tools - Finance Servers")
+    st.markdown("Complete catalog of all tools available across Finance and Insurance MCP servers, sortable by access level.")
+    
+    # Collect all tools from finance servers
+    all_tools_data = []
+    
+    for _, server in finance_df.iterrows():
+        server_name = server.get('canonical_name', server.get('name', 'Unknown'))
+        tools = server.get('tools', [])
+        
+        if isinstance(tools, list):
+            for tool in tools:
+                if isinstance(tool, dict):
+                    tool_name = tool.get('name', '').lower()
+                    tool_desc = tool.get('description', '').lower()
+                    
+                    # Determine access level using same logic as data processor
+                    execute_keywords = ['execute', 'run', 'call', 'invoke', 'send', 'post', 'create', 'delete', 'update', 'modify', 'transfer', 'pay', 'trade', 'order', 'submit', 'cancel', 'make_', 'load_']
+                    write_keywords = ['write', 'save', 'store', 'upload', 'insert', 'add', 'set_', 'put_']
+                    
+                    if any(keyword in tool_name or keyword in tool_desc for keyword in execute_keywords):
+                        access_level = 'execute'
+                    elif any(keyword in tool_name or keyword in tool_desc for keyword in write_keywords):
+                        access_level = 'write'
+                    else:
+                        access_level = 'read'
+                    
+                    all_tools_data.append({
+                        'Server Name': server_name,
+                        'Tool Name': tool.get('name', 'Unknown'),
+                        'Description': (tool.get('description', '')[:100] + '...' if len(tool.get('description', '')) > 100 else tool.get('description', '')),
+                        'Access Level': access_level,
+                        'Stars': server.get('stargazers_count', 0) or 0,
+                        'Source': server.get('primary_source', 'Unknown'),
+                        'Subsectors': ', '.join([
+                            col.replace('is_subsector_', '').replace('_', '') 
+                            for col in server.index 
+                            if col.startswith('is_subsector_52') and server[col]
+                        ])
+                    })
+    
+    if all_tools_data:
+        tools_df = pd.DataFrame(all_tools_data)
+        
+        # Summary metrics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Total Tools", len(tools_df))
+        with col2:
+            execute_count = len(tools_df[tools_df['Access Level'] == 'execute'])
+            st.metric("Execute Tools", execute_count, f"{execute_count/len(tools_df)*100:.1f}%")
+        with col3:
+            write_count = len(tools_df[tools_df['Access Level'] == 'write'])
+            st.metric("Write Tools", write_count, f"{write_count/len(tools_df)*100:.1f}%")
+        with col4:
+            read_count = len(tools_df[tools_df['Access Level'] == 'read'])
+            st.metric("Read Tools", read_count, f"{read_count/len(tools_df)*100:.1f}%")
+        
+        # Filters for the tools table
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            access_filter = st.multiselect(
+                "Filter by Access Level",
+                options=['execute', 'write', 'read'],
+                default=[],
+                key="tools_access_filter"
+            )
+        
+        with col2:
+            source_filter = st.multiselect(
+                "Filter by Source",
+                options=sorted(tools_df['Source'].unique()),
+                default=[],
+                key="tools_source_filter"
+            )
+        
+        with col3:
+            server_filter = st.multiselect(
+                "Filter by Server",
+                options=sorted(tools_df['Server Name'].unique()),
+                default=[],
+                key="tools_server_filter"
+            )
+        
+        # Apply filters
+        filtered_tools_df = tools_df.copy()
+        if access_filter:
+            filtered_tools_df = filtered_tools_df[filtered_tools_df['Access Level'].isin(access_filter)]
+        if source_filter:
+            filtered_tools_df = filtered_tools_df[filtered_tools_df['Source'].isin(source_filter)]
+        if server_filter:
+            filtered_tools_df = filtered_tools_df[filtered_tools_df['Server Name'].isin(server_filter)]
+        
+        # Sort controls
+        col1, col2 = st.columns(2)
+        with col1:
+            sort_by = st.selectbox(
+                "Sort by",
+                options=['Access Level', 'Server Name', 'Tool Name', 'Stars'],
+                index=0
+            )
+        with col2:
+            sort_order = st.selectbox(
+                "Order",
+                options=['Ascending', 'Descending'],
+                index=1 if sort_by in ['Stars', 'Access Level'] else 0
+            )
+        
+        # Apply sorting
+        ascending = sort_order == 'Ascending'
+        if sort_by == 'Access Level':
+            # Custom sort order for access levels
+            access_order = {'execute': 3, 'write': 2, 'read': 1}
+            filtered_tools_df['sort_key'] = filtered_tools_df['Access Level'].map(access_order)
+            filtered_tools_df = filtered_tools_df.sort_values('sort_key', ascending=ascending).drop('sort_key', axis=1)
+        else:
+            filtered_tools_df = filtered_tools_df.sort_values(sort_by, ascending=ascending)
+        
+        # Display the table
+        st.dataframe(
+            filtered_tools_df[['Server Name', 'Tool Name', 'Description', 'Access Level', 'Stars', 'Source', 'Subsectors']],
+            use_container_width=True,
+            hide_index=True
+        )
+        
+        # Show execute tools specifically
+        execute_tools = tools_df[tools_df['Access Level'] == 'execute']
+        if len(execute_tools) > 0:
+            st.subheader("⚡ Execute Tools - Finance Servers")
+            st.markdown(f"**{len(execute_tools)} execute tools** found across finance servers - these tools can perform actions:")
+            
+            # Group by server for execute tools
+            execute_by_server = execute_tools.groupby('Server Name').agg({
+                'Tool Name': list,
+                'Stars': 'first',
+                'Source': 'first',
+                'Subsectors': 'first'
+            }).reset_index()
+            execute_by_server['Execute Tools Count'] = execute_by_server['Tool Name'].apply(len)
+            execute_by_server['Execute Tools'] = execute_by_server['Tool Name'].apply(lambda x: ', '.join(x[:3]) + ('...' if len(x) > 3 else ''))
+            
+            execute_display = execute_by_server[['Server Name', 'Execute Tools Count', 'Execute Tools', 'Stars', 'Source', 'Subsectors']].sort_values('Execute Tools Count', ascending=False)
+            
+            st.dataframe(execute_display, use_container_width=True, hide_index=True)
+            
+            st.caption(f"💡 **{len(execute_by_server)} finance servers** have execute-level tools that can perform actions like payments, trades, and transactions.")
+        
+    else:
+        st.info("No tools data available for finance servers")
     
     # Finance sector specific insights
     st.subheader("💡 Finance Sector Insights")

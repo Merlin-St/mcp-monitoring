@@ -746,9 +746,37 @@ class UnifiedMCPDataProcessor:
         logger.info(f"Saving unified data to {output_file}...")
         
         try:
+            # Filter servers by creation date (must be after 2024-11-01)
+            from datetime import timezone
+            cutoff_date = datetime(2024, 11, 1, tzinfo=timezone.utc)
+            filtered_servers = []
+            total_servers = len(self.unified_servers)
+            filtered_count = 0
+            
+            for server in self.unified_servers.values():
+                # Check if server has a creation date before cutoff
+                if server.created_at:
+                    try:
+                        # Ensure both dates are timezone-aware for comparison
+                        server_date = server.created_at
+                        if server_date.tzinfo is None:
+                            server_date = server_date.replace(tzinfo=timezone.utc)
+                        
+                        if server_date < cutoff_date:
+                            filtered_count += 1
+                            continue  # Skip this server
+                    except Exception as e:
+                        logger.warning(f"Error comparing date for server {server.id}: {e}")
+                        # If we can't compare dates, include the server to be safe
+                
+                filtered_servers.append(server)
+            
+            logger.info(f"Filtered out {filtered_count} servers created before 2024-11-01")
+            logger.info(f"Processing {len(filtered_servers)} servers (was {total_servers})")
+            
             # Convert to serializable format
             serializable_data = []
-            for server in self.unified_servers.values():
+            for server in filtered_servers:
                 server_dict = {
                     'id': server.id,
                     'canonical_name': getattr(server, 'canonical_name', server.name),
