@@ -1,7 +1,7 @@
 # MCP Server Monitoring Dashboard
 
 ## Overview
-Comprehensive dashboard tracking **27,899 MCP servers** across 3 data sources, with focus on **966 finance-related servers**. Analyzes AI tool proliferation and finance sector adoption using advanced ML techniques.
+Comprehensive dashboard tracking **27,899 MCP servers** across 3 data sources, with focus on **966 finance-related servers**. Analyzes AI tool proliferation and finance sector adoption using advanced ML techniques including semantic embeddings, topic modeling, and automated consequentiality scoring.
 
 ## 🚀 Quick Start
 ```bash
@@ -25,6 +25,7 @@ python dashboard_tmux_launcher.py stop unified
 - **Semantic Embeddings**: High-quality text analysis using sentence-transformers
 - **NAICS Classification**: Sector classification across 20 industries, based on the [latest official US classification](https://www.census.gov/naics/reference_files_tools/2022_NAICS_Manual.pdf). It can be mapped to [O*NET](https://www.onetonline.org/find/industry?i=52)
 - **Topic Modeling**: BERTopic for discovering server themes and clusters
+- **Hyperparameter Optimization**: Automated tuning to minimize outliers and maximize topic coherence
 - **Interactive Visualizations**: 2D/3D embeddings with clustering analysis
 - **GPU Acceleration**: Optimized for CUDA with caching for fast iterations
 
@@ -96,13 +97,28 @@ Raw Sources → Load Data → Process Sources → Deduplicate → Enhance → Sa
 - **Interactive Filtering**: By source, language, finance relevance
 - **Visualizations**: Growth charts, distribution analysis, technology trends
 
-## 🧬 Topic modelling
+## 🧬 Topic Modeling & Optimization
 ```bash
 # Generate embeddings and sector analysis (GPU recommended)
-python embed_generate.py                     # Full dataset analysis
-python embed_generate.py --filter sector_52 # Finance & Insurance (NAICS 52)
+python embed_generate.py --clustering hdbscan                     # Full dataset analysis
+python embed_generate.py --filter sector_52 --clustering hdbscan # Finance & Insurance (NAICS 52)
 
-# Results: JSON data + interactive HTML visualizations
+# Optimize BERTopic parameters for better results (HDBSCAN by default)
+python embed_hyperparameter_optimizer.py                        # Full dataset optimization (≥50 topics required)
+python embed_hyperparameter_optimizer.py --finance              # Finance sector optimization (≥10 topics required)
+python embed_hyperparameter_optimizer.py --kmeans               # Include K-means (note: no outliers)
+python embed_hyperparameter_optimizer.py --test-size 500        # Faster testing with smaller dataset
+python embed_hyperparameter_optimizer.py --max-combinations 50  # Limit parameter combinations
+python embed_hyperparameter_optimizer.py --min-topics-sector 5  # Custom minimum topics for sectors
+python embed_hyperparameter_optimizer.py --min-topics-full 25   # Custom minimum topics for full dataset
+
+# Apply optimized parameters to embed_generate.py
+python embed_apply_optimized_parameters.py embed_hyperparameter_optimization_sector_52.log
+
+# Complete optimization pipeline (one command) - ensures ≥10 topics for finance sector
+python embed_hyperparameter_optimizer.py --finance --test-size 500 --max-combinations 20 && python embed_apply_optimized_parameters.py embed_hyperparameter_optimization_sector_52.log && python embed_generate.py --52 --clustering hdbscan
+
+# Results: JSON data + interactive HTML visualizations + optimization logs
 ```
 
 ## 📁 Key Files
@@ -120,9 +136,18 @@ python embed_generate.py --filter sector_52 # Finance & Insurance (NAICS 52)
 
 ### ML Analysis
 - `embed_generate.py` - GPU-accelerated embedding generation
+- `embed_hyperparameter_optimizer.py` - Automated hyperparameter optimization
+- `embed_apply_optimized_parameters.py` - Helper to apply optimized parameters automatically
 - `naics_classification_config.py` - NAICS sector definitions
 - `embed_*.json` - Analysis results by sector/filter
 - `embed_*.html` - Interactive visualizations
+- `embed_hyperparameter_optimization_*.log` - Optimization results and recommendations
+
+### Consequentiality Scoring
+- `conseq_extract_random_tools_for_ground_truth.py` - Extract random tools for ground truth scoring
+- `data_tools_extraction_utils.py` - Tool extraction and access level classification utilities
+- `conseq_ground_truth_tools_sample.json` - Random tools sample for ground truth scoring
+- `conseq_fin_*` - Finance-specific consequentiality analysis pipeline and results
 
 ### Data Collection
 - `smithery_run_bulk_mcp_download.py` - Smithery API (6,434 servers)
@@ -132,6 +157,7 @@ python embed_generate.py --filter sector_52 # Finance & Insurance (NAICS 52)
 ## 🎯 Research Focus
 Tracks AI tool ecosystem growth with specific attention to:
 - **Finance sector tools** and autonomous capabilities
-- **Consequential system impact** assessment
-- **NAICS sector classification** across 20 industries
-- **Semantic clustering** of server capabilities and use cases
+- **Consequential system impact** assessment through ground truth scoring
+- **NAICS sector classification** across 20 industries with keyword-based automation
+- **Semantic clustering** of server capabilities and use cases using advanced embeddings
+- **Multi-stage analysis pipeline** for finance-specific risk assessment and tool categorization
