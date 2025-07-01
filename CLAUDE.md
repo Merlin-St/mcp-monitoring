@@ -79,7 +79,17 @@ python officiallist_url_scraping.py
 
 **ML Analysis & Embeddings:**
 - `embed_generate.py` - GPU-accelerated embedding generation with NAICS classification
+- `embed_hyperparameter_optimizer.py` - Automated hyperparameter optimization for BERTopic models
+- `embed_apply_optimized_parameters.py` - Helper script to apply optimized parameters to embed_generate.py
 - `naics_classification_config.py` - NAICS sector definitions and keyword mappings
+
+**Consequentiality Scoring:**
+- `conseq_extract_random_tools_for_ground_truth.py` - Extract random tools for ground truth scoring
+- `data_tools_extraction_utils.py` - Tool extraction and access level classification utilities
+- `conseq_fin_data_prep.py` - Finance data preparation for multi-stage analysis
+- `conseq_fin_stage1_filter.py` - Stage 1: Initial filtering of finance-relevant servers
+- `conseq_fin_stage2_assess.py` - Stage 2: Detailed consequentiality assessment
+- `conseq_fin_results_merger.py` - Merge and process multi-stage results
 
 **Utilities:**
 - `smithery_quickcheck_bulk_mcp_data.py` - Data validation
@@ -109,6 +119,7 @@ The system extracts and classifies:
 - **Dimensional Reduction**: UMAP for 2D/3D visualization of server relationships
 - **Clustering**: HDBSCAN for identifying server groups and outliers
 - **Sector Classification**: Automated NAICS sector assignment using keyword matching
+- **Hyperparameter Optimization**: Automated tuning of model parameters to minimize outliers and maximize topic coherence
 
 ## Dashboard Outputs
 
@@ -176,6 +187,18 @@ The system extracts and classifies:
 - `embed_*.html` - Interactive visualization files for each analysis
 - `embeddings_cache/` - Cached embeddings to avoid recomputation
 - `smithery_all_mcp_server_details_complete.json` - Enhanced server details
+
+### Consequentiality Scoring Data Files
+- `conseq_ground_truth_tools_sample.json` - Random tools sample for ground truth scoring
+- `conseq_extract_random_tools.log` - Tool extraction log
+- `conseq_fin_*` - Finance-specific consequentiality analysis files:
+  - `conseq_fin_data_prep_summary.json` - Data preparation summary
+  - `conseq_fin_servers_sample.json` - Finance server sample
+  - `conseq_fin_stage1_input.jsonl` - Stage 1 input data
+  - `conseq_fin_stage1_results.json` - Stage 1 filtering results
+  - `conseq_fin_stage2_input.jsonl` - Stage 2 input data
+  - `conseq_fin_stage1_logs/` - Stage 1 processing logs
+  - `conseq_fin_stage2_logs/` - Stage 2 processing logs
 
 ### Test Data Files
 - `officiallist_mcp_servers_test*.json` - Test datasets
@@ -266,6 +289,38 @@ python embed_generate.py --filter sector_52         # Finance & Insurance sector
 python embed_generate.py --filter sector_54         # Professional Services sector (NAICS 54)
 
 # Results saved as JSON and interactive HTML visualizations
+```
+
+### Hyperparameter Optimization
+```bash
+source ~/si_setup/.venv/bin/activate
+
+# Optimize BERTopic parameters to reduce outliers and improve coherence (HDBSCAN by default)
+python embed_hyperparameter_optimizer.py                        # Full dataset optimization (HDBSCAN only)
+python embed_hyperparameter_optimizer.py --finance              # Finance sector optimization
+python embed_hyperparameter_optimizer.py --52                   # Finance & Insurance sector (NAICS 52)
+python embed_hyperparameter_optimizer.py --54                   # Professional Services sector (NAICS 54)
+
+# Options:
+python embed_hyperparameter_optimizer.py --kmeans               # Include K-means clustering (note: no outliers by definition)
+python embed_hyperparameter_optimizer.py --test-size 500        # Use smaller dataset for faster testing
+python embed_hyperparameter_optimizer.py --max-combinations 50  # Limit parameter combinations to test
+python embed_hyperparameter_optimizer.py --no-cache             # Disable embedding caching
+
+# All results saved to:
+# - embed_hyperparameter_optimization.log (or with sector suffix)
+# - Check end of log file for recommended configuration
+
+# Apply optimized parameters to embed_generate.py:
+python embed_apply_optimized_parameters.py embed_hyperparameter_optimization_sector_52.log
+python embed_apply_optimized_parameters.py embed_hyperparameter_optimization.log --dry-run  # Preview changes
+
+# The helper script:
+# 1. Parses the "RECOMMENDED CONFIGURATION" section from the optimization log
+# 2. Extracts optimized UMAP, HDBSCAN, and Vectorizer parameters
+# 3. Automatically modifies embed_generate.py with the optimal values
+# 4. Creates a backup (.backup) before making changes
+# 5. Uses regex to find and replace parameter values in the source code
 ```
 
 ### Testing & Validation
