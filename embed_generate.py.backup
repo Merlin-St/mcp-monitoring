@@ -258,18 +258,18 @@ def create_bertopic_model(embeddings, texts, min_cluster_size=5, n_neighbors=15,
             from cuml.cluster import HDBSCAN as cumlHDBSCAN
             cluster_model = cumlHDBSCAN(
                 min_cluster_size=scaled_min_cluster,         # Smaller clusters for more topics
-                min_samples=max(3, int(scaled_min_cluster * 0.3)), # Use optimized min_samples_factor
+                min_samples=max(3, int(scaled_min_cluster * 0.1)), # Use optimized min_samples_factor
                 metric='euclidean',
-                cluster_selection_epsilon=0.015,              # Smaller epsilon for more distinct clusters
+                cluster_selection_epsilon=0.005,              # Smaller epsilon for more distinct clusters
                 cluster_selection_method='eom'              # Excess of Mass method
             )
             logging.info(f"Using GPU-accelerated HDBSCAN (min_cluster_size={scaled_min_cluster}) targeting ~{target_topics} topics")
         except ImportError:
             cluster_model = hdbscan.HDBSCAN(
                 min_cluster_size=scaled_min_cluster,         # Smaller minimum cluster size for more topics
-                min_samples=max(3, int(scaled_min_cluster * 0.3)), # Use optimized min_samples_factor
+                min_samples=max(3, int(scaled_min_cluster * 0.1)), # Use optimized min_samples_factor
                 metric='euclidean',
-                cluster_selection_epsilon=0.015,              # Smaller epsilon for more distinct clusters
+                cluster_selection_epsilon=0.005,              # Smaller epsilon for more distinct clusters
                 prediction_data=True,
                 core_dist_n_jobs=-1,  # Use all cores
                 algorithm='prims_kdtree'  # Faster for low dimensions
@@ -302,10 +302,10 @@ def create_bertopic_model(embeddings, texts, min_cluster_size=5, n_neighbors=15,
     from sklearn.feature_extraction.text import TfidfVectorizer
     
     vectorizer_model = TfidfVectorizer(
-        max_features=1000,  # Fixed reasonable feature count
+        max_features=1500,  # Fixed reasonable feature count
         ngram_range=(1, 2),  # 1-2 grams for better topic detection
         stop_words=all_stop_words,  # Use custom stop words to filter generic terms
-        min_df=2,  # Safer than optimized min_df=2
+        min_df=1,  # Safer than optimized min_df=1
         max_df=0.7,  # Safer than optimized max_df=0.7
         token_pattern=r'\b[a-zA-Z]{3,}\b',  # Only words with 3+ characters
         sublinear_tf=True,  # Use log scaling for term frequency

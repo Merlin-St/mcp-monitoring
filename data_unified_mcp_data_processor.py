@@ -20,7 +20,7 @@ from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass
 from pathlib import Path
 from naics_classification_config import NAICS_KEYWORDS, NAICS_KEYWORDS_SUB
-from tools_extraction_utils import extract_and_classify_tools
+from data_tools_extraction_utils import extract_and_classify_tools
 
 # Configure logging
 logging.basicConfig(
