@@ -28,6 +28,9 @@ from embed_generate import (
 )
 from naics_classification_config import NAICS_SECTORS, NAICS_KEYWORDS
 
+# Configuration constants
+MIN_TOPICS_REQUIRED = 45  # Minimum number of topics required for optimization
+
 @dataclass
 class OptimizationResult:
     """Results from a single hyperparameter combination"""
@@ -49,7 +52,7 @@ class HyperparameterOptimizer:
     def __init__(self, data_file: str = 'data_unified_filtered.json', 
                  test_size: int = 1000, cache_embeddings: bool = True,
                  sector_filter: Optional[int] = None, include_kmeans: bool = False,
-                 min_topics_sector: int = 10, min_topics_full: int = 50):
+                 min_topics_sector: int = 10, min_topics_full: int = MIN_TOPICS_REQUIRED):
         self.data_file = data_file
         self.test_size = test_size
         self.cache_embeddings = cache_embeddings
@@ -123,8 +126,8 @@ class HyperparameterOptimizer:
         prepared_texts = prepare_texts_parallel(servers_data)
         df = pd.DataFrame(prepared_texts)
         
-        if len(df) < 50:
-            raise ValueError(f"Dataset too small: {len(df)} samples (need at least 50)")
+        if len(df) < 35:
+            raise ValueError(f"Dataset too small: {len(df)} samples (need at least 35)")
         
         self.logger.info(f"Prepared {len(df)} servers for optimization")
         
@@ -185,15 +188,15 @@ class HyperparameterOptimizer:
             'min_dist': [0.01, 0.05, 0.1, 0.2, 0.3],
             'n_components_clustering': [3, 5, 7],
             
-            # HDBSCAN parameters - optimized for more topics (aiming for ~50)
-            'min_cluster_size_factor': [0.005, 0.007, 0.008, 0.01, 0.012, 0.015, 0.02],  # Much smaller factors for more topics
-            'cluster_selection_epsilon': [0.005, 0.01, 0.015, 0.02, 0.03, 0.05],  # Smaller epsilons for more distinct clusters
-            'min_samples_factor': [0.2, 0.3, 0.5, 0.7],  # Include smaller min_samples for more flexibility
+            # HDBSCAN parameters - optimized for 40-60 topics range
+            'min_cluster_size_factor': [0.003, 0.004, 0.005, 0.006, 0.007, 0.008, 0.01],  # Smaller factors for more numerous topics
+            'cluster_selection_epsilon': [0.003, 0.005, 0.008, 0.01, 0.015, 0.02],  # Smaller epsilons for more distinct clusters
+            'min_samples_factor': [0.1, 0.2, 0.3, 0.4, 0.5],  # Include very small min_samples for maximum flexibility
             
-            # Vectorizer parameters - optimized for more diverse topics
-            'max_features': [500, 800, 1000, 1500],  # More features for richer vocabulary
-            'max_df': [0.85, 0.9, 0.95],  # Higher values for better compatibility
-            'min_df': [1, 2],  # Smaller values for small datasets
+            # Vectorizer parameters - optimized for 40-60 topic diversity
+            'max_features': [800, 1000, 1500, 2000],  # Higher feature counts for richer topic vocabulary
+            'max_df': [0.6, 0.7, 0.9],  # Higher values to retain more terms
+            'min_df': [1, 2, 3],  # Include slightly higher min_df for better topic quality
             
             # Clustering algorithm (HDBSCAN by default, K-means if requested)
             'clustering_algorithm': ['hdbscan']
@@ -320,7 +323,7 @@ class HyperparameterOptimizer:
             calculate_probabilities=False,
             nr_topics=nr_topics,
             low_memory=True,
-            min_topic_size=max(10, dataset_size // 50),
+            min_topic_size=max(10, dataset_size // 35),
         )
         
         # Fit model
@@ -750,8 +753,8 @@ def main():
                        help='Include K-means clustering in optimization (note: K-means has no outliers by definition)')
     parser.add_argument('--min-topics-sector', type=int, default=10,
                        help='Minimum number of topics required for sector-specific datasets (default: 10)')
-    parser.add_argument('--min-topics-full', type=int, default=50,
-                       help='Minimum number of topics required for full dataset (default: 50)')
+    parser.add_argument('--min-topics-full', type=int, default=MIN_TOPICS_REQUIRED,
+                       help=f'Minimum number of topics required for full dataset (default: {MIN_TOPICS_REQUIRED})')
     
     # Add sector-specific arguments
     for sector_code in NAICS_KEYWORDS.keys():

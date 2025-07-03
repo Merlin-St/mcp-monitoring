@@ -1,17 +1,32 @@
-2025-06-20 15:07:50,542 - INFO - GPU available: NVIDIA A10G
-2025-06-20 15:07:50,542 - INFO - GPU memory: 23.70 GB
-2025-06-20 15:07:50,543 - INFO - Free GPU memory: 23.70 GB
-2025-06-20 15:07:51,479 - INFO - Successfully loaded 8,878 records from dashboard_mcp_servers_unified_filtered.json
-2025-06-20 15:07:51,867 - INFO - Data preparation completed in 0.4 seconds
-2025-06-20 15:07:51,878 - INFO - Prepared 8,213 servers with meaningful embedding text for processing.
-2025-06-20 15:07:51,878 - INFO - Generating embeddings for 8213 texts with batch size 64
-2025-06-20 15:07:51,906 - INFO - Generated embeddings with shape: (8213, 1024)
-2025-06-20 15:07:51,906 - INFO - Embedding generation completed in 0.0 seconds
-2025-06-20 15:07:51,906 - INFO - Speed: 298270.2 texts/second
-2025-06-20 15:07:51,906 - INFO - Starting BERTopic modeling...
-2025-06-20 15:08:18,726 - INFO - BERTopic modeling completed in 26.8 seconds
-2025-06-20 15:08:18,728 - INFO - Found 30 topics (including outliers)
-2025-06-20 15:08:18,788 - INFO - Topic labeling complete.
-2025-06-20 15:08:19,627 - INFO - Visualization created in 0.9 seconds
-2025-06-20 15:08:19,627 - INFO - Interactive visualization saved to embed_visualization.html
-2025-06-20 15:08:19,850 - INFO - Results with topic analysis saved to embed_results.json
+2025-07-02 20:41:10,300 - INFO - GPU available: NVIDIA A10G
+2025-07-02 20:41:10,300 - INFO - GPU memory: 23.70 GB
+2025-07-02 20:41:10,301 - INFO - Free GPU memory: 23.70 GB
+2025-07-02 20:41:13,535 - INFO - Successfully loaded 9,165 records from data_unified_filtered.json
+2025-07-02 20:41:14,622 - INFO - Data preparation completed in 1.1 seconds
+2025-07-02 20:41:14,635 - INFO - Prepared 8,499 servers with meaningful embedding text for processing.
+2025-07-02 20:41:14,636 - INFO - Generating embeddings for 8499 texts with batch size 64
+2025-07-02 20:41:14,664 - INFO - Generated embeddings with shape: (8499, 1024)
+2025-07-02 20:41:14,664 - INFO - Embedding generation completed in 0.0 seconds
+2025-07-02 20:41:14,664 - INFO - Speed: 301248.9 texts/second
+2025-07-02 20:41:14,664 - INFO - Performing train-test split validation for topic model stability.
+2025-07-02 20:41:14,677 - INFO - Train set size: 6799, Test set size: 1700
+2025-07-02 20:41:14,677 - INFO - Fitting topic model on TRAINING set for validation...
+2025-07-02 20:41:37,525 - INFO - Transforming TEST set to predict topics...
+2025-07-02 20:41:45,571 - INFO - Calculating topic coherence scores...
+2025-07-02 20:41:46,730 - INFO - Train coherence: Coherence calculated for 14 topics
+2025-07-02 20:41:46,730 - INFO - Test coherence: Coherence calculated for 14 topics
+2025-07-02 20:41:46,730 - INFO - --- Train-Test Validation Results ---
+2025-07-02 20:41:46,731 - INFO - Training outliers: 2196/6799 (32.3%)
+2025-07-02 20:41:46,731 - INFO - Test outliers: 625/1700 (36.8%)
+2025-07-02 20:41:46,731 - INFO - Topics found in training: 14
+2025-07-02 20:41:46,731 - INFO - Unique topics assigned to test: 14
+2025-07-02 20:41:46,731 - INFO - Validation completed in 32.1 seconds
+2025-07-02 20:41:46,734 - INFO - Starting BERTopic modeling...
+2025-07-02 20:41:57,982 - INFO - BERTopic modeling completed in 11.2 seconds
+2025-07-02 20:41:57,984 - INFO - Found 16 topics (including outliers)
+2025-07-02 20:41:58,045 - INFO - Topic labeling complete.
+2025-07-02 20:41:58,046 - INFO - Calculating coherence for full dataset...
+2025-07-02 20:41:58,706 - INFO - Full dataset coherence: Coherence calculated for 15 topics
+2025-07-02 20:41:59,377 - INFO - Visualization created in 1.4 seconds
+2025-07-02 20:41:59,377 - INFO - Interactive visualization saved to embed_visualization.html
+2025-07-02 20:41:59,622 - INFO - Results with topic analysis saved to embed_results.json

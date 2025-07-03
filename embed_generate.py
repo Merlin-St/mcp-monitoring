@@ -139,7 +139,7 @@ def generate_high_quality_embeddings(texts, model_name='NovaSearch/stella_en_400
     return embeddings
 
 # OPTIMIZATION 3: Use GPU-accelerated UMAP if available, with optimized parameters
-def reduce_dimensions(embeddings, n_neighbors=15, min_dist=0.1, n_components=2, metric='cosine'):
+def reduce_dimensions(embeddings, n_neighbors=5, min_dist=0.1, n_components=3, metric='cosine'):
     """Reduces the dimensionality of embeddings using UMAP with optimizations."""
     # Ensure n_neighbors is valid
     n_neighbors = min(n_neighbors, len(embeddings) - 1)
@@ -215,7 +215,7 @@ def create_bertopic_model(embeddings, texts, min_cluster_size=5, n_neighbors=15,
         umap_model = cumlUMAP(
             n_neighbors=n_neighbors,
             min_dist=0.1,
-            n_components=5,  # Higher dims for clustering, then reduce
+            n_components=3,  # Optimized from hyperparameter tuning
             metric='cosine',
             random_state=42,
             verbose=False
@@ -225,7 +225,7 @@ def create_bertopic_model(embeddings, texts, min_cluster_size=5, n_neighbors=15,
         umap_model = umap.UMAP(
             n_neighbors=n_neighbors,
             min_dist=0.1,
-            n_components=5,  # Higher dims for clustering
+            n_components=3,  # Optimized from hyperparameter tuning
             metric='cosine',
             random_state=42,
             verbose=False,
@@ -249,37 +249,69 @@ def create_bertopic_model(embeddings, texts, min_cluster_size=5, n_neighbors=15,
         logging.info(f"Using K-means clustering with {n_clusters} clusters")
         nr_topics = n_clusters
     else:
-        # Use HDBSCAN (original algorithm)
+        # Use HDBSCAN (original algorithm) - optimized for 40-60 topics
+        # Scale parameters based on dataset size to get 40-60 topics using optimized factor
+        target_topics = 50
+        scaled_min_cluster = max(5, int(len(texts) * 0.015))  # Use optimized min_cluster_size_factor
+        
         try:
             from cuml.cluster import HDBSCAN as cumlHDBSCAN
             cluster_model = cumlHDBSCAN(
-                min_cluster_size=min_cluster_size,
+                min_cluster_size=scaled_min_cluster,         # Smaller clusters for more topics
+                min_samples=max(3, int(scaled_min_cluster * 0.3)), # Use optimized min_samples_factor
                 metric='euclidean',
-                cluster_selection_epsilon=0.0,  
-                cluster_selection_method='eom'  # 'eom' tends to find more clusters
+                cluster_selection_epsilon=0.015,              # Smaller epsilon for more distinct clusters
+                cluster_selection_method='eom'              # Excess of Mass method
             )
-            logging.info("Using GPU-accelerated HDBSCAN")
+            logging.info(f"Using GPU-accelerated HDBSCAN (min_cluster_size={scaled_min_cluster}) targeting ~{target_topics} topics")
         except ImportError:
             cluster_model = hdbscan.HDBSCAN(
-                min_cluster_size=min_cluster_size,
+                min_cluster_size=scaled_min_cluster,         # Smaller minimum cluster size for more topics
+                min_samples=max(3, int(scaled_min_cluster * 0.3)), # Use optimized min_samples_factor
                 metric='euclidean',
+                cluster_selection_epsilon=0.015,              # Smaller epsilon for more distinct clusters
                 prediction_data=True,
                 core_dist_n_jobs=-1,  # Use all cores
                 algorithm='prims_kdtree'  # Faster for low dimensions
             )
-            logging.info("Using CPU HDBSCAN")
+            logging.info(f"Using CPU HDBSCAN (min_cluster_size={scaled_min_cluster}) targeting ~{target_topics} topics")
         nr_topics = 'auto'
     
     # Optimized vectorizer with parameters suitable for small datasets
     # Adjust min_df and max_df based on dataset size to avoid conflicts
     n_docs = len(texts)
     
-    vectorizer_model = CountVectorizer(
-        max_features=min(300, n_docs * 2),  # Scale features with data size
-        ngram_range=(1, 3),  
-        stop_words='english',
-        min_df=1,  
-        max_df=0.3
+    # Custom stop words to filter out generic MCP/tech terms so sector content emerges naturally
+    custom_stop_words = [
+        'api', 'demo', 'github', 'protocol', 'servers', 'mcp', 'openai', 'stdio', 'prompt',
+        'server', 'tool', 'tools', 'service', 'client', 'function', 'functions', 'endpoint',
+        'integration', 'plugin', 'extension', 'library', 'framework', 'sdk', 'connector',
+        'interface', 'wrapper', 'bridge', 'adapter', 'manager', 'handler', 'provider',
+        'assistant', 'chatgpt', 'gpt', 'claude', 'llm', 'ai', 'model', 'models',
+        'request', 'response', 'http', 'https', 'json', 'xml', 'rest', 'graphql',
+        'python', 'javascript', 'typescript', 'node', 'npm', 'pip', 'install',
+        'example', 'sample', 'test', 'testing', 'mock', 'stub', 'dummy',
+        'context', 'protocol', 'based', 'using', 'allows', 'provides', 'enables'
+    ]
+    
+    # Combine with standard English stop words
+    from sklearn.feature_extraction.text import ENGLISH_STOP_WORDS
+    all_stop_words = list(ENGLISH_STOP_WORDS) + custom_stop_words
+    
+    # Use standard TF-IDF vectorizer (domain boost happens naturally through stop word filtering)
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    
+    vectorizer_model = TfidfVectorizer(
+        max_features=1000,  # Fixed reasonable feature count
+        ngram_range=(1, 2),  # 1-2 grams for better topic detection
+        stop_words=all_stop_words,  # Use custom stop words to filter generic terms
+        min_df=2,  # Safer than optimized min_df=2
+        max_df=0.7,  # Safer than optimized max_df=0.7
+        token_pattern=r'\b[a-zA-Z]{3,}\b',  # Only words with 3+ characters
+        sublinear_tf=True,  # Use log scaling for term frequency
+        norm='l2',  # L2 normalization
+        use_idf=True,  # Use inverse document frequency weighting
+        smooth_idf=True  # Smooth IDF weights
     )
     
     # Create BERTopic model with chosen clustering algorithm
@@ -291,6 +323,7 @@ def create_bertopic_model(embeddings, texts, min_cluster_size=5, n_neighbors=15,
         calculate_probabilities=False,  # Faster without probability calculation
         nr_topics=nr_topics,  # Auto or fixed number based on algorithm
         low_memory=True,  # Use less memory
+        min_topic_size=max(10, len(texts) // 50),  # Minimum viable topic size
     )
     
 # Fit model with pre-computed embeddings

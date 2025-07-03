@@ -323,6 +323,37 @@ python embed_apply_optimized_parameters.py embed_hyperparameter_optimization.log
 # 5. Uses regex to find and replace parameter values in the source code
 ```
 
+### Consequentiality Analysis Pipeline
+```bash
+source ~/si_setup/.venv/bin/activate
+
+# 1. Data Preparation - Create filtered dataset for analysis
+python conseq_fin_data_prep.py                    # Default: 100 servers
+python conseq_fin_data_prep.py --samples 500      # Custom sample size
+python conseq_fin_data_prep.py --all              # Process all servers
+python conseq_fin_data_prep.py --finance          # Only finance-related servers
+
+# 2. Stage 1 - Finance Tool Identification (uses Inspect framework)
+inspect eval conseq_fin_stage1_filter.py --model anthropic/claude-sonnet-4-20250514
+
+# 3. Stage 2 - Consequentiality Assessment (requires Stage 1 completion)
+inspect eval conseq_fin_stage2_assess.py --model anthropic/claude-sonnet-4-20250514
+
+# 4. Results Merger - Combine all stages into final analysis
+python conseq_fin_results_merger.py
+
+# Analysis Pipeline Workflow:
+# 1. Data prep creates conseq_fin_servers_sample.json and conseq_fin_stage1_input.jsonl
+# 2. Stage 1 identifies finance-related servers using LLM evaluation via Inspect framework
+# 3. Stage 2 assesses consequentiality levels (1-5) for finance-identified servers
+# 4. Results merger combines all stages into conseq_fin_final_results.json
+
+# Requirements:
+# - ANTHROPIC_API_KEY environment variable set
+# - Inspect framework installed (pip install inspect_ai)
+# - data_unified_filtered.json must exist (run data_create_filtered_subset.py first)
+```
+
 ### Testing & Validation
 ```bash
 # Quick validation
