@@ -87,8 +87,10 @@ python officiallist_url_scraping.py
 - `conseq_extract_random_tools_for_ground_truth.py` - Extract random tools for ground truth scoring
 - `data_tools_extraction_utils.py` - Tool extraction and access level classification utilities
 - `conseq_fin_data_prep.py` - Finance data preparation for multi-stage analysis
-- `conseq_fin_stage1_filter.py` - Stage 1: Initial filtering of finance-relevant servers
-- `conseq_fin_stage2_assess.py` - Stage 2: Detailed consequentiality assessment
+- `conseq_fin_stage1_inspect.py` - Stage 1: Inspect task for finance-relevant server filtering
+- `conseq_fin_stage1_dfprocessing.py` - Stage 1: DataFrame processing for .eval files
+- `conseq_fin_stage2_inspect.py` - Stage 2: Inspect task for consequentiality assessment
+- `conseq_fin_stage2_dfprocessing.py` - Stage 2: DataFrame processing for .eval files
 - `conseq_fin_results_merger.py` - Merge and process multi-stage results
 
 **Utilities:**
@@ -323,35 +325,53 @@ python embed_apply_optimized_parameters.py embed_hyperparameter_optimization.log
 # 5. Uses regex to find and replace parameter values in the source code
 ```
 
-### Consequentiality Analysis Pipeline
+### Consequentiality Analysis Pipeline (3-Stage Process)
 ```bash
 source ~/si_setup/.venv/bin/activate
 
 # 1. Data Preparation - Create filtered dataset for analysis
 python conseq_fin_data_prep.py                    # Default: 100 servers
-python conseq_fin_data_prep.py --samples 500      # Custom sample size
+python conseq_fin_data_prep.py --samples 500      # Custom sample size (more samples)
+python conseq_fin_data_prep.py --samples 1000     # Large sample for comprehensive analysis
 python conseq_fin_data_prep.py --all              # Process all servers
 python conseq_fin_data_prep.py --finance          # Only finance-related servers
+python conseq_fin_data_prep.py --samples 1000 --finance  # Large finance-focused sample
 
 # 2. Stage 1 - Finance Tool Identification (uses Inspect framework)
-inspect eval conseq_fin_stage1_filter.py --model anthropic/claude-sonnet-4-20250514
+inspect eval conseq_fin_stage1_inspect.py --model anthropic/claude-sonnet-4-20250514
+python conseq_fin_stage1_dfprocessing.py                # Process .eval files to JSON/CSV
 
 # 3. Stage 2 - Consequentiality Assessment (requires Stage 1 completion)
-inspect eval conseq_fin_stage2_assess.py --model anthropic/claude-sonnet-4-20250514
+inspect eval conseq_fin_stage2_inspect.py --model anthropic/claude-sonnet-4-20250514  
+python conseq_fin_stage2_dfprocessing.py                # Process .eval files to JSON/CSV
 
-# 4. Results Merger - Combine all stages into final analysis
-python conseq_fin_results_merger.py
+# 4. Stage 3 - Visualization & Analysis (requires Stage 2 completion)
+python conseq_fin_stage3_visual.py                      # Generate charts and top tools analysis
 
-# Analysis Pipeline Workflow:
-# 1. Data prep creates conseq_fin_servers_sample.json and conseq_fin_stage1_input.jsonl
-# 2. Stage 1 identifies finance-related servers using LLM evaluation via Inspect framework
-# 3. Stage 2 assesses consequentiality levels (1-5) for finance-identified servers
-# 4. Results merger combines all stages into conseq_fin_final_results.json
+# Complete 3-Stage Pipeline Workflow:
+# Stage 1: Data Prep → Finance Filter → Consequentiality Assessment → Visualization
+#   - Data prep creates conseq_fin_servers_sample.json and conseq_fin_stage1_input.jsonl
+#   - Stage 1 identifies finance-related servers using LLM evaluation via Inspect framework
+#     * Run inspect eval to generate .eval files in logs/
+#     * Run DataFrame processing to convert to JSON/CSV (conseq_fin_stage1_results.json/.csv)
+#   - Stage 2 assesses consequentiality levels (1-5) for finance-identified servers
+#     * Run inspect eval to generate .eval files in logs/
+#     * Run DataFrame processing to convert to JSON/CSV (conseq_fin_stage2_results.json/.csv)
+#   - Stage 3 creates visualizations and identifies top execution-level tools
+#     * Generates PNG charts: consequentiality levels, capability distributions
+#     * Displays top 5 most execution-level finance tools with detailed analysis
+#     * Outputs comprehensive summary statistics
+
+# Stage Outputs:
+# - Stage 1: conseq_fin_stage1_results.json/csv (finance-relevant servers)
+# - Stage 2: conseq_fin_stage2_results.json/csv (consequentiality scoring)
+# - Stage 3: PNG charts + console analysis + conseq_fin_stage3_visual.log
 
 # Requirements:
 # - ANTHROPIC_API_KEY environment variable set
 # - Inspect framework installed (pip install inspect_ai)
 # - data_unified_filtered.json must exist (run data_create_filtered_subset.py first)
+# - matplotlib, seaborn, pandas for Stage 3 visualizations
 ```
 
 ### Testing & Validation
