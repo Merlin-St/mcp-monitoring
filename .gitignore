@@ -39,6 +39,7 @@ venv.bak/
 
 # Logs
 *.log
+logs/
 
 # Cache and data directories
 embeddings_cache/
