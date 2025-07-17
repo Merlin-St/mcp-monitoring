@@ -93,6 +93,11 @@ python officiallist_url_scraping.py
 - `conseq_fin_stage2_dfprocessing.py` - Stage 2: DataFrame processing for .eval files
 - `conseq_fin_results_merger.py` - Merge and process multi-stage results
 
+**README Content Filtering:**
+- `readme_content_filter.py` - Stage 1: Keyword-based filtering to remove installation content
+- `readme_filter_inspect.py` - Stage 2: LLM-based refinement using Inspect framework
+- `readme_filter_dfprocessing.py` - Process Inspect results back to JSON format
+
 **Utilities:**
 - `smithery_quickcheck_bulk_mcp_data.py` - Data validation
 - `smithery_bulk_mcp_config.py` - Configuration management
@@ -247,6 +252,54 @@ The system extracts and classifies:
 - **Update remote**: `git remote set-url origin git@github.com:Merlin-St/mcp-monitoring.git` if needed
 - **IMPORTANT**: Always ensure remote uses SSH, not HTTPS. If push takes too long, check `git remote -v` and update to SSH if needed.
 
+## README Content Filtering
+
+### Overview
+The README filtering pipeline removes installation tips and setup instructions while preserving functional descriptions, tool information, and sector-relevant content for embedding analysis and consequentiality scoring.
+
+### Pipeline Stages
+1. **Stage 1**: Keyword-based filtering using pattern matching
+2. **Stage 2**: LLM-based refinement using Inspect framework
+
+### What Gets Removed
+- Package manager commands (`npm install`, `pip install`, `docker run`, etc.)
+- Setup instructions and getting started guides
+- Environment variable configuration for setup
+- Build and compilation instructions
+- Development environment setup
+- Prerequisites and system requirements
+- Code blocks with installation commands
+
+### What Gets Preserved
+- Tool descriptions and functionality
+- API documentation and capabilities
+- Feature lists and what the software does
+- Use cases and application domains
+- Integration possibilities
+- Business logic and workflow descriptions
+- Security and compliance features
+- Service connections and external integrations
+
+### Example Results
+
+**Example 1: 05-make-your-mcp-server (49.2% reduction)**
+- **Before**: 5,685 characters with Docker setup commands, build instructions, and installation steps
+- **After**: 2,886 characters focused on MCP server functionality, tools, and usage
+- **Removed**: Docker build commands, curl installation, configuration files, deployment instructions
+- **Preserved**: Tool descriptions, API explanations, server capabilities, integration examples
+
+**Example 2: 12306-mcp (13.2% reduction)**
+- **Before**: 3,018 characters with npm installation and CLI setup
+- **After**: 2,619 characters focused on ticket search functionality
+- **Removed**: `git clone`, `npm i`, CLI installation commands, configuration setup
+- **Preserved**: Feature table, API capabilities, service descriptions, documentation references
+
+### Performance Statistics
+- Average content reduction: 23.1% (Stage 1 keyword filtering)
+- Processing patterns: 31 installation patterns, 20 section headers, 3 code block patterns
+- Servers processed: 9,141 total servers with 7,000+ containing README content
+- Output: `readme_filtered` column added to `data_unified_filtered.json`
+
 ## Rate Limiting
 
 ### GitHub API
@@ -323,6 +376,37 @@ python embed_apply_optimized_parameters.py embed_hyperparameter_optimization.log
 # 3. Automatically modifies embed_generate.py with the optimal values
 # 4. Creates a backup (.backup) before making changes
 # 5. Uses regex to find and replace parameter values in the source code
+```
+
+### README Content Filtering Pipeline
+```bash
+source ~/si_setup/.venv/bin/activate
+
+# Stage 1: Keyword-based filtering to remove installation content
+python readme_content_filter.py                    # Process all servers
+python readme_content_filter.py --samples 500     # Process sample
+python readme_content_filter.py --test            # Test mode (10 servers)
+
+# Stage 2: LLM-based refinement using Inspect framework (requires ANTHROPIC_API_KEY)
+inspect eval readme_filter_inspect.py --model anthropic/claude-sonnet-4-20250514
+
+# Process Stage 2 results back to JSON
+python readme_filter_dfprocessing.py
+python readme_filter_dfprocessing.py --logs-dir ./logs          # Custom logs directory
+python readme_filter_dfprocessing.py --eval-file specific.eval  # Process specific eval file
+
+# Complete pipeline workflow:
+# 1. Stage 1 adds 'readme_filtered' column to data_unified_filtered.json
+# 2. Stage 2 prepares JSONL dataset and runs LLM refinement via Inspect
+# 3. Processing script updates 'readme_filtered' column with refined content
+# 4. Output ready for embedding analysis and consequentiality scoring
+
+# Key outputs:
+# - data_unified_filtered.json (updated with readme_filtered column)
+# - readme_content_filter_summary.json (Stage 1 statistics)
+# - readme_filter_dfprocessing_summary.json (Stage 2 statistics)
+# - readme_filter_input.jsonl (Inspect input dataset)
+# - logs/readme_filter_*.eval (Inspect evaluation results)
 ```
 
 ### Consequentiality Analysis Pipeline (3-Stage Process)
