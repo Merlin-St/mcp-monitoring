@@ -6,11 +6,11 @@ import json
 import time
 from smithery_bulk_mcp_config import ( # Assuming you are using smithery_bulk_mcp_config.py
     bulk_logger as logger, SMITHERY_API_TOKEN, MCP_API_BASE_URL,
-    ALL_SERVERS_SUMMARIES_JSON, MCP_PAGE_SIZE_BULK, API_DELAY_BULK, MCP_MAX_WORKERS_BULK
+    MCP_PAGE_SIZE_BULK, API_DELAY_BULK, MCP_MAX_WORKERS_BULK
 )
 
 # Define the details file name locally since it's only used here
-ALL_SERVERS_DETAILS_COMPLETE_JSON = "smithery_all_mcp_server_details_complete.json"
+ALL_SERVERS_DETAILS_COMPLETE_JSON = "smithery_data.json"
 # If you switched to config_utils.py, make sure to import the correct variables
 # e.g., API_DELAY_BULK_LIST as API_DELAY_BULK
 from smithery_bulk_mcp_downloader import get_all_server_summaries, get_details_for_all_servers
@@ -40,13 +40,6 @@ def main_bulk_download():
         logger.error("No server summaries were fetched. Cannot proceed to download details. Exiting.")
         return
 
-    # Optional: Save summaries to a file
-    try:
-        with open(ALL_SERVERS_SUMMARIES_JSON, 'w') as f:
-            json.dump(all_summaries, f, indent=2)
-        logger.info(f"All server summaries saved to {ALL_SERVERS_SUMMARIES_JSON}")
-    except IOError as e:
-        logger.error(f"Error saving server summaries to {ALL_SERVERS_SUMMARIES_JSON}: {e}")
 
 
     # --- Step 2: Fetch full details for all servers ---

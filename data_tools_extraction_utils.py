@@ -3,7 +3,7 @@
 Tools Extraction Utilities
 
 Utility functions for extracting and classifying tools from MCP servers.
-Used by data_unified_mcp_data_processor.py for tool processing.
+Used by data_unified_processor.py for tool processing.
 """
 
 import re

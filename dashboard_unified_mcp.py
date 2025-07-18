@@ -87,7 +87,7 @@ def load_unified_data(use_filtered=False):
     if not data_file.exists():
         dataset_type = "filtered" if use_filtered else "full"
         st.error(f"Unified {dataset_type} data file not found: {data_file}")
-        st.info("Please run data_unified_mcp_data_processor.py first.")
+        st.info("Please run data_unified_processor.py first.")
         return pd.DataFrame()
     
     try:

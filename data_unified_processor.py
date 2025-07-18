@@ -3,9 +3,9 @@
 Unified MCP Data Processor
 
 This script consolidates data from all 3 MCP server collection sources:
-1. Smithery API (smithery_all_mcp_server_summaries.json)
-2. GitHub repositories (github_mcp_repositories.json)  
-3. Official MCP servers list (officiallist_mcp_servers_full.json)
+1. Smithery API (smithery_data.json)
+2. GitHub repositories (github_data.json)  
+3. Official MCP servers list (officiallist_data.json)
 
 It merges, deduplicates, and creates a comprehensive unified dataset.
 """
@@ -115,12 +115,58 @@ class UnifiedMCPDataProcessor:
         self.github_data = []
         self.official_data = []
         self.unified_servers: Dict[str, UnifiedMCPServer] = {}
+        self._compiled_patterns_cache = {}  # Cache for compiled regex patterns
+        
+    def _get_compiled_patterns(self, keywords_dict, cache_key):
+        """Compile and cache regex patterns for classification"""
+        if cache_key not in self._compiled_patterns_cache:
+            import re
+            
+            # Define stopwords - overly generic terms to skip
+            stopwords = {
+                'git', 'github', 'server', 'pos', 'directory', 'api', 'storage', 'data', 
+                'natural', 'power', 'professional', 'infrastructure', 'architecture', 
+                'used', 'system', 'technology', 'tech', 'platform', 'online', 'digital', 
+                'internet', 'website', 'application', 'app', 'computer', 'code', 
+                'programming', 'development', 'developer'
+            }
+            
+            compiled_patterns = {}
+            for code, keywords in keywords_dict.items():
+                filtered_keywords = []
+                patterns = []
+                
+                for keyword in keywords:
+                    # Skip generic stopwords for single-word terms
+                    if len(keyword.split()) == 1 and keyword.lower() in stopwords:
+                        continue
+                    
+                    filtered_keywords.append(keyword)
+                    
+                    # Pre-compile patterns for speed
+                    if len(keyword.split()) > 1:  # Multi-word keywords - exact phrase match
+                        patterns.append((keyword, 'phrase'))
+                    else:  # Single word - use word boundaries
+                        pattern = re.compile(r'\b' + re.escape(keyword) + r'\b')
+                        patterns.append((pattern, 'regex'))
+                
+                compiled_patterns[code] = (filtered_keywords, patterns)
+            
+            self._compiled_patterns_cache[cache_key] = compiled_patterns
+        
+        return self._compiled_patterns_cache[cache_key]
+        
+    def _update_server_fields(self, server: UnifiedMCPServer, data: Dict, field_mapping: Dict[str, str]):
+        """Helper to update server fields from data source if not already set"""
+        for server_attr, data_key in field_mapping.items():
+            if not getattr(server, server_attr, None) and data.get(data_key):
+                setattr(server, server_attr, data[data_key])
         
     def load_data_files(self) -> bool:
         """Load all data files"""
         try:
             # Load Smithery data (detailed version with tools)
-            smithery_file = Path("smithery_all_mcp_server_details_complete.json")
+            smithery_file = Path("smithery_data.json")
             if smithery_file.exists():
                 with open(smithery_file, 'r', encoding='utf-8') as f:
                     self.smithery_data = json.load(f)
@@ -129,7 +175,7 @@ class UnifiedMCPDataProcessor:
                 logger.warning("Smithery data file not found")
                 
             # Load GitHub data
-            github_file = Path("github_mcp_repositories.json")
+            github_file = Path("github_data.json")
             if github_file.exists():
                 with open(github_file, 'r', encoding='utf-8') as f:
                     self.github_data = json.load(f)
@@ -138,7 +184,7 @@ class UnifiedMCPDataProcessor:
                 logger.warning("GitHub data file not found")
                 
             # Load Official list data - only use the full file with GitHub metadata
-            official_full_file = Path("officiallist_mcp_servers_full.json")
+            official_full_file = Path("officiallist_data.json")
             
             if official_full_file.exists():
                 with open(official_full_file, 'r', encoding='utf-8') as f:
@@ -320,22 +366,28 @@ class UnifiedMCPDataProcessor:
                         server.data_sources.append('github')
                     
                     # Update fields from GitHub if not already set
-                    if not server.github_url:
-                        server.github_url = github_url
-                    if not server.repository_url:
-                        server.repository_url = github_url
-                    if not server.stargazers_count:
-                        server.stargazers_count = item.get('stargazers_count')
-                    if not server.forks_count:
-                        server.forks_count = item.get('forks_count')
-                    if not server.language:
-                        server.language = item.get('language')
-                    if not server.languages:
-                        server.languages = item.get('languages', {})
-                    if not server.topics:
-                        server.topics = item.get('topics', [])
-                    if not server.readme_content:
-                        server.readme_content = item.get('readme_content')
+                    field_mapping = {
+                        'github_url': github_url,
+                        'repository_url': github_url,
+                        'stargazers_count': 'stargazers_count',
+                        'forks_count': 'forks_count',
+                        'language': 'language',
+                        'languages': 'languages',
+                        'topics': 'topics',
+                        'readme_content': 'readme_content',
+                        'github_description': 'description'
+                    }
+                    
+                    # Handle simple field mappings
+                    for server_attr, data_key in field_mapping.items():
+                        if server_attr in ['github_url', 'repository_url']:
+                            if not getattr(server, server_attr, None):
+                                setattr(server, server_attr, github_url)
+                        else:
+                            if not getattr(server, server_attr, None) and item.get(data_key):
+                                setattr(server, server_attr, item[data_key])
+                    
+                    # Handle special cases
                     if not server.owner_login and item.get('owner'):
                         server.owner_login = item['owner'].get('login')
                         server.owner_name = item['owner'].get('name')
@@ -343,9 +395,6 @@ class UnifiedMCPDataProcessor:
                         server.fork = item.get('fork')
                     if server.archived is None:
                         server.archived = item.get('archived')
-                    # Store GitHub description
-                    if item.get('description'):
-                        server.github_description = item.get('description')
                 else:
                     # Create new server
                     owner = item.get('owner', {})
@@ -520,11 +569,7 @@ class UnifiedMCPDataProcessor:
         
         # Optimize NAICS classification with vectorized operations
         logger.info("Running batch NAICS classification...")
-        self._classify_servers_batch(servers_list, server_texts)
-        
-        # Optimize NAICS subsector classification with vectorized operations
-        logger.info("Running batch NAICS subsector classification...")
-        self._classify_servers_subsector_batch(servers_list, server_texts)
+        self._classify_servers_unified(servers_list, server_texts)
         
         # Process other metadata in optimized batches
         logger.info("Processing remaining metadata...")
@@ -584,59 +629,25 @@ class UnifiedMCPDataProcessor:
                     logger.error(f"Error enhancing metadata for {server.id}: {e}")
                     continue
     
-    def _classify_servers_batch(self, servers_list, server_texts):
-        """Optimized batch NAICS classification using vectorized operations"""
-        import re
+    def _classify_servers_unified(self, servers_list, server_texts):
+        """Unified NAICS classification for both sectors and subsectors"""
+        logger.info("Getting compiled NAICS patterns...")
+        sector_patterns = self._get_compiled_patterns(NAICS_KEYWORDS, 'sector')
+        subsector_patterns = self._get_compiled_patterns(NAICS_KEYWORDS_SUB, 'subsector')
         
-        # Pre-compile all regex patterns for significant speedup
-        logger.info("Pre-compiling NAICS patterns...")
-        compiled_patterns = {}
-        
-        # Define stopwords - overly generic terms to skip
-        stopwords = {
-            'git', 'github', 'server', 'pos', 'directory', 'api', 'storage', 'data', 
-            'natural', 'power', 'professional', 'infrastructure', 'architecture', 
-            'used', 'system', 'technology', 'tech', 'platform', 'online', 'digital', 
-            'internet', 'website', 'application', 'app', 'computer', 'code', 
-            'programming', 'development', 'developer'
-        }
-        
-        for sector_code, keywords in NAICS_KEYWORDS.items():
-            filtered_keywords = []
-            patterns = []
-            
-            for keyword in keywords:
-                # Skip generic stopwords for single-word terms
-                if len(keyword.split()) == 1 and keyword.lower() in stopwords:
-                    continue
-                
-                filtered_keywords.append(keyword)
-                
-                # Pre-compile patterns for speed
-                if len(keyword.split()) > 1:  # Multi-word keywords - exact phrase match
-                    patterns.append((keyword, 'phrase'))
-                else:  # Single word - use word boundaries
-                    pattern = re.compile(r'\b' + re.escape(keyword) + r'\b')
-                    patterns.append((pattern, 'regex'))
-            
-            compiled_patterns[sector_code] = (filtered_keywords, patterns)
-        
-        # Batch process all servers for each sector
+        # Process sectors
         total_sectors = len(NAICS_KEYWORDS)
-        for sector_idx, (sector_code, (keywords, patterns)) in enumerate(compiled_patterns.items()):
+        for sector_idx, (sector_code, (keywords, patterns)) in enumerate(sector_patterns.items()):
             logger.info(f"Classifying sector {sector_code} ({sector_idx + 1}/{total_sectors})")
             
-            # Vectorized matching for all servers at once
-            for server_idx, (server, text) in enumerate(zip(servers_list, server_texts)):
+            for server, text in zip(servers_list, server_texts):
                 matched_keywords = []
                 
-                for idx, (pattern_data, keyword) in enumerate(zip(patterns, filtered_keywords)):
+                for pattern_data, keyword in zip(patterns, keywords):
                     if pattern_data[1] == 'phrase':
-                        # Simple string contains check for phrases
                         if pattern_data[0] in text:
                             matched_keywords.append(pattern_data[0])
                     else:
-                        # Compiled regex for single words
                         if pattern_data[0].search(text):
                             matched_keywords.append(keyword)
                 
@@ -644,69 +655,30 @@ class UnifiedMCPDataProcessor:
                 setattr(server, f'is_sector_{sector_code}', sector_match)
                 setattr(server, f'sector_{sector_code}_keywords', matched_keywords)
         
-        # Set finance classification for backward compatibility
-        for server in servers_list:
-            server.is_finance_related = getattr(server, 'is_sector_52', False)
-    
-    def _classify_servers_subsector_batch(self, servers_list, server_texts):
-        """Optimized batch NAICS subsector classification using vectorized operations"""
-        import re
-        
-        # Pre-compile all regex patterns for significant speedup
-        logger.info("Pre-compiling NAICS subsector patterns...")
-        compiled_patterns = {}
-        
-        # Define stopwords - overly generic terms to skip
-        stopwords = {
-            'git', 'github', 'server', 'pos', 'directory', 'api', 'storage', 'data', 
-            'natural', 'power', 'professional', 'infrastructure', 'architecture', 
-            'used', 'system', 'technology', 'tech', 'platform', 'online', 'digital', 
-            'internet', 'website', 'application', 'app', 'computer', 'code', 
-            'programming', 'development', 'developer'
-        }
-        
-        for subsector_code, keywords in NAICS_KEYWORDS_SUB.items():
-            filtered_keywords = []
-            patterns = []
-            
-            for keyword in keywords:
-                # Skip generic stopwords for single-word terms
-                if len(keyword.split()) == 1 and keyword.lower() in stopwords:
-                    continue
-                
-                filtered_keywords.append(keyword)
-                
-                # Pre-compile patterns for speed
-                if len(keyword.split()) > 1:  # Multi-word keywords - exact phrase match
-                    patterns.append((keyword, 'phrase'))
-                else:  # Single word - use word boundaries
-                    pattern = re.compile(r'\b' + re.escape(keyword) + r'\b')
-                    patterns.append((pattern, 'regex'))
-            
-            compiled_patterns[subsector_code] = (filtered_keywords, patterns)
-        
-        # Batch process all servers for each subsector
+        # Process subsectors
         total_subsectors = len(NAICS_KEYWORDS_SUB)
-        for subsector_idx, (subsector_code, (keywords, patterns)) in enumerate(compiled_patterns.items()):
+        for subsector_idx, (subsector_code, (keywords, patterns)) in enumerate(subsector_patterns.items()):
             logger.info(f"Classifying subsector {subsector_code} ({subsector_idx + 1}/{total_subsectors})")
             
-            # Vectorized matching for all servers at once
-            for server_idx, (server, text) in enumerate(zip(servers_list, server_texts)):
+            for server, text in zip(servers_list, server_texts):
                 matched_keywords = []
                 
-                for idx, (pattern_data, keyword) in enumerate(zip(patterns, filtered_keywords)):
+                for pattern_data, keyword in zip(patterns, keywords):
                     if pattern_data[1] == 'phrase':
-                        # Simple string contains check for phrases
                         if pattern_data[0] in text:
                             matched_keywords.append(pattern_data[0])
                     else:
-                        # Compiled regex for single words
                         if pattern_data[0].search(text):
                             matched_keywords.append(keyword)
                 
                 subsector_match = len(matched_keywords) > 0
                 setattr(server, f'is_subsector_{subsector_code}', subsector_match)
                 setattr(server, f'subsector_{subsector_code}_keywords', matched_keywords)
+        
+        # Set finance classification for backward compatibility
+        for server in servers_list:
+            server.is_finance_related = getattr(server, 'is_sector_52', False)
+    
     
     def create_embedding_text(self, server: UnifiedMCPServer) -> str:
         """Create preprocessed text for embeddings using only canonical name and description"""
@@ -741,106 +713,110 @@ class UnifiedMCPDataProcessor:
             # Fallback to basic name and description if canonical fields not available
             return f"{getattr(server, 'canonical_name', server.name or '')} {getattr(server, 'canonical_description', server.description or '')}".strip()
     
+    def _filter_servers_by_date(self):
+        """Filter servers by creation date (must be after 2024-11-01)"""
+        from datetime import timezone
+        cutoff_date = datetime(2024, 11, 1, tzinfo=timezone.utc)
+        filtered_count = 0
+        
+        for server in self.unified_servers.values():
+            # Check if server has a creation date before cutoff
+            if server.created_at:
+                try:
+                    # Ensure both dates are timezone-aware for comparison
+                    server_date = server.created_at
+                    if server_date.tzinfo is None:
+                        server_date = server_date.replace(tzinfo=timezone.utc)
+                    
+                    if server_date < cutoff_date:
+                        filtered_count += 1
+                        continue  # Skip this server
+                except Exception as e:
+                    logger.warning(f"Error comparing date for server {server.id}: {e}")
+                    # If we can't compare dates, include the server to be safe
+            
+            yield server
+        
+        logger.info(f"Filtered out {filtered_count} servers created before 2024-11-01")
+    
+    def _serialize_server(self, server: UnifiedMCPServer) -> Dict:
+        """Convert server object to serializable dictionary"""
+        server_dict = {
+            'id': server.id,
+            'canonical_name': getattr(server, 'canonical_name', server.name),
+            'canonical_description': getattr(server, 'canonical_description', ''),
+            'name': server.name,
+            'qualified_name': server.qualified_name,
+            'display_name': server.display_name,
+            'description': server.description,
+            'official_description': getattr(server, 'official_description', None),
+            'smithery_description': getattr(server, 'smithery_description', None),
+            'github_description': getattr(server, 'github_description', None),
+            'url': server.url,
+            'homepage': server.homepage,
+            'github_url': server.github_url,
+            'repository_url': server.repository_url,
+            'created_at': server.created_at.isoformat() if server.created_at else None,
+            'updated_at': server.updated_at.isoformat() if server.updated_at else None,
+            'use_count': server.use_count,
+            'stargazers_count': server.stargazers_count,
+            'forks_count': server.forks_count,
+            'language': server.language,
+            'languages': server.languages,
+            'topics': server.topics,
+            'owner_login': server.owner_login,
+            'owner_name': server.owner_name,
+            'fork': server.fork,
+            'archived': server.archived,
+            'data_sources': server.data_sources,
+            'primary_source': getattr(server, 'primary_source', None),
+            'is_finance_related': getattr(server, 'is_finance_related', False),
+            'fetch_status': server.fetch_status,
+            'html_length': server.html_length,
+            'fetch_timestamp': server.fetch_timestamp,
+            'is_github': getattr(server, 'is_github', None),
+            'extracted_date': getattr(server, 'extracted_date', None),
+            'readme_content': server.readme_content,
+            'html_content': server.html_content,
+            'embedding_text': server.embedding_text,
+            'tools': server.tools,
+            'tools_count': server.tools_count,
+            'tools_names': server.tools_names,
+            'tools_summary': server.tools_summary,
+            'extracted_tools': server.extracted_tools,
+            'tools_by_access': server.tools_by_access
+        }
+        
+        # Add all sector classifications and matched keywords
+        for sector_code in NAICS_KEYWORDS.keys():
+            sector_attr = f'is_sector_{sector_code}'
+            keywords_attr = f'sector_{sector_code}_keywords'
+            server_dict[sector_attr] = getattr(server, sector_attr, False)
+            server_dict[keywords_attr] = getattr(server, keywords_attr, [])
+        
+        # Add all subsector classifications and matched keywords
+        for subsector_code in NAICS_KEYWORDS_SUB.keys():
+            subsector_attr = f'is_subsector_{subsector_code}'
+            keywords_attr = f'subsector_{subsector_code}_keywords'
+            server_dict[subsector_attr] = getattr(server, subsector_attr, False)
+            server_dict[keywords_attr] = getattr(server, keywords_attr, [])
+        
+        # Remove None values to reduce file size
+        return {k: v for k, v in server_dict.items() if v is not None}
+    
     def save_unified_data(self, output_file: str = "data_unified.json"):
-        """Save unified data to JSON file"""
+        """Save unified data to JSON file with streaming for memory efficiency"""
         logger.info(f"Saving unified data to {output_file}...")
         
         try:
-            # Filter servers by creation date (must be after 2024-11-01)
-            from datetime import timezone
-            cutoff_date = datetime(2024, 11, 1, tzinfo=timezone.utc)
-            filtered_servers = []
+            # Use generator for memory-efficient processing
+            filtered_servers = list(self._filter_servers_by_date())
             total_servers = len(self.unified_servers)
-            filtered_count = 0
             
-            for server in self.unified_servers.values():
-                # Check if server has a creation date before cutoff
-                if server.created_at:
-                    try:
-                        # Ensure both dates are timezone-aware for comparison
-                        server_date = server.created_at
-                        if server_date.tzinfo is None:
-                            server_date = server_date.replace(tzinfo=timezone.utc)
-                        
-                        if server_date < cutoff_date:
-                            filtered_count += 1
-                            continue  # Skip this server
-                    except Exception as e:
-                        logger.warning(f"Error comparing date for server {server.id}: {e}")
-                        # If we can't compare dates, include the server to be safe
-                
-                filtered_servers.append(server)
-            
-            logger.info(f"Filtered out {filtered_count} servers created before 2024-11-01")
             logger.info(f"Processing {len(filtered_servers)} servers (was {total_servers})")
             
-            # Convert to serializable format
-            serializable_data = []
-            for server in filtered_servers:
-                server_dict = {
-                    'id': server.id,
-                    'canonical_name': getattr(server, 'canonical_name', server.name),
-                    'canonical_description': getattr(server, 'canonical_description', ''),
-                    'name': server.name,
-                    'qualified_name': server.qualified_name,
-                    'display_name': server.display_name,
-                    'description': server.description,
-                    'official_description': getattr(server, 'official_description', None),
-                    'smithery_description': getattr(server, 'smithery_description', None),
-                    'github_description': getattr(server, 'github_description', None),
-                    'url': server.url,
-                    'homepage': server.homepage,
-                    'github_url': server.github_url,
-                    'repository_url': server.repository_url,
-                    'created_at': server.created_at.isoformat() if server.created_at else None,
-                    'updated_at': server.updated_at.isoformat() if server.updated_at else None,
-                    'use_count': server.use_count,
-                    'stargazers_count': server.stargazers_count,
-                    'forks_count': server.forks_count,
-                    'language': server.language,
-                    'languages': server.languages,
-                    'topics': server.topics,
-                    'owner_login': server.owner_login,
-                    'owner_name': server.owner_name,
-                    'fork': server.fork,
-                    'archived': server.archived,
-                    'data_sources': server.data_sources,
-                    'primary_source': getattr(server, 'primary_source', None),
-                    'is_finance_related': getattr(server, 'is_finance_related', False),
-                    'fetch_status': server.fetch_status,
-                    'html_length': server.html_length,
-                    'fetch_timestamp': server.fetch_timestamp,
-                    'is_github': getattr(server, 'is_github', None),
-                    'extracted_date': getattr(server, 'extracted_date', None),
-                    'readme_content': server.readme_content,
-                    'html_content': server.html_content,
-                    'embedding_text': server.embedding_text,
-                    'tools': server.tools,
-                    'tools_count': server.tools_count,
-                    'tools_names': server.tools_names,
-                    'tools_summary': server.tools_summary,
-                    'extracted_tools': server.extracted_tools,
-                    'tools_by_access': server.tools_by_access
-                }
-                
-                # Add all sector classifications and matched keywords
-                for sector_code in NAICS_KEYWORDS.keys():
-                    sector_attr = f'is_sector_{sector_code}'
-                    keywords_attr = f'sector_{sector_code}_keywords'
-                    server_dict[sector_attr] = getattr(server, sector_attr, False)
-                    server_dict[keywords_attr] = getattr(server, keywords_attr, [])
-                
-                # Add all subsector classifications and matched keywords
-                for subsector_code in NAICS_KEYWORDS_SUB.keys():
-                    subsector_attr = f'is_subsector_{subsector_code}'
-                    keywords_attr = f'subsector_{subsector_code}_keywords'
-                    server_dict[subsector_attr] = getattr(server, subsector_attr, False)
-                    server_dict[keywords_attr] = getattr(server, keywords_attr, [])
-                # Remove None values to reduce file size
-                server_dict = {k: v for k, v in server_dict.items() if v is not None}
-                serializable_data.append(server_dict)
-            
-            # Sort by canonical name
+            # Convert to serializable format and sort
+            serializable_data = [self._serialize_server(server) for server in filtered_servers]
             serializable_data.sort(key=lambda x: x.get('canonical_name', '').lower())
             
             with open(output_file, 'w', encoding='utf-8') as f:

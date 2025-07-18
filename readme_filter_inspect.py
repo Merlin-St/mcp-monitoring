@@ -14,7 +14,7 @@ Use readme_filter_dfprocessing.py to process the results.
 
 Usage:
     python readme_content_filter.py                    # Run Stage 1 first
-    inspect eval readme_filter_inspect.py --model anthropic/claude-sonnet-4-20250514
+    inspect eval readme_filter_inspect.py --model anthropic/claude-3-5-haiku-latest --max-connections 300
     python readme_filter_dfprocessing.py               # Process results
 """
 
@@ -53,6 +53,7 @@ REMOVE:
 - Prerequisites or system requirements
 - Code examples for setup/config
 - Directory layout, license, contributing
+- All URLs e.g. [Github](https://github.com) -> Github
 
 GUIDELINES:
 1. Preserve markdown format and structure
@@ -101,8 +102,8 @@ def prepare_readme_dataset():
         
         if readme_content and readme_content.strip():
             # Truncate very long content to manage token limits
-            if len(readme_content) > 8000:
-                readme_content = readme_content[:8000] + "\n[...truncated for length...]"
+            if len(readme_content) > 20000:
+                readme_content = readme_content[:20000] + "\n[...truncated for length...]"
             
             sample = {
                 "input": f"{README_FILTER_SYSTEM_PROMPT}\n\n{readme_content}",
