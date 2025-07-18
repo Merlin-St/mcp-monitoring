@@ -9,7 +9,7 @@ Comprehensive dashboard tracking **27,899 MCP servers** across 3 data sources, w
 source ~/si_setup/.venv/bin/activate
 
 # Process data (if needed)
-python dashboard_unified_mcp_data_processor.py
+python data_unified_processor.py
 
 # Launch dashboard in persistent tmux session (recommended)
 python dashboard_tmux_launcher.py start unified
@@ -58,7 +58,7 @@ python dashboard_tmux_launcher.py stop unified
   - `url`: `https://github.com/modelcontextprotocol/src/everything`
   - `description`: `Reference / test server with prompts, resources, and tools`
 
-### Processing Pipeline (`dashboard_unified_mcp_data_processor.py`)
+### Processing Pipeline (`data_unified_processor.py`)
 
 ```
 Raw Sources → Load Data → Process Sources → Deduplicate → Enhance → Save Unified & Filtered versions
@@ -129,7 +129,7 @@ python embed_hyperparameter_optimizer.py --finance --test-size 500 --max-combina
 - `dashboard_verify_data.py` - Data validation utility
 
 ### Main Data
-- `dashboard_unified_mcp_data_processor.py` - Data unification (27,899 servers)
+- `data_unified_processor.py` - Data unification (27,899 servers)
 - `data_unified.json` - Full unified dataset (343MB, 27,899 servers)
 - `data_unified_filtered.json` - Filtered dataset (225MB, core fields only)
 - `data_unified_summary.json` - Dataset statistics and metadata

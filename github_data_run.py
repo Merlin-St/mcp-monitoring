@@ -19,7 +19,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('github_mcp_collection.log'),
+        logging.FileHandler('github_data_run.log'),
         logging.StreamHandler()  # Keep console output for immediate feedback
     ]
 )
@@ -592,11 +592,11 @@ async def main():
         # Close the session
         await collector.close_session()
         
-        # Save final data with appropriate filename
+        # Save final data with standardized filename
         if test_mode:
-            filename = 'github_mcp_repositories_test_rest.json' if use_rest else 'github_mcp_repositories_test.json'
+            filename = 'github_data_test.json'
         else:
-            filename = 'github_mcp_repositories_rest.json' if use_rest else 'github_mcp_repositories.json'
+            filename = 'github_data.json'
         collector.save_data(repositories, filename)
         
         # Also save a summary
@@ -615,7 +615,7 @@ async def main():
             lang = repo.get('language', 'Unknown')
             summary['repositories_by_language'][lang] = summary['repositories_by_language'].get(lang, 0) + 1
         
-        summary_filename = 'github_mcp_collection_summary_test.json' if test_mode else 'github_mcp_collection_summary.json'
+        summary_filename = 'github_data_summary_test.json' if test_mode else 'github_data_summary.json'
         with open(summary_filename, 'w') as f:
             json.dump(summary, f, indent=2)
         

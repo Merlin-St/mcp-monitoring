@@ -58,7 +58,7 @@ def clean_server_data(server: Dict[str, Any]) -> Dict[str, Any]:
     # Fields to include
     include_fields = {
         'id', 'name', 'canonical_name', 'canonical_description', 
-        'readme_content', 'extracted_tools', 'tools_count', 'tools_names',
+        'readme_filtered', 'extracted_tools', 'tools_count', 'tools_names',
         'tools_by_access', 'homepage', 'url', 'repository_url', 'github_url',
         'topics', 'data_sources', 'primary_source', 'embedding_text',
         'stargazers_count', 'forks_count', 'owner_login', 'fork', 'archived'
@@ -82,9 +82,9 @@ def create_stage1_sample(server: Dict[str, Any]) -> Dict[str, Any]:
     Create a Stage 1 sample for finance identification
     """
     # Truncate readme content to manage token limits
-    readme = server.get('readme_content', '')
-    if len(readme) > 5000:
-        readme = readme[:5000] + "\n[...truncated for length...]"
+    readme = server.get('readme_filtered', '')
+    if len(readme) > 20000:
+        readme = readme[:20000] + "\n[...truncated for length...]"
     
     sample_input = {
         "server_name": server.get('name', ''),

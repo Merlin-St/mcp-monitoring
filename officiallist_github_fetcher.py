@@ -528,7 +528,7 @@ Failed: {len(failed_servers)}
         logger.info(f"Progress saved: {len(repositories)} repositories processed")
 
     def integrate_with_officiallist_full(self, github_metadata_file: str = 'officiallist_github_metadata.json'):
-        """Integrate GitHub metadata into officiallist_mcp_servers_full.json"""
+        """Integrate GitHub metadata into officiallist_data.json"""
         try:
             # Load GitHub metadata
             with open(github_metadata_file, 'r', encoding='utf-8') as f:
@@ -538,7 +538,7 @@ Failed: {len(failed_servers)}
             
             # Load existing officiallist full data
             try:
-                with open('officiallist_mcp_servers_full.json', 'r', encoding='utf-8') as f:
+                with open('officiallist_data.json', 'r', encoding='utf-8') as f:
                     officiallist_data = json.load(f)
             except FileNotFoundError:
                 # Create new structure if file doesn't exist
@@ -572,10 +572,10 @@ Failed: {len(failed_servers)}
             officiallist_data['last_github_integration'] = datetime.now().isoformat()
             
             # Save integrated data
-            with open('officiallist_mcp_servers_full.json', 'w', encoding='utf-8') as f:
+            with open('officiallist_data.json', 'w', encoding='utf-8') as f:
                 json.dump(officiallist_data, f, indent=2, ensure_ascii=False)
             
-            logger.info(f"Successfully integrated GitHub metadata for {enhanced_count} servers into officiallist_mcp_servers_full.json")
+            logger.info(f"Successfully integrated GitHub metadata for {enhanced_count} servers into officiallist_data.json")
             
         except Exception as e:
             logger.error(f"Error integrating GitHub metadata: {e}")
@@ -602,7 +602,7 @@ async def main():
     
     try:
         if args.integrate_only:
-            logger.info("Integration mode: updating officiallist_mcp_servers_full.json with existing metadata")
+            logger.info("Integration mode: updating officiallist_data.json with existing metadata")
             fetcher.integrate_with_officiallist_full()
         else:
             # Fetch GitHub metadata
@@ -616,7 +616,7 @@ async def main():
             await fetcher.save_progress(repositories, [])
             
             # Integrate with officiallist full data
-            logger.info("Integrating GitHub metadata into officiallist_mcp_servers_full.json...")
+            logger.info("Integrating GitHub metadata into officiallist_data.json...")
             fetcher.integrate_with_officiallist_full()
         
         logger.info("Process completed successfully!")

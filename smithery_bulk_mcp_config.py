@@ -13,8 +13,6 @@ MCP_REQUEST_TIMEOUT = 30  # Seconds for API request timeout
 MCP_PAGE_SIZE_BULK = 100 # Number of items per page for Smithery API
 MCP_MAX_WORKERS_BULK = 20 # Max concurrent workers for fetching server details
 
-# Output file for storing the list of all server summaries (from /servers endpoint)
-ALL_SERVERS_SUMMARIES_JSON = "smithery_all_mcp_server_summaries.json"
 
 API_DELAY_BULK = 0.05     # Small delay (in seconds) between paginated calls to the /servers list endpoint
 
