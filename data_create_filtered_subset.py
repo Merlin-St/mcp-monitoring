@@ -20,7 +20,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('filtered_subset_creation.log'),
+        logging.FileHandler('data_create_filtered_subset.log'),
         logging.StreamHandler()
     ]
 )
@@ -315,14 +315,10 @@ def create_filtered_subset(enable_readme_filtering: bool = True):
             else:
                 stats['github_only_excluded'] += 1
                 
-        # Case 2: Smithery only - require use_count >= 1  
+        # Case 2: Smithery only - include all servers from Smithery source
         elif sources == ['smithery']:
-            use_count = server.get('use_count', 0)
-            if use_count >= 1:
-                filtered_data.append(server)
-                stats['smithery_only_included'] += 1
-            else:
-                stats['smithery_only_excluded'] += 1
+            filtered_data.append(server)
+            stats['smithery_only_included'] += 1
                 
         # Case 3: Multiple sources - include all (assume higher quality)
         elif len(sources) > 1:

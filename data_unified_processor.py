@@ -20,14 +20,13 @@ from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass
 from pathlib import Path
 from naics_classification_config import NAICS_KEYWORDS, NAICS_KEYWORDS_SUB
-from data_tools_extraction_utils import extract_and_classify_tools
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('dashboard_unified_mcp_processing.log'),
+        logging.FileHandler('data_unified_processor.log'),
         logging.StreamHandler()
     ]
 )
@@ -81,19 +80,21 @@ class UnifiedMCPServer:
     
     # Tools information
     tools: Optional[List[Dict]] = None
-    tools_count: Optional[int] = None
-    tools_names: Optional[List[str]] = None
-    tools_summary: Optional[str] = None
     
-    # Extracted and classified tools
-    extracted_tools: Optional[List[Dict]] = None
-    tools_by_access: Optional[Dict[str, int]] = None
     
     # Source metadata
     data_sources: List[str] = None
     fetch_status: Optional[str] = None
     html_length: Optional[int] = None
     fetch_timestamp: Optional[float] = None
+    
+    # Lean pipeline fields
+    content_source: Optional[str] = None  # "github_readme" or "html_content"
+    processing_status: Optional[str] = None  # "success", "no_content", etc.
+    github_info: Optional[Dict] = None  # Structured GitHub parsing info
+    readme_path: Optional[str] = None  # Path to README file
+    is_github: Optional[bool] = None  # GitHub server flag
+    extracted_date: Optional[str] = None  # URL extraction date
     
     def __post_init__(self):
         if self.data_sources is None:
@@ -102,12 +103,6 @@ class UnifiedMCPServer:
             self.topics = []
         if self.tools is None:
             self.tools = []
-        if self.tools_names is None:
-            self.tools_names = []
-        if self.extracted_tools is None:
-            self.extracted_tools = []
-        if self.tools_by_access is None:
-            self.tools_by_access = {'read': 0, 'write': 0, 'execute': 0}
 
 class UnifiedMCPDataProcessor:
     def __init__(self):
@@ -316,9 +311,6 @@ class UnifiedMCPDataProcessor:
                     # Process tools data
                     if item.get('tools') and not server.tools:
                         server.tools = item.get('tools')
-                        server.tools_count = len(server.tools)
-                        server.tools_names = [tool.get('name', '') for tool in server.tools if tool.get('name')]
-                        server.tools_summary = f"{server.tools_count} tools: {', '.join(server.tools_names[:3])}" + ("..." if len(server.tools_names) > 3 else "")
                 else:
                     # Create new server
                     server = UnifiedMCPServer(
@@ -337,9 +329,6 @@ class UnifiedMCPDataProcessor:
                     # Process tools data for new server
                     if item.get('tools'):
                         server.tools = item.get('tools')
-                        server.tools_count = len(server.tools)
-                        server.tools_names = [tool.get('name', '') for tool in server.tools if tool.get('name')]
-                        server.tools_summary = f"{server.tools_count} tools: {', '.join(server.tools_names[:3])}" + ("..." if len(server.tools_names) > 3 else "")
                     
                     self.unified_servers[server_id] = server
                     
@@ -465,6 +454,26 @@ class UnifiedMCPDataProcessor:
                     if item.get('description'):
                         server.official_description = item.get('description')
                     
+                    # Handle new fields from lean pipeline
+                    if not hasattr(server, 'content_source') or not server.content_source:
+                        server.content_source = item.get('content_source')
+                    if not hasattr(server, 'processing_status') or not server.processing_status:
+                        server.processing_status = item.get('processing_status')
+                    if not hasattr(server, 'github_info') or not server.github_info:
+                        server.github_info = item.get('github_info')
+                    if not hasattr(server, 'readme_path') or not server.readme_path:
+                        server.readme_path = item.get('readme_path')
+                    
+                    # Consolidate readme content from all sources into readme_content field
+                    # Priority: root-level readme_content > github_metadata readme_content > html_content
+                    if not server.readme_content:
+                        if item.get('readme_content'):
+                            server.readme_content = item.get('readme_content')
+                        elif item.get('github_metadata', {}).get('readme_content'):
+                            server.readme_content = item.get('github_metadata', {}).get('readme_content')
+                        elif item.get('html_content'):
+                            server.readme_content = item.get('html_content')
+                    
                     # Extract GitHub metadata from officiallist if available and not already set from direct GitHub source
                     github_meta = item.get('github_metadata', {})
                     if github_meta:
@@ -479,8 +488,6 @@ class UnifiedMCPDataProcessor:
                             server.languages = github_meta.get('languages')
                         if not server.topics and github_meta.get('topics'):
                             server.topics = github_meta.get('topics', [])
-                        if not server.readme_content and github_meta.get('readme_content'):
-                            server.readme_content = github_meta.get('readme_content')
                         if not server.created_at and github_meta.get('created_at'):
                             server.created_at = self.parse_datetime(github_meta.get('created_at'))
                         if not server.updated_at and github_meta.get('updated_at'):
@@ -520,6 +527,21 @@ class UnifiedMCPDataProcessor:
                     server.is_github = item.get('is_github', False)
                     server.extracted_date = item.get('extracted_date')
                     
+                    # Add new fields from lean pipeline
+                    server.content_source = item.get('content_source')
+                    server.processing_status = item.get('processing_status')
+                    server.github_info = item.get('github_info')
+                    server.readme_path = item.get('readme_path')
+                    
+                    # Consolidate readme content from all sources into readme_content field
+                    # Priority: root-level readme_content > github_metadata readme_content > html_content
+                    if item.get('readme_content'):
+                        server.readme_content = item.get('readme_content')
+                    elif github_meta.get('readme_content'):
+                        server.readme_content = github_meta.get('readme_content')
+                    elif item.get('html_content'):
+                        server.readme_content = item.get('html_content')
+                    
                     # Extract GitHub metadata if available
                     if github_meta:
                         server.stargazers_count = github_meta.get('stargazers_count')
@@ -527,7 +549,6 @@ class UnifiedMCPDataProcessor:
                         server.language = github_meta.get('language')
                         server.languages = github_meta.get('languages', {})
                         server.topics = github_meta.get('topics', [])
-                        server.readme_content = github_meta.get('readme_content')
                         server.created_at = self.parse_datetime(github_meta.get('created_at'))
                         server.updated_at = self.parse_datetime(github_meta.get('updated_at'))
                         server.github_url = github_meta.get('html_url')
@@ -608,19 +629,6 @@ class UnifiedMCPDataProcessor:
                         ""
                     )
                     
-                    # Extract and classify tools (most expensive operation)
-                    server.extracted_tools = extract_and_classify_tools(server.__dict__)
-                    server.tools_count = len(server.extracted_tools) if server.extracted_tools else 0
-                    
-                    # Add tools access level summary
-                    if server.extracted_tools:
-                        server.tools_by_access = {
-                            'read': len([t for t in server.extracted_tools if t['access_level'] == 'read']),
-                            'write': len([t for t in server.extracted_tools if t['access_level'] == 'write']),
-                            'execute': len([t for t in server.extracted_tools if t['access_level'] == 'execute'])
-                        }
-                    else:
-                        server.tools_by_access = {'read': 0, 'write': 0, 'execute': 0}
                     
                     # Create embedding text (must be last operation, uses canonical fields)
                     server.embedding_text = self.create_embedding_text(server)
@@ -776,15 +784,14 @@ class UnifiedMCPDataProcessor:
             'fetch_timestamp': server.fetch_timestamp,
             'is_github': getattr(server, 'is_github', None),
             'extracted_date': getattr(server, 'extracted_date', None),
+            'content_source': getattr(server, 'content_source', None),
+            'processing_status': getattr(server, 'processing_status', None),
+            'github_info': getattr(server, 'github_info', None),
+            'readme_path': getattr(server, 'readme_path', None),
             'readme_content': server.readme_content,
             'html_content': server.html_content,
             'embedding_text': server.embedding_text,
-            'tools': server.tools,
-            'tools_count': server.tools_count,
-            'tools_names': server.tools_names,
-            'tools_summary': server.tools_summary,
-            'extracted_tools': server.extracted_tools,
-            'tools_by_access': server.tools_by_access
+            'tools': server.tools
         }
         
         # Add all sector classifications and matched keywords
@@ -844,11 +851,6 @@ class UnifiedMCPDataProcessor:
             sector_counts = {}
             subsector_counts = {}
             
-            # Tool statistics
-            total_tools = 0
-            servers_with_tools = 0
-            tools_by_source = {'smithery': 0, 'readme': 0, 'html': 0}
-            tools_by_access = {'read': 0, 'write': 0, 'execute': 0}
             
             for server in data:
                 # Count data sources
@@ -880,22 +882,6 @@ class UnifiedMCPDataProcessor:
                             subsector_counts[subsector_code] = 0
                         subsector_counts[subsector_code] += 1
                 
-                # Count tools
-                extracted_tools = server.get('extracted_tools', [])
-                if extracted_tools:
-                    servers_with_tools += 1
-                    total_tools += len(extracted_tools)
-                    
-                    # Count by source
-                    for tool in extracted_tools:
-                        source = tool.get('source', 'unknown')
-                        if source in tools_by_source:
-                            tools_by_source[source] += 1
-                    
-                    # Count by access level
-                    tools_access = server.get('tools_by_access', {})
-                    for access_type in ['read', 'write', 'execute']:
-                        tools_by_access[access_type] += tools_access.get(access_type, 0)
             
             # Language distribution
             language_counts = {}
@@ -935,12 +921,6 @@ class UnifiedMCPDataProcessor:
                 'top_languages': dict(sorted(language_counts.items(), key=lambda x: x[1], reverse=True)[:10]),
                 'top_topics': dict(sorted(topic_counts.items(), key=lambda x: x[1], reverse=True)[:20]),
                 'processing_timestamp': datetime.now().isoformat(),
-                'tool_statistics': {
-                    'total_extracted_tools': total_tools,
-                    'servers_with_tools': servers_with_tools,
-                    'tools_by_source': tools_by_source,
-                    'tools_by_access_level': tools_by_access
-                },
                 'data_quality': {
                     'servers_with_github_data': len([s for s in data if 'github' in s.get('data_sources', [])]),
                     'servers_with_smithery_data': len([s for s in data if 'smithery' in s.get('data_sources', [])]),
@@ -955,10 +935,6 @@ class UnifiedMCPDataProcessor:
             logger.info(f"Summary statistics saved to {summary_file}")
             logger.info(f"Total unified servers: {total_servers}")
             logger.info(f"Finance-related servers: {finance_count}")
-            logger.info(f"Servers with extracted tools: {servers_with_tools} ({servers_with_tools/total_servers*100:.1f}%)")
-            logger.info(f"Total extracted tools: {total_tools}")
-            logger.info(f"Tools by source: {tools_by_source}")
-            logger.info(f"Tools by access level: {tools_by_access}")
             logger.info(f"Servers with multiple sources: {summary['data_quality']['servers_with_multiple_sources']}")
             
         except Exception as e:

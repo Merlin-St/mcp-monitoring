@@ -58,9 +58,8 @@ def clean_server_data(server: Dict[str, Any]) -> Dict[str, Any]:
     # Fields to include
     include_fields = {
         'id', 'name', 'canonical_name', 'canonical_description', 
-        'readme_filtered', 'extracted_tools', 'tools_count', 'tools_names',
-        'tools_by_access', 'homepage', 'url', 'repository_url', 'github_url',
-        'topics', 'data_sources', 'primary_source', 'embedding_text',
+        'readme_filtered', 'readme_filteredinitial', 'readme_content', 'readme_summary', 'readme_is_mcp_server',
+        'tools', 'topics', 'data_sources', 'primary_source', 'embedding_text',
         'stargazers_count', 'forks_count', 'owner_login', 'fork', 'archived'
     }
     
@@ -82,19 +81,20 @@ def create_stage1_sample(server: Dict[str, Any]) -> Dict[str, Any]:
     Create a Stage 1 sample for finance identification
     """
     # Truncate readme content to manage token limits
-    readme = server.get('readme_filtered', '')
-    if len(readme) > 20000:
-        readme = readme[:20000] + "\n[...truncated for length...]"
+    # Use readme_filtered if available, fallback to readme_filteredinitial
+    readme_filtered = server.get('readme_filtered', server.get('readme_filteredinitial', ''))
+    if not readme_filtered and 'readme_filteredinitial' not in server:
+        raise KeyError(f"Server {server.get('id', 'unknown')} missing both 'readme_filtered' and 'readme_filteredinitial' fields")
+    if len(readme_filtered) > 20000:
+        readme_filtered = readme_filtered[:20000] + "\n[...truncated for length...]"
     
     sample_input = {
         "server_name": server.get('name', ''),
         "server_id": server.get('id', ''),
         "description": server.get('canonical_description', ''),
-        "readme": readme,
-        "tools": server.get('extracted_tools', []),
-        "tools_count": server.get('tools_count', 0),
-        "homepage": server.get('homepage', ''),
-        "url": server.get('url', ''),
+        "readme_filtered": readme_filtered,
+        "readme_summary": server.get('readme_summary', ''),
+        "tools": server.get('tools', []),
         "topics": server.get('topics', []),
         "data_sources": server.get('data_sources', [])
     }
@@ -188,6 +188,16 @@ def main():
             logger.error("No finance-related servers found")
             return
     
+    # Filter out servers explicitly marked as NOT MCP servers
+    non_mcp_servers = [s for s in servers if s.get('readme_is_mcp_server') == 0]
+    mcp_servers = [s for s in servers if s.get('readme_is_mcp_server') != 0]
+    
+    if non_mcp_servers:
+        logger.info(f"Filtered out {len(non_mcp_servers)} non-MCP servers, keeping {len(mcp_servers)} servers")
+        servers = mcp_servers
+    else:
+        logger.info("No servers explicitly marked as non-MCP, keeping all servers")
+    
     # Sample servers if needed
     if sample_size is not None:
         servers = sample_servers(servers, sample_size)
@@ -235,7 +245,8 @@ def main():
     
     # Tools distribution
     for server in cleaned_servers:
-        tools_count = server.get('tools_count', 0)
+        tools = server.get('tools', [])
+        tools_count = len(tools) if tools else 0
         if tools_count == 0:
             category = "no_tools"
         elif tools_count <= 5:
@@ -253,7 +264,7 @@ def main():
     logger.info(f"Saved processing summary to {summary_file}")
     
     logger.info("Data preparation completed successfully!")
-    logger.info(f"Next step: Run Stage 1 evaluation with: inspect eval conseq_fin_stage1_filter.py --model claude-sonnet-4-20250514")
+    logger.info(f"Next step: Run Stage 1 evaluation with: inspect eval conseq_fin_stage1_inspect.py --model claude-sonnet-4-20250514")
 
 if __name__ == "__main__":
     main()

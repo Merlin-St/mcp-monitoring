@@ -25,8 +25,8 @@ class MCPServerURLExtractor:
         self.logger = logging.getLogger(__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            file_handler = logging.FileHandler('officiallist_url_extraction.log')
-            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            file_handler = logging.FileHandler('officiallist_data_run.log')
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             file_handler.setFormatter(formatter)
             self.logger.addHandler(handler)
@@ -446,7 +446,7 @@ def main():
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),
-            logging.FileHandler('officiallist_url_extraction.log')
+            logging.FileHandler('officiallist_data_run.log')
         ]
     )
     logger = logging.getLogger(__name__)

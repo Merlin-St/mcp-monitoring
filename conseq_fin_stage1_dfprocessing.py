@@ -158,7 +158,7 @@ def main():
                             valid_responses += 1
                             
                             # Count finance-identified servers
-                            if json_obj.get("is_finance_llm") == "yes":
+                            if json_obj.get("is_finance_llm") == 1:
                                 finance_identified += 1
                     else:
                         sample_result["parsed_output"] = None
@@ -232,23 +232,141 @@ def main():
         # Also save DataFrame as CSV for easy inspection using pandas
         results_df = pd.DataFrame(results)
         
+        # Extract input_data fields into separate columns
+        results_df['server_name'] = results_df.apply(
+            lambda row: row['input_data'].get('server_name', '') if isinstance(row['input_data'], dict) else '', 
+            axis=1
+        )
+        results_df['server_id'] = results_df.apply(
+            lambda row: row['input_data'].get('server_id', '') if isinstance(row['input_data'], dict) else '', 
+            axis=1
+        )
+        results_df['description'] = results_df.apply(
+            lambda row: row['input_data'].get('description', '') if isinstance(row['input_data'], dict) else '', 
+            axis=1
+        )
+        results_df['readme_filtered'] = results_df.apply(
+            lambda row: row['input_data'].get('readme_filtered', '') if isinstance(row['input_data'], dict) else '', 
+            axis=1
+        )
+        results_df['readme_summary'] = results_df.apply(
+            lambda row: row['input_data'].get('readme_summary', '') if isinstance(row['input_data'], dict) else '', 
+            axis=1
+        )
+        results_df['tools'] = results_df.apply(
+            lambda row: str(row['input_data'].get('tools', [])) if isinstance(row['input_data'], dict) else '', 
+            axis=1
+        )
+        results_df['topics'] = results_df.apply(
+            lambda row: str(row['input_data'].get('topics', [])) if isinstance(row['input_data'], dict) else '', 
+            axis=1
+        )
+        results_df['data_sources'] = results_df.apply(
+            lambda row: str(row['input_data'].get('data_sources', [])) if isinstance(row['input_data'], dict) else '', 
+            axis=1
+        )
+        
         # Add key parsed fields as separate columns for better CSV readability
-        results_df['is_finance_llm'] = results_df.apply(
-            lambda row: row['parsed_output'].get('is_finance_llm', '') if isinstance(row['parsed_output'], dict) else '', 
-            axis=1
-        )
-        results_df['confidence'] = results_df.apply(
-            lambda row: row['parsed_output'].get('confidence', '') if isinstance(row['parsed_output'], dict) else '', 
-            axis=1
-        )
-        results_df['threat_models'] = results_df.apply(
-            lambda row: str(row['parsed_output'].get('threat_models', [])) if isinstance(row['parsed_output'], dict) else '', 
+        
+        # Basic classification fields
+        results_df['server'] = results_df.apply(
+            lambda row: row['parsed_output'].get('server', '') if isinstance(row['parsed_output'], dict) else '', 
             axis=1
         )
         results_df['analysis_notes'] = results_df.apply(
             lambda row: row['parsed_output'].get('analysis_notes', '') if isinstance(row['parsed_output'], dict) else '', 
             axis=1
         )
+        results_df['is_finance_llm'] = results_df.apply(
+            lambda row: row['parsed_output'].get('is_finance_llm', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        results_df['asset_type'] = results_df.apply(
+            lambda row: row['parsed_output'].get('asset_type', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        results_df['confidence'] = results_df.apply(
+            lambda row: row['parsed_output'].get('confidence', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        results_df['level'] = results_df.apply(
+            lambda row: row['parsed_output'].get('level', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        
+        # Financial capability fields
+        results_df['research_and_risk_assessment'] = results_df.apply(
+            lambda row: row['parsed_output'].get('research_and_risk_assessment', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        results_df['documentation_gathering'] = results_df.apply(
+            lambda row: row['parsed_output'].get('documentation_gathering', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        results_df['application_and_review'] = results_df.apply(
+            lambda row: row['parsed_output'].get('application_and_review', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        results_df['identity_verification'] = results_df.apply(
+            lambda row: row['parsed_output'].get('identity_verification', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        results_df['authorization_account_transactions'] = results_df.apply(
+            lambda row: row['parsed_output'].get('authorization_account_transactions', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        results_df['account_opening'] = results_df.apply(
+            lambda row: row['parsed_output'].get('account_opening', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        
+        # Transfer capability fields
+        results_df['transfer_bank_and_fund_bank_account'] = results_df.apply(
+            lambda row: row['parsed_output'].get('transfer_bank_and_fund_bank_account', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        results_df['transfer_credit_card'] = results_df.apply(
+            lambda row: row['parsed_output'].get('transfer_credit_card', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        results_df['transfer_paypal_stripe_payments'] = results_df.apply(
+            lambda row: row['parsed_output'].get('transfer_paypal_stripe_payments', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        results_df['transfer_stock_invest'] = results_df.apply(
+            lambda row: row['parsed_output'].get('transfer_stock_invest', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        results_df['transfer_crypto_and_stablecoin'] = results_df.apply(
+            lambda row: row['parsed_output'].get('transfer_crypto_and_stablecoin', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        
+        # Security and sensitive data field
+        results_df['sensitive_data_required'] = results_df.apply(
+            lambda row: row['parsed_output'].get('sensitive_data_required', '') if isinstance(row['parsed_output'], dict) else '', 
+            axis=1
+        )
+        
+        # Reorder columns to put input data fields first for better readability
+        input_columns = ['server_name', 'server_id', 'description', 'readme_filtered', 'readme_summary', 'tools', 'topics', 'data_sources']
+        analysis_columns = ['server', 'analysis_notes', 'is_finance_llm', 'asset_type', 'confidence', 'level']
+        capability_columns = [
+            'research_and_risk_assessment', 'documentation_gathering', 'application_and_review',
+            'identity_verification', 'authorization_account_transactions', 'account_opening'
+        ]
+        transfer_columns = [
+            'transfer_bank_and_fund_bank_account', 'transfer_credit_card', 'transfer_paypal_stripe_payments',
+            'transfer_stock_invest', 'transfer_crypto_and_stablecoin'
+        ]
+        other_columns = ['sensitive_data_required', 'sample_id', 'input_data', 'raw_output', 'score', 'score_explanation', 'parsed_output']
+        
+        # Create ordered column list
+        ordered_columns = input_columns + analysis_columns + capability_columns + transfer_columns + other_columns
+        
+        # Select only columns that exist in the DataFrame
+        existing_columns = [col for col in ordered_columns if col in results_df.columns]
+        results_df = results_df[existing_columns]
         
         df_output_file = "conseq_fin_stage1_results.csv"
         results_df.to_csv(df_output_file, index=False)
@@ -257,11 +375,89 @@ def main():
         logger.info(f"DataFrame saved to {df_output_file}")
         logger.info(f"Summary: {valid_responses}/{len(results)} valid responses, {finance_identified} servers identified as finance-related")
         
+        # Quick analysis overview for the 18 CSV fields
+        logger.info("=== Field Analysis Overview ===")
+        
+        # is_finance_llm (binary)
+        finance_1 = len(results_df[results_df['is_finance_llm'] == 1])
+        logger.info(f"is_finance_llm: {finance_1}/{len(results_df)} ({finance_1/len(results_df)*100:.0f}%)")
+        
+        # Confidence (H/M/L)
+        conf_counts = results_df['confidence'].value_counts()
+        total = len(results_df)
+        h_count = conf_counts.get('H', 0)
+        m_count = conf_counts.get('M', 0)
+        l_count = conf_counts.get('L', 0)
+        logger.info(f"confidence: H={h_count} ({h_count/total*100:.0f}%), M={m_count} ({m_count/total*100:.0f}%), L={l_count} ({l_count/total*100:.0f}%)")
+        
+        # Level (0-5)
+        level_counts = results_df['level'].value_counts()
+        level_summary = {}
+        for level in [0, 1, 2, 3, 4, 5]:
+            count = level_counts.get(level, 0)
+            level_summary[str(level)] = f"{count} ({count/total*100:.0f}%)"
+        logger.info(f"level: {level_summary}")
+        
+        asset_counts = results_df['asset_type'].value_counts()
+        top_assets = dict(list(asset_counts.items())[:3])
+        logger.info(f"asset_type: {top_assets}")
+        
+        # Financial capabilities (binary 0/1)
+        capabilities = [
+            'research_and_risk_assessment', 'documentation_gathering', 'application_and_review',
+            'identity_verification', 'authorization_account_transactions', 'account_opening'
+        ]
+        for cap in capabilities:
+            cap_1 = len(results_df[results_df[cap] == 1])
+            logger.info(f"{cap}: {cap_1}/{len(results_df)} ({cap_1/len(results_df)*100:.0f}%)")
+        
+        # Transfer capabilities (binary 0/1)
+        transfers = [
+            'transfer_bank_and_fund_bank_account', 'transfer_credit_card', 'transfer_paypal_stripe_payments',
+            'transfer_stock_invest', 'transfer_crypto_and_stablecoin'
+        ]
+        for trans in transfers:
+            trans_1 = len(results_df[results_df[trans] == 1])
+            logger.info(f"{trans}: {trans_1}/{len(results_df)} ({trans_1/len(results_df)*100:.0f}%)")
+        
+        # Sensitive data (show examples)
+        sensitive_vals = results_df['sensitive_data_required'].dropna()
+        sensitive_vals = sensitive_vals[sensitive_vals != '']
+        examples = list(sensitive_vals.unique())[:3]
+        logger.info(f"sensitive_data_required: {len(sensitive_vals)} servers, examples: {examples}")
+        
+        # High-level servers (level 4-5) with examples
+        high_level = results_df[results_df['level'].isin([4, 5])]
+        if len(high_level) > 0:
+            logger.info(f"=== High-Level Servers (4-5): {len(high_level)} servers ===")
+            for _, row in high_level.head(3).iterrows():
+                server_name = row.get('server', 'Unknown')
+                # Get description from input_data
+                input_data = row.get('input_data', {})
+                description = input_data.get('description', input_data.get('readme_content', 'No description'))[:100]
+                logger.info(f"Level {row['level']}: {server_name} - {description}...")
+        
+        # Transfer capability servers with examples
+        transfer_fields = [
+            'transfer_bank_and_fund_bank_account', 'transfer_credit_card', 'transfer_paypal_stripe_payments',
+            'transfer_stock_invest', 'transfer_crypto_and_stablecoin'
+        ]
+        transfer_servers = results_df[results_df[transfer_fields].eq(1).any(axis=1)]
+        if len(transfer_servers) > 0:
+            logger.info(f"=== Transfer Capability Servers: {len(transfer_servers)} servers ===")
+            for _, row in transfer_servers.head(3).iterrows():
+                server_name = row.get('server', 'Unknown')
+                # Get description from input_data
+                input_data = row.get('input_data', {})
+                description = input_data.get('description', input_data.get('readme_content', 'No description'))[:100]
+                # Find which transfer capabilities are enabled
+                enabled_transfers = [field.replace('transfer_', '') for field in transfer_fields if row.get(field) == 1]
+                logger.info(f"{server_name} - {description}... [Transfers: {', '.join(enabled_transfers)}]")
+        
+        logger.info("=== End Field Analysis ===")
+        
         # Log next steps
-        if finance_identified > 0:
-            logger.info(f"Next step: Run Stage 2 evaluation with: inspect eval conseq_fin_stage2_inspect.py --model {MODEL}")
-        else:
-            logger.warning("No finance-related servers identified. Check results and consider adjusting criteria.")
+        
             
     except Exception as e:
         logger.error(f"DataFrame processing failed: {e}")

@@ -33,7 +33,7 @@ python dashboard_tmux_launcher.py stop unified
 
 ### Raw Data Sources & Structure
 
-#### 1. **Smithery API** (`smithery_all_mcp_server_summaries.json`)
+#### 1. **Smithery API** (`smithery_data.json`)
 - **Shape**: 6,434 servers × 6 columns
 - **Columns**: `qualifiedName`, `displayName`, `description`, `createdAt`, `useCount`, `homepage`  
 - **Sample Data**:
@@ -41,7 +41,7 @@ python dashboard_tmux_launcher.py stop unified
   - `displayName`: `Desktop Commander`
   - `useCount`: `579226` (usage metrics)
 
-#### 2. **GitHub Repositories** (`github_mcp_repositories.json`)
+#### 2. **GitHub Repositories** (`github_data.json`)
 - **Shape**: 21,053 repos × 83 columns (GitHub API fields)
 - **Key Columns**: `readme_content`, `owner`, `license`, `topics`, `stargazers_count`, `language`, `permissions`
 - **Sample Data**:
@@ -49,7 +49,7 @@ python dashboard_tmux_launcher.py stop unified
   - `owner`: `{'login': 'phil65', 'id': 110931, 'avatar_url': '...'}`  
   - `topics`: `['mcp-server', 'ai-tools', 'claude']`
 
-#### 3. **Official MCP List** (`officiallist_mcp_servers_full.json`)
+#### 3. **Official MCP List** (`officiallist_data.json`)
 - **Shape**: 966 servers × 5 columns per server
 - **Structure**: `{fetch_date, total_servers, servers: [...]}`
 - **Server Columns**: `name`, `url`, `description`, `is_github`, `extracted_date`
@@ -126,7 +126,6 @@ python embed_hyperparameter_optimizer.py --finance --test-size 500 --max-combina
 - `dashboard_unified_mcp.py` - Main comprehensive dashboard (supports --filtered flag)
 - `dashboard_launch.py` - Simple launcher with --filtered support
 - `dashboard_tmux_launcher.py` - Persistent tmux session launcher with --filtered support
-- `dashboard_verify_data.py` - Data validation utility
 
 ### Main Data
 - `data_unified_processor.py` - Data unification (27,899 servers)
@@ -143,22 +142,18 @@ python embed_hyperparameter_optimizer.py --finance --test-size 500 --max-combina
 - `embed_*.html` - Interactive visualizations
 - `embed_hyperparameter_optimization_*.log` - Optimization results and recommendations
 
-### Consequentiality Scoring (3-Stage Pipeline)
-- `conseq_extract_random_tools_for_ground_truth.py` - Extract random tools for ground truth scoring
+### Consequentiality Scoring (2-Stage Pipeline)
 - `data_tools_extraction_utils.py` - Tool extraction and access level classification utilities
 - `conseq_ground_truth_tools_sample.json` - Random tools sample for ground truth scoring
 - `conseq_fin_data_prep.py` - Stage 1: Data preparation with sampling options (--samples 500, --all, --finance)
 - `conseq_fin_stage1_inspect.py` - Stage 1: Finance tool identification using Inspect framework
 - `conseq_fin_stage1_dfprocessing.py` - Stage 1: Process .eval files to JSON/CSV
-- `conseq_fin_stage2_inspect.py` - Stage 2: Consequentiality assessment using Inspect framework
-- `conseq_fin_stage2_dfprocessing.py` - Stage 2: Process .eval files to JSON/CSV
 - `conseq_fin_stage3_visual.py` - Stage 3: Visualization and top tools analysis
-- `conseq_fin_results_merger.py` - Multi-stage results merger and final analysis
 
 ### Data Collection
-- `smithery_run_bulk_mcp_download.py` - Smithery API (6,434 servers)
-- `github_mcp_repo_collector.py` - GitHub scanning (21,053 repos) 
-- `officiallist_url_scraping.py` - Official list (966 servers)
+- `smithery_data_run.py` - Smithery API (6,434 servers)
+- `github_data_run.py` - GitHub scanning (21,053 repos) 
+- `officiallist_data_run.py` - Official list (966 servers)
 
 ## 🎯 Research Focus
 Tracks AI tool ecosystem growth with specific attention to:
@@ -166,9 +161,9 @@ Tracks AI tool ecosystem growth with specific attention to:
 - **Consequential system impact** assessment through ground truth scoring
 - **NAICS sector classification** across 20 industries with keyword-based automation
 - **Semantic clustering** of server capabilities and use cases using advanced embeddings
-- **Multi-stage analysis pipeline** for finance-specific risk assessment and tool categorization
+- **2-stage analysis pipeline** for finance-specific filtering and visualization
 
-## 🔍 Consequentiality Analysis Pipeline (3-Stage Process)
+## 🔍 Consequentiality Analysis Pipeline (2-Stage Process)
 
 ### Stage 1: Data Preparation & Finance Filtering
 ```bash
@@ -184,27 +179,12 @@ inspect eval conseq_fin_stage1_inspect.py --model anthropic/claude-sonnet-4-2025
 python conseq_fin_stage1_dfprocessing.py               # Convert .eval files to JSON/CSV
 ```
 
-### Stage 2: Consequentiality Assessment
-```bash
-# Assess consequentiality levels (1-5) for finance-identified servers
-inspect eval conseq_fin_stage2_inspect.py --model anthropic/claude-sonnet-4-20250514
-python conseq_fin_stage2_dfprocessing.py               # Convert .eval files to JSON/CSV
-```
-
 ### Stage 3: Visualization & Analysis
 ```bash
-# Generate charts and identify top execution-level tools
+# Generate charts and analysis based on Stage 1 results
 python conseq_fin_stage3_visual.py
 ```
 
 **Pipeline Output:**
 - **Stage 1**: `conseq_fin_stage1_results.json/csv` (finance-relevant servers)
-- **Stage 2**: `conseq_fin_stage2_results.json/csv` (consequentiality scoring with 5 levels)
-- **Stage 3**: PNG charts + top 5 execution-level finance tools + summary statistics
-
-**Consequentiality Levels:**
-1. **MONITORING** (Read-only): Information gathering, no execution
-2. **ADVISING** (Recommendations): Provides suggestions, no actions  
-3. **PREPARING** (Staging): Prepares operations but requires approval
-4. **EXECUTING** (With constraints): Can execute with limits/approval
-5. **EXECUTING** (No constraints): Full autonomous execution capability
+- **Stage 3**: PNG charts + finance server analysis + summary statistics
