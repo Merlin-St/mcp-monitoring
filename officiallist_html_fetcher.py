@@ -26,8 +26,8 @@ class MCPServerHTMLFetcher:
         self.logger = logging.getLogger(__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            file_handler = logging.FileHandler('officiallist_html_fetching.log')
-            formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
+            file_handler = logging.FileHandler('officiallist_data_run.log')
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             file_handler.setFormatter(formatter)
             self.logger.addHandler(handler)
@@ -230,6 +230,81 @@ class MCPServerHTMLFetcher:
         finally:
             self.close_driver()
     
+    def fetch_external_html(self, max_external=None):
+        """Fetch HTML for external (non-GitHub) servers with limit"""
+        external_servers = [s for s in self.servers if not s.get('is_github', False)]
+        
+        if not external_servers:
+            self.logger.warning("No external servers to fetch")
+            return
+        
+        # Apply max_external limit
+        if max_external and max_external < len(external_servers):
+            external_servers = external_servers[:max_external]
+            self.logger.info(f"Limited to {max_external} external servers for processing")
+        
+        self.logger.info(f"Starting HTML fetch for {len(external_servers)} external servers")
+        
+        # Setup selenium driver
+        self.setup_driver()
+        
+        try:
+            start_time = time.time()
+            
+            for i, server in enumerate(external_servers):
+                # Skip if already processed successfully
+                if server.get('fetch_status') == 'success' and server.get('html_content'):
+                    self.logger.info(f"  Already processed: {server['name']}")
+                    continue
+                
+                # Fetch HTML content
+                self.fetch_html_content(server)
+                
+                # Add readme_content field (copy from html_content for consistency)
+                if server.get('html_content'):
+                    server['readme_content'] = server['html_content']
+                    server['content_source'] = 'html_content'
+                else:
+                    server['readme_content'] = None
+                    server['content_source'] = None
+                
+                self.processed_count += 1
+                
+                # Progress reporting
+                if i > 0 and (i + 1) % 5 == 0:
+                    elapsed = time.time() - start_time
+                    rate = (i + 1) / elapsed * 60  # servers per minute
+                    remaining = len(external_servers) - (i + 1)
+                    eta_minutes = remaining / rate if rate > 0 else 0
+                    
+                    self.logger.info(f"Progress: {i + 1}/{len(external_servers)} ({rate:.1f}/min, ETA: {eta_minutes:.0f}m)")
+                
+                # Rate limiting between requests
+                time.sleep(1)
+            
+            end_time = time.time()
+            self.logger.info(f"External HTML fetching completed in {(end_time - start_time)/60:.1f} minutes")
+            
+        except Exception as e:
+            self.logger.error(f"Error during external HTML fetching: {e}")
+            raise
+        finally:
+            self.close_driver()
+    
+    def save_results(self, filename):
+        """Save results with proper structure"""
+        output_data = {
+            'fetch_date': datetime.now().isoformat(),
+            'total_servers': len(self.servers),
+            'processed_count': self.processed_count,
+            'servers': self.servers
+        }
+        
+        with open(filename, 'w', encoding='utf-8') as f:
+            json.dump(output_data, f, indent=2, ensure_ascii=False)
+        
+        self.logger.info(f"Results saved to {filename}")
+    
     def print_summary(self):
         """Print summary of HTML fetching results"""
         external_servers = [s for s in self.servers if not s.get('is_github', False)]
@@ -287,7 +362,7 @@ def main():
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),
-            logging.FileHandler('officiallist_html_fetching.log')
+            logging.FileHandler('officiallist_data_run.log')
         ]
     )
     logger = logging.getLogger(__name__)

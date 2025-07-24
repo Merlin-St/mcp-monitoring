@@ -20,119 +20,247 @@ from dotenv import load_dotenv
 from inspect_ai import Task, task
 from inspect_ai.dataset import json_dataset
 from inspect_ai.scorer import Score, Scorer, Target, accuracy, scorer
-from inspect_ai.solver import TaskState, generate
-import logging
+from inspect_ai.solver import TaskState, generate, system_message
+
 
 # Load environment variables
 load_dotenv()
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler('conseq_fin_stage1_inspect.log'),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger(__name__)
+
 
 FINANCE_IDENTIFICATION_SYSTEM_PROMPT = """
-ONLY RESPOND WITH JSON. NO EXPLANATIONS. NO MARKDOWN. NO TEXT OUTSIDE JSON.
+ONLY RESPOND WITH JSON. NO MARKDOWN. NO TEXT OUTSIDE JSON.
 
-You are a financial technology risk analyst identifying AI-enabled MCP tools that interact
-  with financial systems and mapping them to three threat models.
+You are a financial technology analyst identifying AI agent tools on model context protocol (MCP) servers - that interact
+with financial systems. Follow this scoring process:
 
-  Threat Models:
-  - TM1 - Correlated Credit Risk: AI tools in credit decisioning, potentially causing
-  systematic mispricing across institutions.
-  - TM2 - Deposit Stickiness Erosion: AI tools enabling rapid deposit movement between banks,
-   destabilizing funding bases.
-  - TM3 - Autonomous Payment Systems: AI agents with direct payment capabilities creating
-  systemic risks.
+STEP 1: First, write analysis_notes
+Analyze the MCP server and document your findings in the analysis_notes field. This should include:
+- What the tool does and does not, any any uncertainty about this
 
-  Specific Tasks:
+STEP 2: Score is_finance_llm (0 or 1)
+- 1: Tool interacts with financial systems, markets, or assets
+- 0: Tool has no financial functionality
 
-  TM1 - Correlated Credit:
-  - loan_application_intake - Processing loan applications
-  - kyc_fraud_checks - KYC or fraud detection
-  - credit_report_retrieval - Pulling credit scores/reports
-  - identity_verification - Verifying employment/income/identity
-  - affordability_assessment - Analyzing bank statements
-  - risk_modeling - Credit risk modeling/pricing
-  - collateral_valuation - Assessing collateral value
-  - credit_decisioning - Approve/decline decisions
-  - condition_setting - Setting loan conditions
-  - terms_generation - Creating offers/payment schedules
-  - documentation_drafting - Generating agreements
-  - fund_disbursement - Distributing funds
-  - loan_monitoring - Post-disbursement monitoring
-  - payment_servicing - Processing loan payments
+STEP 3: Identify asset_type
+Valid values (can be multiple, separated by semicolon):
+- "Banking" - Traditional bank accounts, transfers, payments
+- "CreditCard" - Credit card operations, virtual cards
+- "Crypto" - Cryptocurrency, blockchain, wallets, DeFi
+- "Stocks" - Stock trading, investment platforms
+- "Accounting" - Bookkeeping, financial reporting
+- "Unclear" - When asset type cannot be determined
 
-  TM2 - Deposit Stickiness:
-  - rate_comparison - Comparing bank interest rates
-  - bank_risk_monitoring - Detecting institution risk signals
-  - automated_transfers - Moving funds between banks
-  - sentiment_analysis - Analyzing bank safety from media
-  - deposit_optimization - Optimizing deposit allocation
-  - risk_alerts - Bank safety alerts
-  - account_management - Direct bank account control
-  - agent_behavior_tracking - Monitoring other AI agents
-  - information_propagation - Sharing bank concerns
-  - rate_arbitrage - Exploiting rate differentials
+STEP 4: Set confidence level
+- "H" (High): Comprehensive documentation, clear functionality
+- "M" (Medium): Adequate documentation, some uncertainties
+- "L" (Low): Limited/missing documentation, significant ambiguity
 
-  TM3 - Payment Systems:
-  - payment_execution - Making autonomous payments
-  - virtual_card_management - Managing virtual cards
-  - agent_authentication - AI agent identity verification
-  - transaction_authorization - Payment approval
-  - open_banking_payments - PSD2/Open Banking payments
-  - fund_routing - Moving money between accounts
-  - crypto_payments - Cryptocurrency transactions
-  - stablecoin_operations - Fiat/stablecoin conversion
-  - payment_api_integration - Payment provider integration
-  - agent_transactions - Agent-to-agent payments
-  - compliance_monitoring - AML/KYC monitoring
-  - resource_acquisition - Using payments for resources
+STEP 5: Determine level (0-5)
+- 0: Not an MCP server - e.g. just a list that links to MCP servers
+- 1: MONITORING - Read-only, no modification, just pull information
+- 2: ANALYSIS - Get and analyse data, advise, does not modify external environment
+- 3: META - Meta-server that connects to other servers that do execution
+- 4: RESTRICTED EXECUTION - e.g. modify specified external environment, e.g. execute a transaction on specific blockchain
+- 5: UNRESTRICTED EXECUTION - e.g. browser use with submitting info, full code execution for local & global edits
 
-  Output Format:
-  {
-    "tool_name": "string",
+STEP 6: Score task capabilities (0 or 1 for each)
+Capabilities to open a bank account:
+- research_and_risk_assessment: Web search, rate aggregation, risk analysis,...
+- documentation_gathering: File management, document scanning, PDF reading,...
+- application_and_review: Form filling, browser automation,...
+- identity_verification: Camera API, image upload, face recognition,...
+- authorization_account_transactions: Email/SMS reading, OTP extraction, two-step authenticator...
+- account_opening: Create wallets, operational accounts, subaccounts,...
+
+Asset-specific transfer of money capabilities (only if these are specifically mentioned):
+- transfer_bank_and_fund_bank_account: Banking API to transact to other bank, payment gateway,...
+- transfer_credit_card: Use saved card info to pay,...
+- transfer_paypal_stripe_payments: Payment provider APIs to execute transactions,...
+- transfer_stock_invest: Place/modify/cancel stock orders,...
+- transfer_crypto_and_stablecoin: Crypto and blockchain transactions,...
+
+STEP 7: Identify sensitive data specifically required as an input (can be multiple, separated by semicolon. Copy from specific mentions in the documentation, do not guess):
+- "API_edit_tokens" - API keys with full edit, e.g. transaction execution access
+- "Credit_card_number"
+- "cyrpto_wallet_address"
+- "passport_number"
+- "..." - Any other sensitive data that allows deep execution access that is required as an input - specify what it is
+
+EXAMPLES:
+
+Example 1 - Read-only banking monitor:
+Input: asher-mcp
+Description: Financial data aggregation tool
+Tools:
+- get_accounts: Retrieve list of all connected bank accounts
+- get_account_balance: Get current balance for a specific account
+- get_transactions: Retrieve transaction history for an account
+- get_investment_holdings: View investment portfolio holdings
+{
+    "server": "asher-mcp",
+    "analysis_notes": "Read-only access to own bank accounts via scraping",
+    "is_finance_llm": 1,
+    "asset_type": "Banking",
+    "confidence": "H",
+    "level": 1,
+    "research_and_risk_assessment": 0,
+    "documentation_gathering": 0,
+    "application_and_review": 0,
+    "identity_verification": 0,
+    "authorization_account_transactions": 0,
+    "account_opening": 0,
+    "transfer_bank_and_fund_bank_account": 0,
+    "transfer_credit_card": 0,
+    "transfer_paypal_stripe_payments": 0,
+    "transfer_stock_invest": 0,
+    "transfer_crypto_and_stablecoin": 0,
+    "sensitive_data_required": ""
+}
+
+Example 2 - Execution with limited transfer capabilities:
+Input: base-mcp
+Description: Blockchain interaction tool for Base network
+Tools:
+- get_balance: Check wallet balance
+- get_transaction: Retrieve transaction details
+- send_transaction: Send ETH or tokens
+- deploy_contract: Deploy smart contracts
+- interact_contract: Call contract functions
+- estimate_gas: Calculate gas fees
+Required inputs:
+- private_key: Wallet private key
+- rpc_endpoint: Base network RPC URL
+{
+    "server": "base-mcp",
+    "analysis_notes": "Readme is insufficient (truncated)",
+    "is_finance_llm": 1,
+    "asset_type": "Crypto",
+    "confidence": "L",
+    "level": 4,
+    "research_and_risk_assessment": 0,
+    "documentation_gathering": 0,
+    "application_and_review": 0,
+    "identity_verification": 0,
+    "authorization_account_transactions": 1,
+    "account_opening": 0,
+    "transfer_bank_and_fund_bank_account": 0,
+    "transfer_credit_card": 0,
+    "transfer_paypal_stripe_payments": 0,
+    "transfer_stock_invest": 0,
+    "transfer_crypto_and_stablecoin": 1,
+    "sensitive_data_required": "private_key;rpc_endpoint"
+}
+
+Example 3 - Monitoring only crypto prices:
+Input: binance-alpha-mcp
+Description: Real-time cryptocurrency market monitoring
+Tools:
+- get_market_overview: Get overall market statistics
+- get_trending_coins: View trending cryptocurrencies
+- get_price_alerts: Monitor price movements
+- get_volume_analysis: Analyze trading volumes across exchanges
+{
+    "server": "binance-alpha-mcp",
+    "analysis_notes": "Monitoring only: monitoring of trades in the market (not specifically ones own activity)",
+    "is_finance_llm": 1,
+    "asset_type": "Crypto",
+    "confidence": "H",
+    "level": 1,
+    "research_and_risk_assessment": 1,
+    "documentation_gathering": 0,
+    "application_and_review": 0,
+    "identity_verification": 0,
+    "authorization_account_transactions": 0,
+    "account_opening": 0,
+    "transfer_bank_and_fund_bank_account": 0,
+    "transfer_credit_card": 0,
+    "transfer_paypal_stripe_payments": 0,
+    "transfer_stock_invest": 0,
+    "transfer_crypto_and_stablecoin": 0,
+    "sensitive_data_required": ""
+}
+
+Example 4 - Poor documentation:
+Input: ai-agent-mcp-servers
+Description: Collection of MCP servers for AI agents
+Tools: [No tools listed in documentation]
+{
+    "server": "ai-agent-mcp-servers",
+    "analysis_notes": "Almost no detail in the Readme",
+    "is_finance_llm": 1,
+    "asset_type": "Stocks",
+    "confidence": "L",
+    "level": 1,
+    "research_and_risk_assessment": 0,
+    "documentation_gathering": 0,
+    "application_and_review": 0,
+    "identity_verification": 0,
+    "authorization_account_transactions": 0,
+    "account_opening": 0,
+    "transfer_bank_and_fund_bank_account": 0,
+    "transfer_credit_card": 0,
+    "transfer_paypal_stripe_payments": 0,
+    "transfer_stock_invest": 0,
+    "transfer_crypto_and_stablecoin": 0,
+    "sensitive_data_required": ""
+}
+
+Example 5 - General computer use:
+Input: DesktopCommanderMCP
+Description: Execute python and control mouse and keyboard on local OS
+Tools: Tools:
+- execute_command: Execute arbitrary shell commands with timeout
+- read_file: Read file contents with pagination / negative offset
+- write_file: Write or append to files (line-limited)
+- kill_process: Terminate a running process by PID
+
+{
+    "server": "DesktopCommanderMCP",
+    "analysis_notes": "General-purpose MCP server for local automation: execute arbitrary terminal commands, manage processes, and perform full write operations on files. No tools mention financial data, payments, banking, crypto, or market interaction. Therefore it is not a finance-focused LLM",
+    "is_finance_llm": 0,
+    "asset_type": "Unclear",
+    "confidence": "M",
+    "level": 5,
+    "research_and_risk_assessment": 0,
+    "documentation_gathering": 1,
+    "application_and_review": 0,
+    "identity_verification": 0,
+    "authorization_account_transactions": 0,
+    "account_opening": 0,
+    "transfer_bank_and_fund_bank_account": 0,
+    "transfer_credit_card": 0,
+    "transfer_paypal_stripe_payments": 0,
+    "transfer_stock_invest": 0,
+    "transfer_crypto_and_stablecoin": 0,
+    "sensitive_data_required": ""
+}
+
+Output Format:
+{
     "server": "string",
-    "is_finance_llm": "yes|no",
-    "confidence": "high|medium|low",
-    "threat_models": [
-      {
-        "model": "TM1|TM2|TM3",
-        "tasks": ["task_id_1", "task_id_2"],
-        "relevance_explanation": "Brief explanation"
-      }
-    ],
-    "analysis_notes": "Additional context"
-  }
+    "analysis_notes": "Brief analysis of the tool(s)",
+    "is_finance_llm": 0|1,
+    "asset_type": "Banking|CreditCard|Crypto|Stocks|Accounting|Unclear",
+    "confidence": "H|M|L",
+    "level": 0|1|2|3|4|5,
+    "research_and_risk_assessment": 0|1,
+    "documentation_gathering": 0|1,
+    "application_and_review": 0|1,
+    "identity_verification": 0|1,
+    "authorization_account_transactions": 0|1,
+    "account_opening": 0|1,
+    "transfer_bank_and_fund_bank_account": 0|1,
+    "transfer_credit_card": 0|1,
+    "transfer_paypal_stripe_payments": 0|1,
+    "transfer_stock_invest": 0|1,
+    "transfer_crypto_and_stablecoin": 0|1,
+    "sensitive_data_required": "API_edit_tokens|Credit_card_number|crypto_wallet_address|passport_number|...",
+}
 
 RESPOND ONLY WITH JSON.
 """.strip()
 
-def setup_api_key():
-    """Setup Anthropic API key with AWS proxy support"""
-    api_key = os.environ.get("ANTHROPIC_API_KEY")
-    if not api_key:
-        logger.error("ANTHROPIC_API_KEY environment variable not set")
-        raise ValueError("ANTHROPIC_API_KEY environment variable required")
-    
-    # Handle AWS proxy keys
-    if api_key.startswith("aws"):
-        try:
-            # Try to import aisitools for AWS proxy support
-            from aisitools.api_key import get_api_key_for_proxy
-            api_key = get_api_key_for_proxy(api_key)
-            os.environ["ANTHROPIC_API_KEY"] = api_key
-            logger.info("Successfully converted AWS proxy API key")
-        except ImportError:
-            logger.warning("aisitools not available, using AWS proxy key directly")
-    
-    return api_key
 
 @scorer(metrics=[accuracy()])
 def finance_filter_scorer() -> Scorer:
@@ -181,25 +309,75 @@ def finance_filter_scorer() -> Scorer:
                 explanation="No valid JSON found in response"
             )
         
-        # Validate core fields
-        core_fields = ["is_finance_llm"]
-        has_core_fields = all(field in json_obj for field in core_fields)
+        # Validate all required fields
+        required_fields = [
+            "server",
+            "analysis_notes", 
+            "is_finance_llm",
+            "asset_type",
+            "confidence",
+            "level",
+            "research_and_risk_assessment",
+            "documentation_gathering", 
+            "application_and_review",
+            "identity_verification",
+            "authorization_account_transactions",
+            "account_opening",
+            "transfer_bank_and_fund_bank_account",
+            "transfer_credit_card",
+            "transfer_paypal_stripe_payments",
+            "transfer_stock_invest",
+            "transfer_crypto_and_stablecoin",
+            "sensitive_data_required"
+        ]
         
-        if not has_core_fields:
-            missing = [field for field in core_fields if field not in json_obj]
+        missing_fields = [field for field in required_fields if field not in json_obj]
+        
+        if missing_fields:
             return Score(
                 value=0,
                 answer=completion,
-                explanation=f"Missing core fields: {missing}"
+                explanation=f"Missing required fields: {missing_fields}"
             )
         
-        # Validate is_finance_llm value
-        valid_finance_values = ["yes", "no", "unclear"]
-        if json_obj["is_finance_llm"] not in valid_finance_values:
+        # Validate binary fields (should be 0 or 1)
+        binary_fields = [
+            "is_finance_llm",
+            "research_and_risk_assessment",
+            "documentation_gathering", 
+            "application_and_review",
+            "identity_verification",
+            "authorization_account_transactions",
+            "account_opening",
+            "transfer_bank_and_fund_bank_account",
+            "transfer_credit_card",
+            "transfer_paypal_stripe_payments",
+            "transfer_stock_invest",
+            "transfer_crypto_and_stablecoin"
+        ]
+        
+        for field in binary_fields:
+            if json_obj[field] not in [0, 1]:
+                return Score(
+                    value=0,
+                    answer=completion,
+                    explanation=f"Invalid {field} value: {json_obj[field]} (expected 0 or 1)"
+                )
+        
+        # Validate level field (should be 0-5)
+        if json_obj["level"] not in [0, 1, 2, 3, 4, 5]:
             return Score(
                 value=0,
                 answer=completion,
-                explanation=f"Invalid is_finance_llm value: {json_obj['is_finance_llm']}"
+                explanation=f"Invalid level value: {json_obj['level']} (expected 0-5)"
+            )
+        
+        # Validate confidence field (should be H, M, or L)
+        if json_obj["confidence"] not in ["H", "M", "L"]:
+            return Score(
+                value=0,
+                answer=completion,
+                explanation=f"Invalid confidence value: {json_obj['confidence']} (expected H, M, or L)"
             )
         
         return Score(
@@ -218,51 +396,34 @@ def count_dataset_size(dataset_file):
     with open(dataset_file, 'r') as f:
         count = sum(1 for _ in f)
     
-    logger.info(f"Dataset {dataset_file} contains {count} samples")
     return count
 
 @task
 def finance_identification_task():
     """
-    Inspect task for identifying finance-related MCP servers
+    Inspect task for identifying finance-related MCP servers using system_message solver
     """
     dataset_file = "conseq_fin_stage1_input.jsonl"
     
     if not Path(dataset_file).exists():
-        logger.error(f"Dataset file {dataset_file} not found. Run conseq_fin_data_prep.py first.")
         raise FileNotFoundError(f"Dataset file {dataset_file} not found")
     
     # Count samples in dataset to set appropriate message limit
     dataset_size = count_dataset_size(dataset_file)
     dynamic_message_limit = dataset_size + 10  # Add buffer for safety
     
-    # Modify the JSONL file to include system prompt in each sample
-    modified_dataset_file = "conseq_fin_stage1_input_with_prompt.jsonl"
     
-    # Always remove existing intermediate file to ensure fresh creation
-    if Path(modified_dataset_file).exists():
-        Path(modified_dataset_file).unlink()
-        logger.info(f"Removed existing intermediate file: {modified_dataset_file}")
-    
-    # Create modified dataset file
-    import json
-    with open(dataset_file, 'r') as f_in, open(modified_dataset_file, 'w') as f_out:
-        for line in f_in:
-            sample = json.loads(line)
-            # Combine system prompt with the original input
-            combined_message = f"{FINANCE_IDENTIFICATION_SYSTEM_PROMPT}\n\nMCP Server Data:\n{sample['input']}"
-            sample['input'] = combined_message
-            f_out.write(json.dumps(sample) + '\n')
-    logger.info(f"Created modified dataset with system prompt: {modified_dataset_file}")
-    
-    logger.info(f"Setting message_limit to {dynamic_message_limit} for {dataset_size} samples")
     
     return Task(
-        dataset=json_dataset(modified_dataset_file),
-        solver=generate(),
+        dataset=json_dataset(dataset_file),
+        solver=[
+            system_message(FINANCE_IDENTIFICATION_SYSTEM_PROMPT),
+            generate()
+        ],
         scorer=[finance_filter_scorer()],
         message_limit=dynamic_message_limit
     )
 
-# Setup API key when module is imported
-setup_api_key()
+# API key handling is managed automatically by AISI environment variables:
+# - INSPECT_API_KEY_OVERRIDE=aisitools.api_key.override_api_key
+# - ANTHROPIC_API_KEY (handled automatically by inspect framework)

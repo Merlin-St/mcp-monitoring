@@ -56,12 +56,11 @@ python officiallist_data_run.py
 **Key Files:**
 
 **Data Collection:**
-- `smithery_run_bulk_mcp_download.py` - Smithery API collection entry point
+- `smithery_data_run.py` - Smithery API collection entry point
 - `smithery_bulk_mcp_downloader.py` - Core Smithery download logic
-- `smithery_mcp_api_handler.py` - Smithery API interaction handler
-- `github_mcp_repo_collector.py` - GitHub repository scanning
+- `github_data_run.py` - GitHub repository scanning
 - `github_mcp_repo_searcher.py` - GitHub search functionality
-- `officiallist_url_scraping.py` - Official list scraping
+- `officiallist_data_run.py` - Official list scraping
 - `officiallist_html_fetcher.py` - HTML content fetching
 - `officiallist_url_extractor.py` - URL extraction from HTML
 
@@ -70,7 +69,6 @@ python officiallist_data_run.py
 - `data_unified_processor.py` - Unified data processing (27,899 servers)
 - `dashboard_launch.py` - Simple dashboard launcher with --filtered support
 - `dashboard_tmux_launcher.py` - Persistent tmux session launcher with --filtered support
-- `dashboard_verify_data.py` - Data validation utility
 - `data_unified_processor.py` - Enhanced data processing pipeline
 - `data_create_filtered_subset.py` - Create filtered subsets for analysis
 
@@ -81,25 +79,19 @@ python officiallist_data_run.py
 - `naics_classification_config.py` - NAICS sector definitions and keyword mappings
 
 **Consequentiality Scoring:**
-- `conseq_extract_random_tools_for_ground_truth.py` - Extract random tools for ground truth scoring
 - `data_tools_extraction_utils.py` - Tool extraction and access level classification utilities
 - `conseq_fin_data_prep.py` - Finance data preparation for multi-stage analysis
 - `conseq_fin_stage1_inspect.py` - Stage 1: Inspect task for finance-relevant server filtering
 - `conseq_fin_stage1_dfprocessing.py` - Stage 1: DataFrame processing for .eval files
-- `conseq_fin_stage2_inspect.py` - Stage 2: Inspect task for consequentiality assessment
-- `conseq_fin_stage2_dfprocessing.py` - Stage 2: DataFrame processing for .eval files
-- `conseq_fin_results_merger.py` - Merge and process multi-stage results
+- `conseq_fin_stage3_visual.py` - Stage 3: Visualization and analysis
 
 **README Content Filtering:**
-- `readme_content_filter.py` - Stage 1: Keyword-based filtering to remove installation content
-- `readme_filter_inspect.py` - Stage 2: LLM-based refinement using Inspect framework
-- `readme_filter_dfprocessing.py` - Process Inspect results back to JSON format
+- `data_readme_filter_inspect.py` - LLM-based refinement using Inspect framework
+- `data_readme_filter_dfprocessing.py` - Process Inspect results back to JSON format
 
 **Utilities:**
-- `smithery_quickcheck_bulk_mcp_data.py` - Data validation
 - `smithery_bulk_mcp_config.py` - Configuration management
 - `officiallist_github_fetcher.py` - GitHub metadata collection for officiallist servers
-- `verify_github_coverage.py` - Analyze GitHub coverage gaps
 
 ## Analysis & Classification
 
@@ -162,20 +154,17 @@ The system extracts and classifies:
 ## Data Files
 
 ### Smithery Data Files
-- `smithery_all_mcp_server_summaries.json` - Complete Smithery server data
+- `smithery_data.json` - Complete Smithery server data
 
 ### GitHub Data Files
-- `github_mcp_repositories.json` - Complete GitHub repository data
-- `github_mcp_repositories_partial.json` - Partial/in-progress data
-- `github_mcp_collection_summary.json` - Collection statistics
+- `github_data.json` - Complete GitHub repository data
+- `github_data_summary.json` - Collection statistics
 
 ### Official List Data Files
-- `officiallist_mcp_servers_full.json` - Complete official server list with GitHub metadata
-- `officiallist_mcp_servers.json` - Processed official server data
+- `officiallist_data.json` - Complete official server list with GitHub metadata
 - `officiallist_history.json` - Historical tracking data
 - `officiallist_monthly_history.json` - Monthly snapshots
 - `officiallist_urls.json` - Extracted URLs
-- `officiallist_github_metadata.json` - GitHub metadata for officiallist servers
 
 ### Dashboard Data Files
 - `data_unified.json` - Unified dashboard data (27MB, 27,899 servers)
@@ -187,28 +176,20 @@ The system extracts and classifies:
 - `embed_results.json` - Complete embedding analysis results
 - `embed_finance_results.json` - Finance-specific embedding analysis
 - `embed_sector_52_results.json` - Finance & Insurance sector analysis (NAICS 52)
-- `embed_sector_54_results.json` - Professional Services sector analysis (NAICS 54)
 - `embed_*.html` - Interactive visualization files for each analysis
 - `embeddings_cache/` - Cached embeddings to avoid recomputation
-- `smithery_all_mcp_server_details_complete.json` - Enhanced server details
 
 ### Consequentiality Scoring Data Files
 - `conseq_ground_truth_tools_sample.json` - Random tools sample for ground truth scoring
-- `conseq_extract_random_tools.log` - Tool extraction log
 - `conseq_fin_*` - Finance-specific consequentiality analysis files:
   - `conseq_fin_data_prep_summary.json` - Data preparation summary
   - `conseq_fin_servers_sample.json` - Finance server sample
-  - `conseq_fin_stage1_input.jsonl` - Stage 1 input data
   - `conseq_fin_stage1_results.json` - Stage 1 filtering results
-  - `conseq_fin_stage2_input.jsonl` - Stage 2 input data
+  - `conseq_fin_stage1_results.csv` - Stage 1 filtering results (CSV)
   - `conseq_fin_stage1_logs/` - Stage 1 processing logs
-  - `conseq_fin_stage2_logs/` - Stage 2 processing logs
 
 ### Test Data Files
-- `officiallist_mcp_servers_test*.json` - Test datasets
-- `officiallist_urls_test*.json` - Test URL datasets
-- `officiallist_test_results.json` - Test results
-- `embed_test_*.json` - Embedding test results
+- Various test files for development and validation
 
 ## Development Guidelines
 
@@ -224,7 +205,7 @@ The system extracts and classifies:
   - `logger.warning()` for rate limits and recoverable issues
   - `logger.error()` for errors and exceptions
   - `logger.debug()` for detailed debugging information
-- Log files should be named descriptively (e.g., `github_mcp_collection.log`, `bulk_mcp_download.log`)
+- Log files should be named descriptively (e.g., `github_data_run.log`, `bulk_mcp_download.log`)
 
 ### Code Quality
 - Replace all print() statements with appropriate logging calls
@@ -292,8 +273,7 @@ The README filtering pipeline removes installation tips and setup instructions w
 - **Preserved**: Feature table, API capabilities, service descriptions, documentation references
 
 ### Performance Statistics
-- Average content reduction: 23.1% (Stage 1 keyword filtering)
-- Processing patterns: 31 installation patterns, 20 section headers, 3 code block patterns
+- LLM-based filtering removes installation content while preserving functional descriptions
 - Servers processed: 9,141 total servers with 7,000+ containing README content
 - Output: `readme_filtered` column added to `data_unified_filtered.json`
 
@@ -311,9 +291,9 @@ The README filtering pipeline removes installation tips and setup instructions w
 source ~/si_setup/.venv/bin/activate
 
 # Collect from all 3 sources
-python smithery_run_bulk_mcp_download.py
-python github_mcp_repo_collector.py  
-python officiallist_url_scraping.py
+python smithery_data_run.py
+python github_data_run.py
+python officiallist_data_run.py
 
 # Enhance officiallist with GitHub metadata
 python officiallist_github_fetcher.py
@@ -379,30 +359,24 @@ python embed_apply_optimized_parameters.py embed_hyperparameter_optimization.log
 ```bash
 source ~/si_setup/.venv/bin/activate
 
-# Stage 1: Keyword-based filtering to remove installation content
-python readme_content_filter.py                    # Process all servers
-python readme_content_filter.py --samples 500     # Process sample
-python readme_content_filter.py --test            # Test mode (10 servers)
+# LLM-based README filtering using Inspect framework (requires ANTHROPIC_API_KEY)
+inspect eval data_readme_filter_inspect.py --model anthropic/claude-sonnet-4-20250514
 
-# Stage 2: LLM-based refinement using Inspect framework (requires ANTHROPIC_API_KEY)
-inspect eval readme_filter_inspect.py --model anthropic/claude-sonnet-4-20250514
-
-# Process Stage 2 results back to JSON
-python readme_filter_dfprocessing.py
-python readme_filter_dfprocessing.py --logs-dir ./logs          # Custom logs directory
-python readme_filter_dfprocessing.py --eval-file specific.eval  # Process specific eval file
+# Process results back to JSON
+python data_readme_filter_dfprocessing.py
+python data_readme_filter_dfprocessing.py --logs-dir ./logs          # Custom logs directory
+python data_readme_filter_dfprocessing.py --eval-file specific.eval  # Process specific eval file
 
 # Complete pipeline workflow:
-# 1. Stage 1 adds 'readme_filtered' column to data_unified_filtered.json
-# 2. Stage 2 prepares JSONL dataset and runs LLM refinement via Inspect
+# 1. Prepare JSONL dataset from data_unified_filtered.json
+# 2. Run LLM refinement via Inspect framework to filter installation content
 # 3. Processing script updates 'readme_filtered' column with refined content
 # 4. Output ready for embedding analysis and consequentiality scoring
 
 # Key outputs:
 # - data_unified_filtered.json (updated with readme_filtered column)
-# - readme_content_filter_summary.json (Stage 1 statistics)
-# - readme_filter_dfprocessing_summary.json (Stage 2 statistics)
-# - readme_filter_input.jsonl (Inspect input dataset)
+# - data_readme_filter_dfprocessing_summary.json (Processing statistics)
+# - data_readme_filter_input.jsonl (Inspect input dataset)
 # - logs/readme_filter_*.eval (Inspect evaluation results)
 ```
 
@@ -422,30 +396,22 @@ python conseq_fin_data_prep.py --samples 1000 --finance  # Large finance-focused
 inspect eval conseq_fin_stage1_inspect.py --model anthropic/claude-sonnet-4-20250514
 python conseq_fin_stage1_dfprocessing.py                # Process .eval files to JSON/CSV
 
-# 3. Stage 2 - Consequentiality Assessment (requires Stage 1 completion)
-inspect eval conseq_fin_stage2_inspect.py --model anthropic/claude-sonnet-4-20250514  
-python conseq_fin_stage2_dfprocessing.py                # Process .eval files to JSON/CSV
-
-# 4. Stage 3 - Visualization & Analysis (requires Stage 2 completion)
+# 3. Stage 3 - Visualization & Analysis (requires Stage 1 completion)
 python conseq_fin_stage3_visual.py                      # Generate charts and top tools analysis
 
-# Complete 3-Stage Pipeline Workflow:
-# Stage 1: Data Prep → Finance Filter → Consequentiality Assessment → Visualization
+# Complete 2-Stage Pipeline Workflow:
+# Stage 1: Data Prep → Finance Filter → Visualization
 #   - Data prep creates conseq_fin_servers_sample.json and conseq_fin_stage1_input.jsonl
 #   - Stage 1 identifies finance-related servers using LLM evaluation via Inspect framework
 #     * Run inspect eval to generate .eval files in logs/
 #     * Run DataFrame processing to convert to JSON/CSV (conseq_fin_stage1_results.json/.csv)
-#   - Stage 2 assesses consequentiality levels (1-5) for finance-identified servers
-#     * Run inspect eval to generate .eval files in logs/
-#     * Run DataFrame processing to convert to JSON/CSV (conseq_fin_stage2_results.json/.csv)
 #   - Stage 3 creates visualizations and identifies top execution-level tools
-#     * Generates PNG charts: consequentiality levels, capability distributions
-#     * Displays top 5 most execution-level finance tools with detailed analysis
+#     * Generates PNG charts and analysis based on Stage 1 outputs
+#     * Displays finance-related servers and tool analysis
 #     * Outputs comprehensive summary statistics
 
 # Stage Outputs:
 # - Stage 1: conseq_fin_stage1_results.json/csv (finance-relevant servers)
-# - Stage 2: conseq_fin_stage2_results.json/csv (consequentiality scoring)
 # - Stage 3: PNG charts + console analysis + conseq_fin_stage3_visual.log
 
 # Requirements:
@@ -457,18 +423,14 @@ python conseq_fin_stage3_visual.py                      # Generate charts and to
 
 ### Testing & Validation
 ```bash
-# Quick validation
-python smithery_quickcheck_bulk_mcp_data.py
-
 # Test GitHub collection
-python github_mcp_repo_collector.py --test
+python github_data_run.py --test
 ```
 
 ## Known Issues
 
-- `smithery_mcp_api_handler.py:4` has broken import: `from hf_models_monitoring_test.config_utils` - this module path needs to be updated
-- No formal testing framework - validation is done through quickcheck scripts
-- GitHub rate limiting may require patience for full collection runs
+- No formal testing framework - validation is done through individual script testing
+- The data_unified.json and data_unified_filtered.json are very big files, so you cant use read() for them directly
 
 
 # GENERAL GUIDELINES
@@ -563,6 +525,7 @@ Write concise commit messages that add value beyond what's obvious from the code
 - Pragmatism over perfection - balance ideal solutions with practical constraints
 - Learning over knowing - be open about knowledge gaps and learn from the codebase
 - NEVER Do unrelated changes
+- ALWAYS specifically report any fallbacks you have implemented
 
 ### Command Line Tools
 - Use ag instead of rg for code searching
