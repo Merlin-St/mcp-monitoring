@@ -353,7 +353,7 @@ def display_naics_classification(df):
     # Display embed visualization at the top
     embed_file = Path("embed_visualization.html")
     if embed_file.exists():
-        st.subheader("🎯 Interactive Embedding Visualization")
+        st.subheader("Interactive Embedding Visualization")
         st.markdown("Explore MCP servers in embedding space - similar servers cluster together:")
         
         # Read and display the HTML file
