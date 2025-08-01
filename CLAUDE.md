@@ -9,6 +9,43 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 source ~/si_setup/.venv/bin/activate
 ```
 
+## Project Dependencies
+
+This project uses **pyproject.toml** for dependency management (modern Python standard):
+
+```bash
+# Install dependencies
+uv sync                    # Install runtime dependencies
+uv sync --group dev        # Install with development dependencies (includes ruff, pytest)
+
+# Alternative with pip
+pip install -e .           # Install runtime dependencies  
+pip install -e .[dev]      # Install with development dependencies
+```
+
+## Code Quality & Linting
+
+**Always run code quality checks before committing:**
+
+```bash
+# Check code quality (linting)
+ruff check .
+
+# Auto-fix issues where possible
+ruff check . --fix
+
+# Fix unsafe issues (like bare except statements)
+ruff check . --fix --unsafe-fixes
+
+# Format code
+ruff format .
+
+# Fix specific error types
+ruff check . --select E722 --fix --unsafe-fixes  # Fix bare except statements
+```
+
+**Configuration**: Code quality rules are defined in `pyproject.toml` under `[tool.ruff.lint]`
+
 ## Project Overview
 
 This is a **MCP Server Monitoring Dashboard** that provides comprehensive analysis of Model Context Protocol (MCP) servers across multiple data sources. The project monitors MCP server ecosystem growth, tool availability, and finance-specific capabilities to answer key research questions about AI tool proliferation in financial systems.
@@ -51,7 +88,7 @@ python officiallist_data_run.py
 **Data Flow:**
 1. **Collection**: Three parallel data collection streams → JSON data files
 2. **Analysis**: Unified analysis processing server data with financial risk categorization
-3. **Visualization**: Streamlit dashboard with 2 graphs & 2 tables
+3. **Visualization**: Dashboard components moved to https://github.com/AI-Safety-Institute/sr-mcp-dashboard
 
 **Key Files:**
 
@@ -64,12 +101,8 @@ python officiallist_data_run.py
 - `officiallist_html_fetcher.py` - HTML content fetching
 - `officiallist_url_extractor.py` - URL extraction from HTML
 
-**Dashboard & Analysis:**
-- `dashboard_unified_mcp.py` - Main comprehensive dashboard (supports --filtered flag for filtered dataset)
+**Data Processing & Analysis:**
 - `data_unified_processor.py` - Unified data processing (27,899 servers)
-- `dashboard_launch.py` - Simple dashboard launcher with --filtered support
-- `dashboard_tmux_launcher.py` - Persistent tmux session launcher with --filtered support
-- `data_unified_processor.py` - Enhanced data processing pipeline
 - `data_create_filtered_subset.py` - Create filtered subsets for analysis
 
 **ML Analysis & Embeddings:**
@@ -117,19 +150,9 @@ The system extracts and classifies:
 - **Sector Classification**: Automated NAICS sector assignment using keyword matching
 - **Hyperparameter Optimization**: Automated tuning of model parameters to minimize outliers and maximize topic coherence
 
-## Dashboard Outputs
+## Dashboard & Visualization
 
-### 2 Graphs
-1. **MCP servers creation and usage over time** - Shows trend analysis with sub-graphs focusing on:
-   - Servers executing payments
-   - Other finance servers
-   - Clickable example MCP servers
-
-2. **Finance tool availability trends** - Growth of finance-specific capabilities
-
-### 2 Tables
-1. **Overview of all tools relevant to automatic payments**
-2. **Overview table of all MCP servers and tools** - Filterable by sector, use case, autonomy level
+**Note**: Dashboard components have been moved to https://github.com/AI-Safety-Institute/sr-mcp-dashboard from stage2.csv onwards. This repository focuses on data collection, processing, and analysis.
 
 ## Key Dependencies
 
@@ -301,13 +324,8 @@ python officiallist_github_fetcher.py
 # Process unified data (27,899 servers)
 python data_unified_processor.py
 
-# Launch dashboards
-streamlit run dashboard_unified_mcp.py               # Main unified dashboard (full dataset)
-streamlit run dashboard_unified_mcp.py --filtered    # Main dashboard with filtered dataset
-python dashboard_launch.py                           # Simple launcher (supports --filtered)
-python dashboard_launch.py --filtered                # Simple launcher with filtered dataset
-python dashboard_tmux_launcher.py start unified      # Persistent tmux session (full dataset)
-python dashboard_tmux_launcher.py start unified --filtered  # Persistent session with filtered dataset
+# Create filtered subset for analysis
+python data_create_filtered_subset.py
 ```
 
 ### ML Analysis Pipeline

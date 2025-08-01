@@ -2,10 +2,8 @@
 
 import pandas as pd
 import matplotlib.pyplot as plt
-import seaborn as sns
 import numpy as np
 import logging
-from pathlib import Path
 
 # Configure logging
 logging.basicConfig(
@@ -166,7 +164,7 @@ def create_server_overview_chart(df):
     
     # Create a simple overview based on available data
     if 'finance_relevant' in df.columns:
-        finance_servers = df[df['finance_relevant'] == True]
+        df[df['finance_relevant']]
         plt.figure(figsize=(10, 6))
         
         # Show finance relevance distribution
@@ -204,7 +202,7 @@ def display_transfer_capability_servers(df, transfer_cols):
     """Display servers with transfer capabilities."""
     logger.info("Finding servers with transfer capabilities...")
     
-    transfer_servers = df[df['has_transfer_capability'] == True].copy()
+    transfer_servers = df[df['has_transfer_capability']].copy()
     
     if len(transfer_servers) == 0:
         logger.warning("No servers with transfer capabilities found")
@@ -248,7 +246,7 @@ def display_level4_plus_servers(df):
     """Display level 4+ servers."""
     logger.info("Finding level 4+ servers...")
     
-    level4_servers = df[df['is_level_4_plus'] == True].copy()
+    level4_servers = df[df['is_level_4_plus']].copy()
     
     if len(level4_servers) == 0:
         logger.warning("No level 4+ servers found")
@@ -285,7 +283,7 @@ def find_top_finance_tools(df):
     """Find and display the top finance-relevant tools."""
     logger.info("Finding top finance-relevant tools...")
     
-    finance_servers = df[df['finance_relevant'] == True].copy()
+    finance_servers = df[df['finance_relevant']].copy()
     
     if len(finance_servers) == 0:
         logger.warning("No finance-relevant servers found")
@@ -367,10 +365,10 @@ def generate_summary_stats(df, transfer_cols):
         print(f"  {conf}: {count} servers ({pct:.1f}%)")
     
     # Cross-analysis: Finance + Transfer + Level 4+
-    finance_transfer = df[(df['finance_relevant'] == True) & (df['has_transfer_capability'] == True)]
-    finance_level4 = df[(df['finance_relevant'] == True) & (df['is_level_4_plus'] == True)]
-    transfer_level4 = df[(df['has_transfer_capability'] == True) & (df['is_level_4_plus'] == True)]
-    all_three = df[(df['finance_relevant'] == True) & (df['has_transfer_capability'] == True) & (df['is_level_4_plus'] == True)]
+    finance_transfer = df[(df['finance_relevant']) & (df['has_transfer_capability'])]
+    finance_level4 = df[(df['finance_relevant']) & (df['is_level_4_plus'])]
+    transfer_level4 = df[(df['has_transfer_capability']) & (df['is_level_4_plus'])]
+    all_three = df[(df['finance_relevant']) & (df['has_transfer_capability']) & (df['is_level_4_plus'])]
     
     print("\nCross-Analysis:")
     print(f"  Finance + Transfer Capabilities: {len(finance_transfer)} servers")
@@ -391,28 +389,28 @@ def main():
         
         # Create transfer capabilities chart
         logger.info("Creating transfer capabilities chart...")
-        transfer_data = create_transfer_capabilities_chart(df, transfer_cols)
+        create_transfer_capabilities_chart(df, transfer_cols)
         
         # Create level distribution chart
         logger.info("Creating level distribution chart...")
-        level_data = create_level_distribution_chart(df)
+        create_level_distribution_chart(df)
         
         # Create finance relevance chart
         logger.info("Creating finance relevance chart...")
-        relevance_data = create_finance_relevance_chart(df)
+        create_finance_relevance_chart(df)
         
         # Create server overview chart
         logger.info("Creating server overview chart...")
-        overview_data = create_server_overview_chart(df)
+        create_server_overview_chart(df)
         
         # Display servers with transfer capabilities
-        transfer_servers = display_transfer_capability_servers(df, transfer_cols)
+        display_transfer_capability_servers(df, transfer_cols)
         
         # Display level 4+ servers
-        level4_servers = display_level4_plus_servers(df)
+        display_level4_plus_servers(df)
         
         # Find top finance tools
-        top_servers = find_top_finance_tools(df)
+        find_top_finance_tools(df)
         
         logger.info("Visualization complete! Generated files:")
         logger.info("  - conseq_fin_stage3_transfer_capabilities.png")

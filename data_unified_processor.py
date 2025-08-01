@@ -13,10 +13,9 @@ It merges, deduplicates, and creates a comprehensive unified dataset.
 import json
 import logging
 import re
-import time
 import urllib.parse
 from datetime import datetime
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional
 from dataclasses import dataclass
 from pathlib import Path
 from naics_classification_config import NAICS_KEYWORDS, NAICS_KEYWORDS_SUB
@@ -269,11 +268,11 @@ class UnifiedMCPDataProcessor:
                 return datetime.fromisoformat(date_str.replace('Z', '+00:00'))
             # ISO format
             return datetime.fromisoformat(date_str.replace('+00:00', ''))
-        except:
+        except (ValueError, TypeError):
             try:
                 # GitHub format
                 return datetime.strptime(date_str, '%Y-%m-%dT%H:%M:%SZ')
-            except:
+            except (ValueError, TypeError):
                 logger.warning(f"Could not parse datetime: {date_str}")
                 return None
     

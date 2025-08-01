@@ -11,8 +11,7 @@ import json
 import logging
 import re
 import argparse
-from pathlib import Path
-from typing import Dict, List, Any, Optional
+from typing import Dict, List, Any
 from datetime import datetime
 
 # Set up logging

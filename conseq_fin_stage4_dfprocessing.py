@@ -13,7 +13,6 @@ Usage:
 """
 
 import json
-import os
 from pathlib import Path
 from datetime import datetime
 import logging
@@ -110,7 +109,7 @@ def main():
                 try:
                     # The input should be JSON containing tool data
                     sample_result["input_data"] = json.loads(user_content)
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError):
                     sample_result["input_data"] = {"raw_input": str(user_content)}
             
             # Get assistant response (the actual model output)
@@ -210,7 +209,7 @@ def main():
                         if MODEL in usage_data:
                             total_input_tokens += usage_data[MODEL].get("input_tokens", 0)
                             total_output_tokens += usage_data[MODEL].get("output_tokens", 0)
-                    except:
+                    except (KeyError, TypeError, AttributeError, json.JSONDecodeError):
                         continue
             
             summary["model_usage"] = {
@@ -328,7 +327,7 @@ def main():
         logger.info("=== O*NET Economic Task Classification Analysis ===")
         
         # Automation levels
-        logger.info(f"Automation Level Distribution:")
+        logger.info("Automation Level Distribution:")
         total_classified = sum(classification_counts['automation_levels'].values())
         for level, count in classification_counts['automation_levels'].items():
             percentage = (count / total_classified * 100) if total_classified > 0 else 0
@@ -336,7 +335,7 @@ def main():
             logger.info(f"  Level {level} ({level_desc.get(level, 'Unknown')}): {count} ({percentage:.1f}%)")
         
         # Economic impact
-        logger.info(f"Economic Impact Distribution:")
+        logger.info("Economic Impact Distribution:")
         total_impact = sum(classification_counts['economic_impacts'].values())
         for impact, count in classification_counts['economic_impacts'].items():
             percentage = (count / total_impact * 100) if total_impact > 0 else 0
@@ -344,14 +343,14 @@ def main():
             logger.info(f"  Impact {impact} ({impact_desc.get(impact, 'Unknown')}): {count} ({percentage:.1f}%)")
         
         # Confidence levels
-        logger.info(f"Confidence Level Distribution:")
+        logger.info("Confidence Level Distribution:")
         total_conf = sum(classification_counts['confidence_levels'].values())
         for conf, count in classification_counts['confidence_levels'].items():
             percentage = (count / total_conf * 100) if total_conf > 0 else 0
             logger.info(f"  {conf}: {count} ({percentage:.1f}%)")
         
         # Top occupation categories
-        logger.info(f"Top Occupation Categories:")
+        logger.info("Top Occupation Categories:")
         sorted_categories = sorted(classification_counts['occupation_categories'].items(), key=lambda x: x[1], reverse=True)
         for category, count in sorted_categories[:5]:
             percentage = (count / total_classified * 100) if total_classified > 0 else 0
@@ -381,7 +380,7 @@ def main():
         
         # Log next steps
         logger.info("=== Analysis Complete ===")
-        logger.info(f"Results ready for further analysis and visualization")
+        logger.info("Results ready for further analysis and visualization")
         
         # Clean up temp directory
         shutil.rmtree(temp_dir)

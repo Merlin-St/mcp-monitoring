@@ -398,7 +398,7 @@ def main():
         # Save current progress before exiting
         try:
             fetcher.save_progress(args.output, force=True)
-        except:
+        except (OSError, IOError, PermissionError):
             pass
         raise
 

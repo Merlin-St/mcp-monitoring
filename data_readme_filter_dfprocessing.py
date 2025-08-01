@@ -22,9 +22,6 @@ import logging
 from pathlib import Path
 from typing import Dict, List, Any, Optional
 from datetime import datetime
-import re
-import glob
-import pandas as pd
 
 # Configure logging
 logging.basicConfig(
@@ -81,7 +78,7 @@ def load_eval_results(logs_dir: str) -> List[Dict[str, Any]]:
         
         # Create lookup dictionaries for O(1) access
         assistant_lookup = assistant_messages.set_index('sample_id')['content'].to_dict()
-        user_lookup = user_messages.set_index('sample_id')['content'].to_dict()
+        user_messages.set_index('sample_id')['content'].to_dict()
         
         # Process results using vectorized operations
         results = []
@@ -101,7 +98,7 @@ def load_eval_results(logs_dir: str) -> List[Dict[str, Any]]:
             if hasattr(sample_row, 'metadata') and sample_row.metadata:
                 try:
                     sample_result["metadata"] = json.loads(sample_row.metadata) if isinstance(sample_row.metadata, str) else sample_row.metadata
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError):
                     pass
             
             # Extract server ID from sample metadata
@@ -374,7 +371,7 @@ def validate_filtering_results(dataset: List[Dict[str, Any]]) -> Dict[str, Any]:
         if count > 0
     ]
     
-    logger.info(f"Validation complete:")
+    logger.info("Validation complete:")
     logger.info(f"  - {validation_stats['servers_with_both']} servers have both original and filtered content")
     logger.info(f"  - {validation_stats['servers_with_summary']} servers have summaries extracted")
     logger.info(f"  - {validation_stats['servers_classified_as_mcp']} servers classified as MCP servers (1)")

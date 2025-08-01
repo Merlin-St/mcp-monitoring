@@ -7,7 +7,6 @@ Reads the recommended configuration from the log file and applies it to the code
 import re
 import argparse
 import logging
-from pathlib import Path
 
 def setup_logging():
     """Setup logging configuration"""

@@ -11,7 +11,7 @@ import time
 import logging
 import argparse
 from datetime import datetime, timedelta
-from urllib.parse import urljoin, urlparse
+from urllib.parse import urljoin
 import requests
 
 class MCPServerURLExtractor:
@@ -92,7 +92,7 @@ class MCPServerURLExtractor:
                 commit_sha = commit['sha']
                 
                 # Get README content at this commit
-                content_url = f"https://api.github.com/repos/modelcontextprotocol/servers/contents/README.md"
+                content_url = "https://api.github.com/repos/modelcontextprotocol/servers/contents/README.md"
                 params = {'ref': commit_sha}
                 
                 try:
@@ -232,7 +232,7 @@ class MCPServerURLExtractor:
     
     def fetch_readme_at_commit(self, commit_sha):
         """Fetch README content at a specific commit"""
-        content_url = f"https://api.github.com/repos/modelcontextprotocol/servers/contents/README.md"
+        content_url = "https://api.github.com/repos/modelcontextprotocol/servers/contents/README.md"
         params = {'ref': commit_sha}
         
         try:
@@ -402,7 +402,7 @@ class MCPServerURLExtractor:
     def print_summary(self):
         """Print summary of extracted URLs"""
         self.logger.info("\n" + "="*60)
-        self.logger.info(f"URL EXTRACTION COMPLETE")
+        self.logger.info("URL EXTRACTION COMPLETE")
         self.logger.info("="*60)
         self.logger.info(f"Total servers: {len(self.servers)}")
         
@@ -416,13 +416,13 @@ class MCPServerURLExtractor:
         # Show sample external URLs
         external_servers = [s for s in self.servers if not s['is_github']]
         if external_servers:
-            self.logger.info(f"\nSample external servers:")
+            self.logger.info("\nSample external servers:")
             for server in external_servers[:5]:
                 self.logger.info(f"  - {server['name']}: {server['url']}")
         
         # Historical summary
         if self.historical_data:
-            self.logger.info(f"\nHistorical data:")
+            self.logger.info("\nHistorical data:")
             self.logger.info(f"  Snapshots collected: {len(self.historical_data)}")
             if len(self.historical_data) > 1:
                 growth = self.historical_data[-1]['server_count'] - self.historical_data[0]['server_count']

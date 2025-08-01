@@ -5,14 +5,11 @@ Processes GitHub URLs from officiallist_urls.json to collect README and metadata
 """
 
 import json
-import os
-import re
 import asyncio
 import logging
 import aiohttp
 import base64
 from datetime import datetime
-from urllib.parse import urlparse
 
 class OfficiallistGitHubFetcherLean:
     def __init__(self, github_token):
@@ -78,7 +75,7 @@ class OfficiallistGitHubFetcherLean:
                 if len(parts) >= 5 and parts[2] == 'tree':
                     subdirectory = '/'.join(parts[4:])
                 # Handle direct subdirectory references
-                elif not parts[2] in ['issues', 'pulls', 'wiki', 'releases']:
+                elif parts[2] not in ['issues', 'pulls', 'wiki', 'releases']:
                     subdirectory = '/'.join(parts[2:])
             
             return {
