@@ -6,8 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **IMPORTANT**: Always activate the virtual environment before running Python scripts:
 ```bash
-source ~/si_setup/.venv/bin/activate
+source ~/mcp-monitoring/.venv/bin/activate
 ```
+If libraries are missing, add them to the pyproject.toml and run uv sync
 
 ## Project Dependencies
 

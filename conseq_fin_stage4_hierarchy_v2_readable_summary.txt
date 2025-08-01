@@ -1,0 +1,28 @@
+Level 1 Superclusters (K=20) - Generated from Level 2 Cluster Name Embeddings
+================================================================================
+
+L1_00: Educational Services and Student Support (18 Level 2 clusters)
+L1_01: Equipment Operations and Maintenance (19 Level 2 clusters)
+L1_02: Technology Systems Development and Management (14 Level 2 clusters)
+L1_03: Financial Analysis and Management (8 Level 2 clusters)
+L1_04: Service and Care Operations (15 Level 2 clusters)
+L1_05: Research and Development Engineering (12 Level 2 clusters)
+L1_06: Manufacturing Operations and Machine Control (14 Level 2 clusters)
+L1_07: Academic and Educational Leadership (35 Level 2 clusters)
+L1_08: Manufacturing and Logistics Operations (22 Level 2 clusters)
+L1_09: Entertainment and Marketing Management (23 Level 2 clusters)
+L1_10: Healthcare and Medical Services (38 Level 2 clusters)
+L1_11: Customer Service and Operations Management (19 Level 2 clusters)
+L1_12: Manufacturing and Craft Production Operations (24 Level 2 clusters)
+L1_13: Installation and Technical Systems (19 Level 2 clusters)
+L1_14: Project and Team Coordination Management (13 Level 2 clusters)
+L1_15: Records and Documentation Management (24 Level 2 clusters)
+L1_16: Natural Resources and Environmental Operations (29 Level 2 clusters)
+L1_17: Safety and Security Operations Management (27 Level 2 clusters)
+L1_18: Environmental Compliance and Sustainability Management (11 Level 2 clusters)
+L1_19: Quality Testing and Inspection Services (16 Level 2 clusters)
+
+Total: 20 Level 1 superclusters
+Covering: 400 Level 2 clusters
+Silhouette Score: 0.039
+Generated: 2025-08-01T17:12:25.647266
