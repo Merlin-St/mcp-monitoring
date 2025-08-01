@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
 """
-Financial MCP Server Stage 4 - DataFrame Processing for O*NET Economic Task Classification
+Stage 4 O*NET Classification - DataFrame Processing
 
 Processes the evaluation results from conseq_fin_stage4_inspect.py
-by reading the .eval files and converting them to JSON and CSV formats.
+by reading the .eval files and converting them to structured JSON and CSV formats.
 
 This should be run after:
     inspect eval conseq_fin_stage4_inspect.py --model anthropic/claude-sonnet-4-20250514
 
 Usage:
     python conseq_fin_stage4_dfprocessing.py
+    python conseq_fin_stage4_dfprocessing.py --logs-dir ./custom_logs
 """
 
 import json
+import re
+import argparse
+import logging
 from pathlib import Path
 from datetime import datetime
-import logging
+from typing import Dict, List, Any, Optional
 import pandas as pd
 
 # Configure logging
@@ -31,178 +35,284 @@ logger = logging.getLogger(__name__)
 
 MODEL = "anthropic/claude-sonnet-4-20250514"
 
-def main():
-    """Main DataFrame processing function"""
-    logger.info("Starting Stage 4 DataFrame Processing for O*NET Economic Task Classification")
+def extract_json_objects(text: str, expected_count: int = 4) -> List[Dict[str, Any]]:
+    """Extract multiple JSON objects from text"""
+    json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
+    json_matches = re.findall(json_pattern, text, re.DOTALL)
     
-    # Default log directory that Inspect uses
-    log_dir = "logs"
+    results = []
+    for match in json_matches[:expected_count]:
+        try:
+            obj = json.loads(match)
+            results.append(obj)
+        except json.JSONDecodeError:
+            continue
     
-    # Check if logs directory exists
-    if not Path(log_dir).exists():
-        logger.error(f"Log directory {log_dir} not found. Run inspect eval first.")
-        return
+    return results
+
+def process_classification_results(samples_df: pd.DataFrame, messages_df: pd.DataFrame) -> List[Dict[str, Any]]:
+    """Process classification results from DataFrames"""
+    results = []
     
-    # Find the latest Stage 4 .eval file
-    stage4_files = list(Path(log_dir).glob("*onet-economic-task-classification*.eval"))
-    if not stage4_files:
-        logger.error(f"No Stage 4 .eval files found in {log_dir}. Run inspect eval first.")
-        return
+    # Get assistant messages
+    assistant_messages = messages_df[messages_df['role'] == 'assistant']
     
-    # Get the most recent Stage 4 file
-    latest_stage4_file = max(stage4_files, key=lambda x: x.stat().st_mtime)
-    logger.info(f"Using latest Stage 4 file: {latest_stage4_file.name}")
-    
-    # Create a temporary directory with just this file for DataFrame processing
-    import tempfile
-    import shutil
-    temp_dir = tempfile.mkdtemp()
-    temp_file = Path(temp_dir) / latest_stage4_file.name
-    shutil.copy2(latest_stage4_file, temp_file)
-    
-    # Use the temp directory for DataFrame processing
-    log_dir = temp_dir
-    
-    try:
-        # Read results using messages DataFrame
-        from inspect_ai.analysis.beta import samples_df, messages_df
+    for idx, sample_row in samples_df.iterrows():
+        sample_id = sample_row.get("sample_id", f"sample_{idx}")
         
-        samples_df_data = samples_df(log_dir)
-        messages_df_data = messages_df(log_dir)
-        logger.info(f"Loaded samples DataFrame with {len(samples_df_data)} samples")
-        logger.info(f"Loaded messages DataFrame with {len(messages_df_data)} messages")
+        # Find assistant message for this sample
+        sample_messages = assistant_messages[assistant_messages['sample_id'] == sample_id]
         
-        # Process results by joining samples and messages DataFrames
-        results = []
-        valid_responses = 0
-        classification_counts = {
-            'automation_levels': {1: 0, 2: 0, 3: 0, 4: 0, 5: 0},
-            'economic_impacts': {1: 0, 2: 0, 3: 0},
-            'confidence_levels': {'H': 0, 'M': 0, 'L': 0},
-            'occupation_categories': {}
+        result = {
+            "sample_id": sample_id,
+            "tool_id": "",
+            "input_data": {},
+            "raw_output": "",
+            "score": sample_row.get("score_onet_classifier_scorer", 0),
+            "classifications": {
+                "task_mapping": None,
+                "collaboration_pattern": None,
+                "automation_level": None,
+                "tool_replacement": None
+            },
+            "errors": []
         }
         
-        # Group messages by sample_id to get assistant responses
-        assistant_messages = messages_df_data[messages_df_data['role'] == 'assistant']
+        # Parse input data
+        user_messages = messages_df[
+            (messages_df['sample_id'] == sample_id) & 
+            (messages_df['role'] == 'user')
+        ]
         
-        for idx, sample_row in samples_df_data.iterrows():
-            sample_id = sample_row.get("sample_id", f"sample_{idx}")
-            
-            # Find the assistant message for this sample
-            sample_messages = assistant_messages[assistant_messages['sample_id'] == sample_id]
-            
-            sample_result = {
-                "sample_id": sample_id,
-                "input_data": {},
-                "raw_output": "",
-                "score": sample_row.get("score_onet_classification_scorer", 0),
-                "score_explanation": ""
-            }
-            
-            # Parse input data from user message
-            user_messages = messages_df_data[
-                (messages_df_data['sample_id'] == sample_id) & 
-                (messages_df_data['role'] == 'user')
-            ]
-            if not user_messages.empty:
-                user_content = user_messages.iloc[0]['content']
-                try:
-                    # The input should be JSON containing tool data
-                    sample_result["input_data"] = json.loads(user_content)
-                except (json.JSONDecodeError, TypeError, ValueError):
-                    sample_result["input_data"] = {"raw_input": str(user_content)}
-            
-            # Get assistant response (the actual model output)
-            if not sample_messages.empty:
-                sample_result["raw_output"] = sample_messages.iloc[0]['content']
-            
-            # Try to parse the LLM output using robust JSON extraction
+        if not user_messages.empty:
+            user_content = user_messages.iloc[0]['content']
             try:
-                if sample_result["raw_output"]:
-                    completion = sample_result["raw_output"]
-                    json_obj = None
+                # Extract JSON from user content
+                if "{" in user_content and "}" in user_content:
+                    start = user_content.find('{')
+                    end = user_content.rfind('}')
+                    json_str = user_content[start:end+1]
+                    input_data = json.loads(json_str)
+                    result["input_data"] = input_data
                     
-                    # First try: direct JSON parsing
-                    try:
-                        json_obj = json.loads(completion)
-                    except json.JSONDecodeError:
-                        # Second try: find JSON block in text (handle markdown code blocks)
-                        import re
-                        # Remove markdown code blocks
-                        if completion.startswith('```'):
-                            lines = completion.split('\n')
-                            if len(lines) > 2:
-                                # Remove first and last lines (```json and ```)
-                                completion = '\n'.join(lines[1:-1])
-                        
-                        try:
-                            json_obj = json.loads(completion)
-                        except json.JSONDecodeError:
-                            # Third try: find JSON pattern in text
-                            json_pattern = r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}'
-                            json_matches = re.findall(json_pattern, completion, re.DOTALL)
-                            
-                            for match in json_matches:
-                                try:
-                                    json_obj = json.loads(match)
-                                    break
-                                except json.JSONDecodeError:
-                                    continue
-                    
-                    if json_obj:
-                        sample_result["parsed_output"] = json_obj
-                        
-                        # Count valid responses (score > 0)
-                        if sample_result["score"] > 0:
-                            valid_responses += 1
-                            
-                            # Collect classification statistics
-                            automation_level = json_obj.get("automation_level")
-                            if automation_level in [1, 2, 3, 4, 5]:
-                                classification_counts['automation_levels'][automation_level] += 1
-                            
-                            economic_impact = json_obj.get("economic_impact")
-                            if economic_impact in [1, 2, 3]:
-                                classification_counts['economic_impacts'][economic_impact] += 1
-                            
-                            confidence = json_obj.get("confidence")
-                            if confidence in ['H', 'M', 'L']:
-                                classification_counts['confidence_levels'][confidence] += 1
-                            
-                            occupation_category = json_obj.get("occupation_category", "")
-                            if occupation_category:
-                                if occupation_category not in classification_counts['occupation_categories']:
-                                    classification_counts['occupation_categories'][occupation_category] = 0
-                                classification_counts['occupation_categories'][occupation_category] += 1
-                    else:
-                        sample_result["parsed_output"] = None
-                        sample_result["error"] = "Could not extract JSON"
-                            
-                else:
-                    sample_result["parsed_output"] = None
-                    sample_result["error"] = "No output generated"
+                    # Get tool_id from metadata if available
+                    if "metadata" in sample_row:
+                        metadata = sample_row["metadata"]
+                        if isinstance(metadata, str):
+                            metadata = json.loads(metadata)
+                        result["tool_id"] = metadata.get("id", "")
+            except (json.JSONDecodeError, TypeError, ValueError) as e:
+                result["errors"].append(f"Failed to parse input: {str(e)}")
+        
+        # Get assistant response
+        if not sample_messages.empty:
+            result["raw_output"] = sample_messages.iloc[0]['content']
+            
+            # Extract the 4 JSON responses
+            try:
+                json_objects = extract_json_objects(result["raw_output"], 4)
+                
+                if len(json_objects) >= 1:
+                    result["classifications"]["task_mapping"] = json_objects[0]
+                
+                if len(json_objects) >= 2:
+                    result["classifications"]["collaboration_pattern"] = json_objects[1]
+                
+                if len(json_objects) >= 3:
+                    result["classifications"]["automation_level"] = json_objects[2]
+                
+                if len(json_objects) >= 4:
+                    result["classifications"]["tool_replacement"] = json_objects[3]
+                
+                if len(json_objects) < 4:
+                    result["errors"].append(f"Only found {len(json_objects)} JSON responses, expected 4")
                     
             except Exception as e:
-                sample_result["parsed_output"] = None
-                sample_result["error"] = f"Processing error: {str(e)}"
-            
-            results.append(sample_result)
+                result["errors"].append(f"Failed to extract classifications: {str(e)}")
         
-        # Create summary
-        summary = {
-            "evaluation_timestamp": datetime.now().isoformat(),
-            "model": MODEL,
-            "total_samples": len(results),
-            "valid_responses": valid_responses,
-            "invalid_responses": len(results) - valid_responses,
-            "classification_statistics": classification_counts
+        results.append(result)
+    
+    return results
+
+def create_analysis_dataframe(results: List[Dict[str, Any]]) -> pd.DataFrame:
+    """Create a flattened DataFrame for analysis"""
+    rows = []
+    
+    for result in results:
+        row = {
+            'tool_id': result['tool_id'],
+            'sample_id': result['sample_id'],
+            'score': result['score'],
+            'has_errors': len(result.get('errors', [])) > 0,
+            'error_count': len(result.get('errors', []))
         }
         
-        # Add model usage from samples DataFrame if available
-        if "model_usage" in samples_df_data.columns:
+        # Add input data fields
+        input_data = result.get('input_data', {})
+        row['tool_name'] = input_data.get('tool_name', '')
+        row['tool_description'] = input_data.get('tool_description', '')
+        row['server_name'] = input_data.get('server_name', '')
+        row['server_description'] = input_data.get('server_description', '')
+        
+        # Task mapping classification
+        task_mapping = result['classifications'].get('task_mapping', {})
+        if task_mapping:
+            row['top_level_category'] = task_mapping.get('top_level_category', '')
+            row['top_level_number'] = task_mapping.get('top_level_number', '')
+            row['specific_task'] = task_mapping.get('specific_task', '')
+            row['occupation'] = task_mapping.get('occupation', '')
+            row['task_confidence'] = task_mapping.get('confidence', '')
+        
+        # Collaboration pattern
+        collab = result['classifications'].get('collaboration_pattern', {})
+        if collab:
+            row['collaboration_pattern'] = collab.get('pattern', '')
+            row['collab_confidence'] = collab.get('confidence', '')
+        
+        # Automation level
+        auto = result['classifications'].get('automation_level', {})
+        if auto:
+            row['automation_level'] = auto.get('level', -1)
+            row['automation_description'] = auto.get('level_description', '')
+        
+        # Tool replacement
+        replacement = result['classifications'].get('tool_replacement', {})
+        if replacement:
+            replaced_tools = replacement.get('replaced_tools', [])
+            row['replaced_tools_count'] = len(replaced_tools)
+            row['replaced_tools'] = ';'.join(replaced_tools) if replaced_tools else ''
+            row['replacement_confidence'] = replacement.get('confidence', '')
+        
+        rows.append(row)
+    
+    return pd.DataFrame(rows)
+
+def generate_summary_statistics(df: pd.DataFrame, results: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """Generate summary statistics from processed results"""
+    valid_results = df[df['score'] > 0]
+    
+    summary = {
+        'processing_timestamp': datetime.now().isoformat(),
+        'model': MODEL,
+        'total_tools': len(results),
+        'valid_classifications': len(valid_results),
+        'error_rate': (len(df) - len(valid_results)) / len(df) * 100 if len(df) > 0 else 0
+    }
+    
+    # Task mapping statistics
+    if 'top_level_number' in valid_results.columns:
+        top_level_dist = valid_results['top_level_number'].value_counts().to_dict()
+        summary['top_level_distribution'] = {int(k): v for k, v in top_level_dist.items() if pd.notna(k)}
+        summary['top_occupations'] = valid_results['occupation'].value_counts().head(10).to_dict()
+    
+    # Collaboration patterns
+    if 'collaboration_pattern' in valid_results.columns:
+        collab_dist = valid_results['collaboration_pattern'].value_counts().to_dict()
+        summary['collaboration_patterns'] = collab_dist
+        
+        # Calculate automation vs augmentation
+        automation_patterns = ['Directive', 'Feedback Loop']
+        augmentation_patterns = ['Task Iteration', 'Learning', 'Validation']
+        
+        automation_count = valid_results[valid_results['collaboration_pattern'].isin(automation_patterns)].shape[0]
+        augmentation_count = valid_results[valid_results['collaboration_pattern'].isin(augmentation_patterns)].shape[0]
+        
+        summary['automation_vs_augmentation'] = {
+            'automation': automation_count,
+            'augmentation': augmentation_count,
+            'automation_percentage': automation_count / (automation_count + augmentation_count) * 100 if (automation_count + augmentation_count) > 0 else 0
+        }
+    
+    # Automation levels
+    if 'automation_level' in valid_results.columns:
+        level_dist = valid_results['automation_level'].value_counts().sort_index().to_dict()
+        summary['automation_levels'] = {int(k): v for k, v in level_dist.items() if k >= 0}
+        summary['avg_automation_level'] = valid_results[valid_results['automation_level'] >= 0]['automation_level'].mean()
+    
+    # Tool replacement
+    if 'replaced_tools_count' in valid_results.columns:
+        summary['tools_replacing_onet'] = (valid_results['replaced_tools_count'] > 0).sum()
+        summary['avg_tools_replaced'] = valid_results['replaced_tools_count'].mean()
+        
+        # Most commonly replaced tools
+        all_replaced = []
+        for tools_str in valid_results['replaced_tools'].dropna():
+            if tools_str:
+                all_replaced.extend(tools_str.split(';'))
+        
+        if all_replaced:
+            from collections import Counter
+            tool_counts = Counter(all_replaced)
+            summary['most_replaced_tools'] = dict(tool_counts.most_common(10))
+    
+    return summary
+
+def main():
+    parser = argparse.ArgumentParser(description='Process O*NET classification results')
+    parser.add_argument('--logs-dir', type=str, default='conseq_fin_stage4_logs',
+                       help='Directory containing .eval files')
+    parser.add_argument('--eval-file', type=str,
+                       help='Specific .eval file to process')
+    
+    args = parser.parse_args()
+    
+    logger.info("Starting Stage 4 DataFrame Processing")
+    
+    # Find eval files
+    if args.eval_file:
+        eval_files = [Path(args.eval_file)]
+    else:
+        log_dir = Path(args.logs_dir)
+        if not log_dir.exists():
+            # Try default logs directory
+            log_dir = Path('logs')
+        
+        if not log_dir.exists():
+            logger.error(f"Log directory {args.logs_dir} not found")
+            return
+        
+        eval_files = list(log_dir.glob("*onet-classification-task*.eval"))
+        if not eval_files:
+            logger.error(f"No O*NET classification .eval files found in {log_dir}")
+            return
+    
+    # Process most recent file
+    latest_file = max(eval_files, key=lambda x: x.stat().st_mtime)
+    logger.info(f"Processing: {latest_file.name}")
+    
+    # Create temporary directory for single file processing
+    import tempfile
+    temp_dir = tempfile.mkdtemp()
+    temp_file = Path(temp_dir) / latest_file.name
+    
+    import shutil
+    shutil.copy2(latest_file, temp_file)
+    
+    try:
+        # Load DataFrames
+        from inspect_ai.analysis.beta import samples_df, messages_df
+        
+        samples = samples_df(temp_dir)
+        messages = messages_df(temp_dir)
+        
+        logger.info(f"Loaded {len(samples)} samples")
+        logger.info(f"Loaded {len(messages)} messages")
+        
+        # Process results
+        results = process_classification_results(samples, messages)
+        
+        # Create analysis DataFrame
+        analysis_df = create_analysis_dataframe(results)
+        
+        # Generate summary
+        summary = generate_summary_statistics(analysis_df, results)
+        
+        # Add model usage if available
+        if "model_usage" in samples.columns:
             total_input_tokens = 0
             total_output_tokens = 0
-            for _, row in samples_df_data.iterrows():
+            
+            for _, row in samples.iterrows():
                 if row["model_usage"]:
                     try:
                         usage_data = json.loads(row["model_usage"]) if isinstance(row["model_usage"], str) else row["model_usage"]
@@ -224,172 +334,54 @@ def main():
             "results": results
         }
         
-        # Convert any pandas NA values to None for JSON serialization
-        def convert_na_to_none(obj):
-            if isinstance(obj, dict):
-                return {k: convert_na_to_none(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [convert_na_to_none(v) for v in obj]
-            elif pd.isna(obj):
-                return None
-            else:
-                return obj
-        
-        output_data = convert_na_to_none(output_data)
-        
-        output_file = "conseq_fin_stage4_results.json"
-        with open(output_file, 'w', encoding='utf-8') as f:
+        # Save JSON
+        json_file = "conseq_fin_stage4_results.json"
+        with open(json_file, 'w', encoding='utf-8') as f:
             json.dump(output_data, f, indent=2, ensure_ascii=False)
+        logger.info(f"Saved results to {json_file}")
         
-        # Also save DataFrame as CSV for easy inspection using pandas
-        results_df = pd.DataFrame(results)
+        # Save CSV
+        csv_file = "conseq_fin_stage4_results.csv"
+        analysis_df.to_csv(csv_file, index=False)
+        logger.info(f"Saved DataFrame to {csv_file}")
         
-        # Extract input_data fields into separate columns
-        results_df['tool_id'] = results_df.apply(
-            lambda row: json.loads(row['input_data']).get('tool_id', '') if isinstance(row['input_data'], str) else row['input_data'].get('tool_id', ''), 
-            axis=1
-        )
-        results_df['tool_name'] = results_df.apply(
-            lambda row: json.loads(row['input_data']).get('tool_name', '') if isinstance(row['input_data'], str) else row['input_data'].get('tool_name', ''), 
-            axis=1
-        )
-        results_df['tool_description'] = results_df.apply(
-            lambda row: json.loads(row['input_data']).get('tool_description', '') if isinstance(row['input_data'], str) else row['input_data'].get('tool_description', ''), 
-            axis=1
-        )
-        results_df['server_name'] = results_df.apply(
-            lambda row: json.loads(row['input_data']).get('server_name', '') if isinstance(row['input_data'], str) else row['input_data'].get('server_name', ''), 
-            axis=1
-        )
-        results_df['server_description'] = results_df.apply(
-            lambda row: json.loads(row['input_data']).get('server_description', '') if isinstance(row['input_data'], str) else row['input_data'].get('server_description', ''), 
-            axis=1
-        )
-        results_df['finance_is_finance_llm'] = results_df.apply(
-            lambda row: json.loads(row['input_data']).get('finance_is_finance_llm', 0) if isinstance(row['input_data'], str) else row['input_data'].get('finance_is_finance_llm', 0), 
-            axis=1
-        )
+        # Save summary
+        summary_file = "conseq_fin_stage4_summary.json"
+        with open(summary_file, 'w', encoding='utf-8') as f:
+            json.dump(summary, f, indent=2)
+        logger.info(f"Saved summary to {summary_file}")
         
-        # Add key parsed fields as separate columns for better CSV readability
-        results_df['analysis_notes'] = results_df.apply(
-            lambda row: row['parsed_output'].get('analysis_notes', '') if isinstance(row['parsed_output'], dict) else '', 
-            axis=1
-        )
-        results_df['primary_onet_task'] = results_df.apply(
-            lambda row: row['parsed_output'].get('primary_onet_task', '') if isinstance(row['parsed_output'], dict) else '', 
-            axis=1
-        )
-        results_df['secondary_onet_tasks'] = results_df.apply(
-            lambda row: row['parsed_output'].get('secondary_onet_tasks', '') if isinstance(row['parsed_output'], dict) else '', 
-            axis=1
-        )
-        results_df['occupation_category'] = results_df.apply(
-            lambda row: row['parsed_output'].get('occupation_category', '') if isinstance(row['parsed_output'], dict) else '', 
-            axis=1
-        )
-        results_df['automation_level'] = results_df.apply(
-            lambda row: row['parsed_output'].get('automation_level', '') if isinstance(row['parsed_output'], dict) else '', 
-            axis=1
-        )
-        results_df['economic_impact'] = results_df.apply(
-            lambda row: row['parsed_output'].get('economic_impact', '') if isinstance(row['parsed_output'], dict) else '', 
-            axis=1
-        )
-        results_df['confidence'] = results_df.apply(
-            lambda row: row['parsed_output'].get('confidence', '') if isinstance(row['parsed_output'], dict) else '', 
-            axis=1
-        )
-        results_df['task_skills'] = results_df.apply(
-            lambda row: row['parsed_output'].get('task_skills', '') if isinstance(row['parsed_output'], dict) else '', 
-            axis=1
-        )
+        # Log key statistics
+        logger.info("\n=== Classification Results ===")
+        logger.info(f"Total tools processed: {summary['total_tools']}")
+        logger.info(f"Valid classifications: {summary['valid_classifications']}")
+        logger.info(f"Error rate: {summary['error_rate']:.1f}%")
         
-        # Reorder columns to put key fields first
-        input_columns = ['tool_id', 'tool_name', 'tool_description', 'server_name', 'server_description', 'finance_is_finance_llm']
-        classification_columns = ['primary_onet_task', 'secondary_onet_tasks', 'occupation_category', 'automation_level', 'economic_impact', 'confidence', 'task_skills', 'analysis_notes']
-        other_columns = ['sample_id', 'input_data', 'raw_output', 'score', 'score_explanation', 'parsed_output']
+        if 'top_level_distribution' in summary:
+            logger.info("\nTop-level task distribution:")
+            for level, count in sorted(summary['top_level_distribution'].items()):
+                logger.info(f"  Level {level}: {count} tools")
         
-        # Create ordered column list
-        ordered_columns = input_columns + classification_columns + other_columns
+        if 'automation_vs_augmentation' in summary:
+            logger.info(f"\nAutomation vs Augmentation:")
+            logger.info(f"  Automation: {summary['automation_vs_augmentation']['automation']} ({summary['automation_vs_augmentation']['automation_percentage']:.1f}%)")
+            logger.info(f"  Augmentation: {summary['automation_vs_augmentation']['augmentation']}")
         
-        # Select only columns that exist in the DataFrame
-        existing_columns = [col for col in ordered_columns if col in results_df.columns]
-        results_df = results_df[existing_columns]
+        if 'automation_levels' in summary:
+            logger.info("\nAutomation level distribution:")
+            for level, count in sorted(summary['automation_levels'].items()):
+                logger.info(f"  Level {level}: {count} tools")
         
-        df_output_file = "conseq_fin_stage4_results.csv"
-        results_df.to_csv(df_output_file, index=False)
+        logger.info("\n=== Processing Complete ===")
         
-        logger.info(f"Results saved to {output_file}")
-        logger.info(f"DataFrame saved to {df_output_file}")
-        logger.info(f"Summary: {valid_responses}/{len(results)} valid responses")
-        
-        # Log analysis overview
-        logger.info("=== O*NET Economic Task Classification Analysis ===")
-        
-        # Automation levels
-        logger.info("Automation Level Distribution:")
-        total_classified = sum(classification_counts['automation_levels'].values())
-        for level, count in classification_counts['automation_levels'].items():
-            percentage = (count / total_classified * 100) if total_classified > 0 else 0
-            level_desc = {1: "Monitoring", 2: "Analysis", 3: "Workflow", 4: "Execution", 5: "Autonomous"}
-            logger.info(f"  Level {level} ({level_desc.get(level, 'Unknown')}): {count} ({percentage:.1f}%)")
-        
-        # Economic impact
-        logger.info("Economic Impact Distribution:")
-        total_impact = sum(classification_counts['economic_impacts'].values())
-        for impact, count in classification_counts['economic_impacts'].items():
-            percentage = (count / total_impact * 100) if total_impact > 0 else 0
-            impact_desc = {1: "Low", 2: "Medium", 3: "High"}
-            logger.info(f"  Impact {impact} ({impact_desc.get(impact, 'Unknown')}): {count} ({percentage:.1f}%)")
-        
-        # Confidence levels
-        logger.info("Confidence Level Distribution:")
-        total_conf = sum(classification_counts['confidence_levels'].values())
-        for conf, count in classification_counts['confidence_levels'].items():
-            percentage = (count / total_conf * 100) if total_conf > 0 else 0
-            logger.info(f"  {conf}: {count} ({percentage:.1f}%)")
-        
-        # Top occupation categories
-        logger.info("Top Occupation Categories:")
-        sorted_categories = sorted(classification_counts['occupation_categories'].items(), key=lambda x: x[1], reverse=True)
-        for category, count in sorted_categories[:5]:
-            percentage = (count / total_classified * 100) if total_classified > 0 else 0
-            logger.info(f"  {category}: {count} ({percentage:.1f}%)")
-        
-        # High-impact tools analysis
-        high_impact_tools = results_df[
-            (results_df['economic_impact'] == 3) & 
-            (results_df['automation_level'].isin([4, 5]))
-        ]
-        if len(high_impact_tools) > 0:
-            logger.info(f"=== High Economic Impact + High Automation Tools: {len(high_impact_tools)} ===")
-            for _, row in high_impact_tools.head(5).iterrows():
-                tool_name = row.get('tool_name', 'Unknown')
-                primary_task = row.get('primary_onet_task', 'No task')[:80]
-                logger.info(f"  {tool_name}: {primary_task}...")
-        
-        # Finance-specific analysis
-        finance_tools = results_df[results_df['finance_is_finance_llm'] == 1]
-        if len(finance_tools) > 0:
-            logger.info(f"=== Finance-Specific Tools Analysis: {len(finance_tools)} tools ===")
-            finance_categories = finance_tools['occupation_category'].value_counts()
-            for category, count in finance_categories.head(3).items():
-                logger.info(f"  {category}: {count} tools")
-        
-        logger.info("=== End Analysis ===")
-        
-        # Log next steps
-        logger.info("=== Analysis Complete ===")
-        logger.info("Results ready for further analysis and visualization")
-        
-        # Clean up temp directory
-        shutil.rmtree(temp_dir)
-            
     except Exception as e:
-        logger.error(f"DataFrame processing failed: {e}")
+        logger.error(f"Processing failed: {e}")
         import traceback
         traceback.print_exc()
         raise
+    finally:
+        # Cleanup
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
 if __name__ == "__main__":
     main()

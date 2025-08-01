@@ -6,7 +6,7 @@ Comprehensive dashboard tracking **27,899 MCP servers** across 3 data sources, w
 ## 🚀 Quick Start
 ```bash
 # Activate environment
-source ~/si_setup/.venv/bin/activate
+uv sync # or old via source ~/si_setup/.venv/bin/activate
 
 # Process data
 python data_unified_processor.py
