@@ -133,7 +133,7 @@ def expand_tools_columns(df):
     servers_with_tools = sum(1 for tools in parsed_tools if len(tools) > 0)
     
     logger.info(f"Expanded {total_tools} total tools across {servers_with_tools} servers")
-    logger.info(f"Created exactly 297 tool columns (99 sets of name/description/inputSchema)")
+    logger.info("Created exactly 297 tool columns (99 sets of name/description/inputSchema)")
     logger.info(f"Maximum tools found in any server: {max_tools_found}")
     
     return df
@@ -209,7 +209,6 @@ def main():
         'transfer_bank_and_fund_bank_account', 'transfer_credit_card', 'transfer_paypal_stripe_payments',
         'transfer_stock_invest', 'transfer_crypto_and_stablecoin', 'sensitive_data_required'
     ]
-    other_columns = ['server', 'sample_id', 'score', 'score_explanation', 'parsed_output', 'confidence']
     
     # Get tool_count column and all tool columns (dynamically created)
     tool_count_column = ['tool_count'] if 'tool_count' in results_df.columns else []

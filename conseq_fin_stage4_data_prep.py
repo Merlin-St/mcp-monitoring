@@ -14,11 +14,9 @@ Usage:
 
 import json
 import logging
-import os
 import argparse
 from pathlib import Path
 from datetime import datetime
-import pandas as pd
 
 # Configure logging
 logging.basicConfig(
@@ -299,8 +297,8 @@ def main():
         logger.info(f"{server['server_name']}: {server['tool_count']} tools")
     
     logger.info("=== Next Steps ===")
-    logger.info(f"1. Run: inspect eval conseq_fin_stage4_inspect.py --model anthropic/claude-sonnet-4-20250514")
-    logger.info(f"2. Process results: python conseq_fin_stage4_dfprocessing.py")
+    logger.info("1. Run: inspect eval conseq_fin_stage4_inspect.py --model anthropic/claude-sonnet-4-20250514")
+    logger.info("2. Process results: python conseq_fin_stage4_dfprocessing.py")
     
     logger.info("Stage 4 data preparation completed successfully!")
 

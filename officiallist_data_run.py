@@ -339,7 +339,7 @@ class OfficialistDataRunner:
         self.logger.info(f"  URLs: {data_sources['urls'].get('total_servers', 0)}")
         self.logger.info(f"  HTML: {len(lookups['html'])}")
         self.logger.info(f"  GitHub: {len(lookups['github'])}")
-        self.logger.info(f"Final dataset saved to: officiallist_data.json")
+        self.logger.info("Final dataset saved to: officiallist_data.json")
         
         return True
     
@@ -504,7 +504,7 @@ class OfficialistDataRunner:
             self.logger.info(f"GitHub enhanced: {github_count}")
             self.logger.info(f"Data merger: {'✓ Success' if merger_success else '✗ Failed'}")
             
-            self.logger.info(f"\n✓ PIPELINE SUCCESSFUL - Data saved to: officiallist_data.json")
+            self.logger.info("\n✓ PIPELINE SUCCESSFUL - Data saved to: officiallist_data.json")
             return True
                 
         except Exception as e:

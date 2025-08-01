@@ -13,7 +13,6 @@ Usage:
 """
 
 import json
-import os
 from pathlib import Path
 from datetime import datetime
 import logging
@@ -110,7 +109,7 @@ def main():
                         sample_result["input_data"] = json.loads(json_part)
                     else:
                         sample_result["input_data"] = json.loads(user_content)
-                except:
+                except (json.JSONDecodeError, TypeError, ValueError):
                     sample_result["input_data"] = {"raw_input": str(user_content)}
             
             # Get assistant response (the actual model output)
@@ -197,7 +196,7 @@ def main():
                         if MODEL in usage_data:
                             total_input_tokens += usage_data[MODEL].get("input_tokens", 0)
                             total_output_tokens += usage_data[MODEL].get("output_tokens", 0)
-                    except:
+                    except (KeyError, TypeError, AttributeError, json.JSONDecodeError):
                         continue
             
             summary["model_usage"] = {

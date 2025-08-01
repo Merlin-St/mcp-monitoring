@@ -180,7 +180,7 @@ def main():
     
     # Filter for finance-related servers if flag is set
     if args.finance:
-        finance_servers = [s for s in servers if s.get('is_finance_related') == True]
+        finance_servers = [s for s in servers if s.get('is_finance_related')]
         logger.info(f"Filtered to {len(finance_servers)} finance-related servers (from {len(servers)} total)")
         servers = finance_servers
         
@@ -264,7 +264,7 @@ def main():
     logger.info(f"Saved processing summary to {summary_file}")
     
     logger.info("Data preparation completed successfully!")
-    logger.info(f"Next step: Run Stage 1 evaluation with: inspect eval conseq_fin_stage1_inspect.py --model claude-sonnet-4-20250514")
+    logger.info("Next step: Run Stage 1 evaluation with: inspect eval conseq_fin_stage1_inspect.py --model claude-sonnet-4-20250514")
 
 if __name__ == "__main__":
     main()

@@ -6,7 +6,6 @@ Automatically tests different parameter combinations to minimize outliers and ma
 
 import json
 import logging
-import os
 import time
 import argparse
 from itertools import product
@@ -16,17 +15,16 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split
 import warnings
-warnings.filterwarnings('ignore')
-
 # Import the original functions from embed_generate
 from embed_generate import (
     generate_high_quality_embeddings,
-    create_bertopic_model,
     calculate_topic_coherence,
     prepare_texts_parallel,
     setup_gpu_optimizations
 )
 from naics_classification_config import NAICS_SECTORS, NAICS_KEYWORDS
+
+warnings.filterwarnings('ignore')
 
 # Configuration constants
 MIN_TOPICS_REQUIRED = 45  # Minimum number of topics required for optimization
@@ -600,7 +598,7 @@ class HyperparameterOptimizer:
                 self.logger.info(f"  Test Coherence: {result.test_coherence:.3f}")
                 self.logger.info(f"  Topics Found: {result.num_topics}")
                 self.logger.info(f"  Execution Time: {result.execution_time:.1f}s")
-                self.logger.info(f"  Parameters:")
+                self.logger.info("  Parameters:")
                 for param, value in result.params.items():
                     self.logger.info(f"    {param}: {value}")
         
@@ -668,7 +666,7 @@ class HyperparameterOptimizer:
                 elif param in ['max_features', 'max_df', 'min_df']:
                     self.logger.info(f"  Vectorizer {param}: {value}")
             self.logger.info("")
-            self.logger.info(f"Expected performance:")
+            self.logger.info("Expected performance:")
             self.logger.info(f"  - Outlier rate: {best_result.avg_outlier_pct:.1f}%")
             self.logger.info(f"  - Topic coherence: {best_result.avg_coherence:.3f}")
             self.logger.info(f"  - Number of topics: {best_result.num_topics}")
@@ -713,7 +711,7 @@ class HyperparameterOptimizer:
         if successful_results:
             best_results = self.get_best_parameters(5)
             
-            print(f"\nTOP 5 PARAMETER COMBINATIONS:")
+            print("\nTOP 5 PARAMETER COMBINATIONS:")
             print(f"{'='*60}")
             
             for i, result in enumerate(best_results, 1):
@@ -723,12 +721,12 @@ class HyperparameterOptimizer:
                 print(f"  Avg Coherence: {result.avg_coherence:.3f}")
                 print(f"  Topics Found: {result.num_topics}")
                 print(f"  Execution Time: {result.execution_time:.1f}s")
-                print(f"  Parameters:")
+                print("  Parameters:")
                 for param, value in result.params.items():
                     print(f"    {param}: {value}")
         
         if failed_results:
-            print(f"\nCOMMON FAILURE REASONS:")
+            print("\nCOMMON FAILURE REASONS:")
             error_counts = {}
             for result in failed_results:
                 error_type = type(result.error).__name__ if hasattr(result.error, '__class__') else 'Unknown'
@@ -790,7 +788,7 @@ def main():
         min_topics_full=args.min_topics_full
     )
     
-    results = optimizer.optimize(max_combinations=args.max_combinations)
+    optimizer.optimize(max_combinations=args.max_combinations)
     
     # Log final results to log file
     optimizer.log_final_results()
@@ -803,7 +801,7 @@ def main():
     log_file = f'embed_hyperparameter_optimization{suffix}.log'
     
     print(f"\nAll results logged to: {log_file}")
-    print(f"Check the end of the log file for recommended configuration.")
+    print("Check the end of the log file for recommended configuration.")
     
     if selected_sector:
         sector_name = NAICS_SECTORS.get(selected_sector, f"Sector {selected_sector}")

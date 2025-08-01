@@ -231,7 +231,7 @@ def main():
         print("  - finance_mcp_repositories.csv (spreadsheet format)")
         print("  - finance_mcp_summary.txt (human-readable summary)")
         
-        print(f"\nTop 5 finance MCP repositories:")
+        print("\nTop 5 finance MCP repositories:")
         for i, repo in enumerate(finance_repos[:5], 1):
             print(f"{i}. {repo['full_name']} (Score: {repo['relevance_score']}, Stars: {repo['stars']})")
             print(f"   Keywords: {', '.join(repo['matched_keywords'][:5])}")

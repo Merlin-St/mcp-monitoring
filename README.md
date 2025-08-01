@@ -8,18 +8,14 @@ Comprehensive dashboard tracking **27,899 MCP servers** across 3 data sources, w
 # Activate environment
 source ~/si_setup/.venv/bin/activate
 
-# Process data (if needed)
+# Process data
 python data_unified_processor.py
 
-# Launch dashboard in persistent tmux session (recommended)
-python dashboard_tmux_launcher.py start unified
-
-# Use filtered dataset (smaller, faster loading)
-python dashboard_tmux_launcher.py start unified --filtered
-
-# Stop when done
-python dashboard_tmux_launcher.py stop unified
+# Create filtered subset for analysis
+python data_create_filtered_subset.py
 ```
+
+**Note**: Dashboard components have been moved to https://github.com/AI-Safety-Institute/sr-mcp-dashboard. This repository focuses on data collection, processing, and ML analysis.
 
 ## 🔬 ML Analysis Features
 - **Semantic Embeddings**: High-quality text analysis using sentence-transformers
@@ -92,10 +88,11 @@ Raw Sources → Load Data → Process Sources → Deduplicate → Enhance → Sa
 }
 ```
 
-## Dashboard Features
-- **5 Sections**: Overview, Growth Trends, Technology Analysis, Finance Analysis, Server Explorer
-- **Interactive Filtering**: By source, language, finance relevance
-- **Visualizations**: Growth charts, distribution analysis, technology trends
+## Core Features
+- **Data Collection**: 3 parallel sources (Smithery, GitHub, Official MCP list)
+- **ML Analysis**: Semantic embeddings, topic modeling, NAICS classification
+- **Finance Focus**: 966 finance-related servers with consequentiality scoring
+- **Processing Pipeline**: Unified dataset with deduplication and enhancement
 
 ## 🧬 Topic Modeling & Optimization
 ```bash
@@ -122,11 +119,6 @@ python embed_hyperparameter_optimizer.py --finance --test-size 500 --max-combina
 ```
 
 ## 📁 Key Files
-### Dashboard Files
-- `dashboard_unified_mcp.py` - Main comprehensive dashboard (supports --filtered flag)
-- `dashboard_launch.py` - Simple launcher with --filtered support
-- `dashboard_tmux_launcher.py` - Persistent tmux session launcher with --filtered support
-
 ### Main Data
 - `data_unified_processor.py` - Data unification (27,899 servers)
 - `data_unified.json` - Full unified dataset (343MB, 27,899 servers)

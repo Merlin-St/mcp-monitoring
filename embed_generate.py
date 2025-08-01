@@ -11,13 +11,10 @@ import json
 import argparse
 import logging
 import os
-import warnings
 import time
 from tqdm import tqdm
 from bertopic import BERTopic
-from sklearn.feature_extraction.text import CountVectorizer
 from sklearn.model_selection import train_test_split
-import gensim
 from gensim.models.coherencemodel import CoherenceModel
 from gensim.corpora import Dictionary
 import torch
@@ -25,8 +22,6 @@ from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import pickle
 import gc
-import shutil
-import re
 from naics_classification_config import NAICS_SECTORS, NAICS_KEYWORDS
 
 # OPTIMIZATION 1: Enable mixed precision and optimize GPU settings
@@ -279,7 +274,7 @@ def create_bertopic_model(embeddings, texts, min_cluster_size=5, n_neighbors=15,
     
     # Optimized vectorizer with parameters suitable for small datasets
     # Adjust min_df and max_df based on dataset size to avoid conflicts
-    n_docs = len(texts)
+    len(texts)
     
     # Custom stop words to filter out generic MCP/tech terms so sector content emerges naturally
     custom_stop_words = [
@@ -333,7 +328,6 @@ def create_bertopic_model(embeddings, texts, min_cluster_size=5, n_neighbors=15,
 
 def create_interactive_plot(df, topic_info=None, validation_metrics=None):
     """Creates an interactive scatter plot using Plotly with direct cluster labeling."""
-    import numpy as np
     
     # Create hover text with topic keywords if available
     hover_text = []
@@ -382,7 +376,6 @@ def create_interactive_plot(df, topic_info=None, validation_metrics=None):
     )
     
     # Calculate cluster information and place text annotations
-    annotations = []
     used_positions = []  # Track used positions to avoid overlap
     
     for topic_id in df['topic'].unique():
@@ -408,13 +401,13 @@ def create_interactive_plot(df, topic_info=None, validation_metrics=None):
             short_name = ', '.join(keywords)
             
             server_name = most_popular['canonical_name']
-            server_count = len(topic_servers)
+            len(topic_servers)
             stars = most_popular['stargazers_count']
             
             # Get the color for this topic from the scatter plot
             # Use a simple color mapping based on topic_id
             colors = px.colors.qualitative.Plotly
-            topic_color = colors[topic_id % len(colors)]
+            colors[topic_id % len(colors)]
             
             # Create annotation text in two lines: topic name, then example
             annotation_text = f"<b>{short_name}</b><br>(e.g. {server_name} {stars}★)"
@@ -969,7 +962,7 @@ def main():
         logger.info(f"Results with topic analysis saved to {output_file}")
         
         # Print topic summary
-        print(f"\nTopic Analysis Summary:")
+        print("\nTopic Analysis Summary:")
         print(f"Found {len(topic_info) - 1} topics (excluding outliers)")
         if full_coherence is not None:
             print(f"Full dataset coherence: {full_coherence:.3f}")
@@ -983,7 +976,7 @@ def main():
         
         total_duration = time.time() - start_time
         print(f"\nBERTopic analysis completed successfully in {total_duration:.1f} seconds!")
-        print(f"Performance summary:")
+        print("Performance summary:")
         print(f"  - Data preparation: {prep_duration:.1f}s")
         print(f"  - Embedding generation: {embedding_duration:.1f}s ({len(texts) / embedding_duration:.0f} texts/s)")
         print(f"  - BERTopic modeling: {bertopic_duration:.1f}s")
@@ -993,7 +986,7 @@ def main():
         if torch.cuda.is_available():
             allocated = torch.cuda.memory_allocated() / 1e9
             reserved = torch.cuda.memory_reserved() / 1e9
-            print(f"\nGPU Memory usage:")
+            print("\nGPU Memory usage:")
             print(f"  - Allocated: {allocated:.2f} GB")
             print(f"  - Reserved: {reserved:.2f} GB")
             

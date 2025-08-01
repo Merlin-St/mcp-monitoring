@@ -8,12 +8,12 @@ from smithery_bulk_mcp_config import ( # Assuming you are using smithery_bulk_mc
     bulk_logger as logger, SMITHERY_API_TOKEN, MCP_API_BASE_URL,
     MCP_PAGE_SIZE_BULK, API_DELAY_BULK, MCP_MAX_WORKERS_BULK
 )
+from smithery_bulk_mcp_downloader import get_all_server_summaries, get_details_for_all_servers
 
 # Define the details file name locally since it's only used here
 ALL_SERVERS_DETAILS_COMPLETE_JSON = "smithery_data.json"
 # If you switched to config_utils.py, make sure to import the correct variables
 # e.g., API_DELAY_BULK_LIST as API_DELAY_BULK
-from smithery_bulk_mcp_downloader import get_all_server_summaries, get_details_for_all_servers
 
 def main_bulk_download():
     logger.info("--- Starting Bulk MCP Server Data Download Process ---")

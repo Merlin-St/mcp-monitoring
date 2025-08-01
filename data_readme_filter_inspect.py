@@ -23,7 +23,7 @@ from pathlib import Path
 
 from inspect_ai import Task, task
 from inspect_ai.dataset import json_dataset
-from inspect_ai.scorer import includes, scorer, Score, Target, accuracy, Scorer
+from inspect_ai.scorer import scorer, Score, Target, accuracy, Scorer
 from inspect_ai.solver import generate, system_message, TaskState
 import logging
 
