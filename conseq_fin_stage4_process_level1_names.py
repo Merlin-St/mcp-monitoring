@@ -86,7 +86,7 @@ def save_level1_names(cluster_names: Dict[str, str]):
     ])
     
     # Load existing Level 1 names if available
-    metadata_file = 'conseq_fin_stage4_hierarchy_metadata.json'
+    metadata_file = 'conseq_fin_stage4_hierarchy_k12_summary.json'
     if Path(metadata_file).exists():
         with open(metadata_file, 'r') as f:
             metadata = json.load(f)

@@ -49,7 +49,7 @@ def analyze_and_name_level1_clusters():
     }
     
     # Update metadata
-    metadata_file = 'conseq_fin_stage4_hierarchy_metadata.json'
+    metadata_file = 'conseq_fin_stage4_hierarchy_k12_summary.json'
     with open(metadata_file, 'r') as f:
         metadata = json.load(f)
     

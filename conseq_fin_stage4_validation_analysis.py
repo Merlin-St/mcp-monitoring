@@ -60,10 +60,10 @@ class ValidationAnalyzer:
         try:
             shutil.copy2(eval_file, temp_file)
             
-            from inspect_ai.analysis.beta import eval_df
+            from inspect_ai.analysis.beta import evals_df
             
             # Load evaluation data
-            df = eval_df(str(temp_file))
+            df = evals_df(str(temp_file))
             
             # Extract relevant columns
             results_df = pd.DataFrame({
