@@ -67,7 +67,7 @@ def process_naming_results(eval_file: Path) -> Dict[str, str]:
 
 def update_hierarchy_metadata(cluster_names: Dict[str, str]):
     """Update hierarchy metadata with cluster names"""
-    metadata_file = 'conseq_fin_stage4_hierarchy_metadata.json'
+    metadata_file = 'conseq_fin_stage4_hierarchy_k12_summary.json'
     
     # Load existing metadata
     if Path(metadata_file).exists():

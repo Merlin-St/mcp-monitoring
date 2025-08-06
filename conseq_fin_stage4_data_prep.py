@@ -69,18 +69,9 @@ def extract_tools_from_servers(servers: List[Dict[str, Any]],
                 'server_id': server.get('id', ''),
                 'server_name': server.get('name', ''),
                 'server_description': server.get('canonical_description', ''),
-                'server_readme': server.get('readme_filtered', server.get('readme_filteredinitial', '')),
-                'server_readme_summary': server.get('readme_summary', ''),
-                'server_topics': server.get('topics', []),
-                'server_data_sources': server.get('data_sources', []),
-                'server_stargazers': server.get('stargazers_count', 0),
-                'server_forks': server.get('forks_count', 0),
-                'is_finance_related': server.get('is_sector_52', False)
+                'readme_summary': server.get('readme_summary', ''),
+                'server_data_sources': server.get('data_sources', [])
             }
-            
-            # Truncate readme if too long
-            if len(tool_record['server_readme']) > 10000:
-                tool_record['server_readme'] = tool_record['server_readme'][:10000] + "\n[...truncated...]"
             
             tools.append(tool_record)
     
@@ -99,8 +90,7 @@ def create_inspect_samples(tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "tool_input_schema": json.dumps(tool['tool_input_schema']) if tool['tool_input_schema'] else "",
             "server_name": tool['server_name'],
             "server_description": tool['server_description'],
-            "server_readme_summary": tool['server_readme_summary'],
-            "server_readme": tool['server_readme'][:5000] if len(tool['server_readme']) > 5000 else tool['server_readme']
+            "readme_summary": tool['readme_summary']
         }
         
         sample = {
@@ -109,8 +99,7 @@ def create_inspect_samples(tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             "id": tool['tool_id'],
             "metadata": {
                 "stage": "onet_classification",
-                "server_id": tool['server_id'],
-                "is_finance": tool['is_finance_related']
+                "server_id": tool['server_id']
             }
         }
         
@@ -139,7 +128,6 @@ def save_datasets(tools: List[Dict[str, Any]], samples: List[Dict[str, Any]]):
         "total_tools": len(tools),
         "total_samples": len(samples),
         "unique_servers": len(set(t['server_id'] for t in tools)),
-        "finance_tools": sum(1 for t in tools if t['is_finance_related']),
         "tools_with_schema": sum(1 for t in tools if t['tool_input_schema']),
         "avg_tools_per_server": len(tools) / len(set(t['server_id'] for t in tools)) if tools else 0
     }
@@ -209,7 +197,6 @@ def main():
     logger.info(f"- Total tools found: {len(all_tools)}")
     logger.info(f"- Tools selected: {len(selected_tools)}")
     logger.info(f"- Unique servers in selection: {len(set(t['server_id'] for t in selected_tools))}")
-    logger.info(f"- Finance-related tools: {sum(1 for t in selected_tools if t['is_finance_related'])}")
     logger.info(f"- Tools with input schema: {sum(1 for t in selected_tools if t['tool_input_schema'])}")
     
     # Show sample tools

@@ -40,7 +40,7 @@ def prepare_cluster_data() -> List[Sample]:
     
     # Load hierarchy data
     clusters_csv = 'conseq_fin_stage4_onetclusters.csv'
-    metadata_json = 'conseq_fin_stage4_hierarchy_metadata.json'
+    metadata_json = 'conseq_fin_stage4_hierarchy_k12_summary.json'
     
     if not Path(clusters_csv).exists():
         raise FileNotFoundError(f"Clusters CSV not found: {clusters_csv}")

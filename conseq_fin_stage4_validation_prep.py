@@ -51,7 +51,7 @@ class ValidationDataPrep:
         self.l2_names = dict(zip(l2_names_df['cluster_id'], l2_names_df['cluster_name']))
         
         # Load Level 1 names from metadata
-        metadata_file = 'conseq_fin_stage4_hierarchy_metadata.json'
+        metadata_file = 'conseq_fin_stage4_hierarchy_k12_names_summary.json'
         with open(metadata_file, 'r') as f:
             metadata = json.load(f)
         
@@ -189,7 +189,7 @@ Select the Level 1 parent cluster from the following options:
                 'input': input_text,
                 'target': correct_l1,  # For includes() scorer
                 'metadata': {
-                    'l2_cluster_id': l2_cluster,
+                    'level2_cluster_id': l2_cluster,
                     'l2_cluster_name': self.l2_names.get(l2_cluster, "Unknown"),
                     'correct_l1': correct_l1,
                     'correct_l1_name': self.l1_names.get(correct_l1, f"Level 1 Cluster {correct_l1}"),
@@ -266,7 +266,7 @@ Select the Level 1 cluster this task belongs to from the following options:
             if val_type == 'l3_to_l2':
                 unique_clusters = len(set(s['metadata']['correct_l2'] for s in samples))
             elif val_type == 'l2_to_l1':
-                unique_clusters = len(set(s['metadata']['l2_cluster_id'] for s in samples))
+                unique_clusters = len(set(s['metadata']['level2_cluster_id'] for s in samples))
             elif val_type == 'l3_to_l1':
                 unique_clusters = len(set(s['metadata']['correct_l1'] for s in samples))
             else:
