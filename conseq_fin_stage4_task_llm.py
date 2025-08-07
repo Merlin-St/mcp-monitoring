@@ -230,16 +230,20 @@ def process_validation_results(log_dir: str, validation_type: str) -> Dict[str, 
         # Get evaluation dataframe
         df = evals_df(logs=log_dir, quiet=True)
         
-        # Count total samples
-        total = len(df)
-        
-        # Check scores - includes scorer should have marked correct ones
-        if 'includes' in df.columns:
-            correct = df['includes'].sum()
+        # Get total samples and accuracy from evaluation summary
+        if 'total_samples' in df.columns and len(df) > 0:
+            total = df['total_samples'].iloc[0]
         else:
-            logger.warning("No 'includes' column found in eval results")
-            
-        accuracy = correct / total if total > 0 else 0
+            total = 50  # fallback to expected sample count
+        
+        # Check scores - includes scorer results are in score_includes_accuracy
+        if 'score_includes_accuracy' in df.columns and len(df) > 0:
+            accuracy = df['score_includes_accuracy'].iloc[0]
+            correct = int(accuracy * total)
+        else:
+            logger.warning("No 'score_includes_accuracy' column found in eval results")
+            accuracy = 0
+            correct = 0
         
         results = {
             'validation_type': validation_type,

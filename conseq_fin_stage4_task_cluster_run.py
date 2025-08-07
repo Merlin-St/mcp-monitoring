@@ -69,6 +69,17 @@ def run_inspect_eval(script_path: str, task_name: str, eval_name: str) -> str:
     logger.info(f"Inspect eval completed, logs in: {log_dir}")
     return log_dir
 
+def convert_numpy_types(obj):
+    """Recursively convert numpy types to native Python types"""
+    if isinstance(obj, dict):
+        return {k: convert_numpy_types(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    elif hasattr(obj, 'item'):  # numpy scalar
+        return obj.item()
+    else:
+        return obj
+
 def main():
     parser = argparse.ArgumentParser(description='ONET Task Clustering Pipeline')
     parser.add_argument('--k2', type=int, default=400,
@@ -296,10 +307,11 @@ def l2_naming_task():
                 accuracy = results.get('accuracy', 0)
                 logger.info(f"  {task_type}: {accuracy:.3f}")
         
-        # Save summary
+        # Save summary (convert numpy types to Python types for JSON serialization)
+        summary_clean = convert_numpy_types(summary)
         summary_file = 'conseq_fin_stage4_task_cluster_summary.json'
         with open(summary_file, 'w') as f:
-            json.dump(summary, f, indent=2)
+            json.dump(summary_clean, f, indent=2)
         logger.info(f"Saved summary to: {summary_file}")
         
     except Exception as e:
@@ -307,10 +319,11 @@ def l2_naming_task():
         summary['error'] = str(e)
         summary['status'] = 'failed'
         
-        # Save error summary
+        # Save error summary (convert numpy types to Python types for JSON serialization)
+        summary_clean = convert_numpy_types(summary)
         summary_file = 'conseq_fin_stage4_task_cluster_summary_error.json'
         with open(summary_file, 'w') as f:
-            json.dump(summary, f, indent=2)
+            json.dump(summary_clean, f, indent=2)
         
         sys.exit(1)
 
