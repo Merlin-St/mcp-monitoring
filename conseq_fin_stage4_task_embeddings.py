@@ -16,6 +16,8 @@ import pandas as pd
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
 from sklearn.metrics.pairwise import cosine_similarity
+import torch
+import os
 
 # Configure logging
 logging.basicConfig(
@@ -26,6 +28,23 @@ logger = logging.getLogger(__name__)
 
 # Global model instance (lazy loaded)
 _embedding_model = None
+
+# Centralized model configuration - CHANGE HERE TO USE DIFFERENT MODEL
+EMBEDDING_MODEL_NAME = 'NovaSearch/stella_en_400M_v5'  # 1024 dimensions, consistent across all embeddings
+
+# GPU optimization setup
+def setup_gpu_optimizations():
+    """Configure GPU for maximum performance"""
+    if torch.cuda.is_available():
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cudnn.benchmark = True
+        torch.backends.cudnn.deterministic = False
+        # Clear GPU cache
+        torch.cuda.empty_cache()
+        # Set to use TensorCores
+        torch.set_float32_matmul_precision('medium')
+    return torch.cuda.is_available()
 
 # Predefined meaningful Level 1 categories (based on embed_levels.py approach)
 LEVEL1_CATEGORIES = {
@@ -44,11 +63,28 @@ LEVEL1_CATEGORIES = {
 }
 
 def get_embedding_model():
-    """Get or create the shared SentenceTransformer model instance"""
+    """Get or create the shared SentenceTransformer model instance with GPU optimization"""
     global _embedding_model
     if _embedding_model is None:
         logger.info("Loading sentence transformer model...")
-        _embedding_model = SentenceTransformer('sentence-transformers/all-mpnet-base-v2')
+        
+        # Set memory optimization environment variable
+        os.environ['PYTORCH_CUDA_ALLOC_CONF'] = 'expandable_segments:True'
+        
+        # Setup GPU optimizations
+        has_gpu = setup_gpu_optimizations()
+        device = 'cuda' if has_gpu else 'cpu'
+        
+        logger.info(f"Using device: {device}")
+        logger.info(f"Using embedding model: {EMBEDDING_MODEL_NAME}")
+        _embedding_model = SentenceTransformer(
+            EMBEDDING_MODEL_NAME,
+            device=device,
+            trust_remote_code=True
+        )
+        
+        if has_gpu:
+            logger.info("GPU optimizations enabled")
     return _embedding_model
 
 def load_or_generate_embeddings(
@@ -74,9 +110,13 @@ def load_or_generate_embeddings(
     logger.info(f"Generating embeddings for {len(texts)} texts...")
     model = get_embedding_model()
     
-    # Process in batches for memory efficiency
-    batch_size = 100
+    # Process in batches for memory efficiency (optimized for GPU)
+    batch_size = 64  # GPU-optimized batch size
     embeddings = []
+    
+    # Clear GPU memory if available
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     
     for i in range(0, len(texts), batch_size):
         batch = texts[i:i+batch_size]
@@ -287,37 +327,148 @@ def assign_clusters_to_level1_categories(
     return level1_assignments, assignment_details
 
 
+def cluster_level2_to_natural_level1(
+    cluster_centers: np.ndarray,
+    level2_clusters: np.ndarray,
+    min_cluster_size: int = 10
+) -> Tuple[np.ndarray, Dict[str, Any]]:
+    """
+    Cluster Level 2 cluster centers into natural Level 1 clusters using HDBSCAN
+    
+    Args:
+        cluster_centers: Centers of Level 2 clusters  
+        level2_clusters: Level 2 cluster indices for each center
+        min_cluster_size: Minimum size for Level 1 clusters
+        
+    Returns:
+        level1_assignments: Array mapping each Level 2 cluster to Level 1 category
+        clustering_details: Dict with clustering info and statistics
+    """
+    logger.info(f"Creating natural Level 1 clusters from {len(cluster_centers)} Level 2 cluster centers using HDBSCAN")
+    
+    # Use HDBSCAN to find natural groupings among cluster centers
+    import hdbscan
+    
+    # Scale min_cluster_size based on number of L2 clusters - aim for ~8-15 L1 clusters
+    target_l1_clusters = min(15, max(8, len(cluster_centers) // 10))  # More aggressive division
+    adjusted_min_size = max(2, len(cluster_centers) // target_l1_clusters)
+    
+    logger.info(f"Using HDBSCAN with min_cluster_size={adjusted_min_size}, targeting ~{target_l1_clusters} L1 clusters")
+    
+    clusterer = hdbscan.HDBSCAN(
+        min_cluster_size=adjusted_min_size,
+        min_samples=max(1, adjusted_min_size // 3),  # Reduced min_samples
+        metric='euclidean',
+        cluster_selection_epsilon=0.005,  # Smaller epsilon for tighter clusters
+        prediction_data=True,
+        core_dist_n_jobs=-1,
+        algorithm='prims_kdtree'
+    )
+    
+    level1_labels = clusterer.fit_predict(cluster_centers)
+    
+    # Handle outliers by assigning them to nearest cluster
+    outlier_mask = level1_labels == -1
+    n_outliers = outlier_mask.sum()
+    
+    if n_outliers > 0:
+        logger.info(f"Found {n_outliers} outlier Level 2 clusters, assigning to nearest Level 1 cluster")
+        from sklearn.metrics.pairwise import euclidean_distances
+        
+        # Get valid cluster centers (non-outliers)
+        valid_mask = level1_labels != -1
+        if valid_mask.sum() > 0:
+            valid_centers = cluster_centers[valid_mask]
+            valid_labels = level1_labels[valid_mask]
+            
+            # For each outlier, find closest valid cluster center
+            outlier_centers = cluster_centers[outlier_mask]
+            distances = euclidean_distances(outlier_centers, valid_centers)
+            closest_indices = distances.argmin(axis=1)
+            
+            # Assign outliers to closest cluster's label
+            level1_labels[outlier_mask] = valid_labels[closest_indices]
+        else:
+            # If all are outliers, create a single cluster
+            logger.warning("All Level 2 clusters were outliers, creating single Level 1 cluster")
+            level1_labels[:] = 0
+    
+    # Create clustering details
+    unique_labels = np.unique(level1_labels)
+    n_l1_clusters = len(unique_labels)
+    
+    clustering_details = {
+        'n_level1_clusters': n_l1_clusters,
+        'level1_labels': level1_labels,
+        'cluster_sizes': {},
+        'assignments': {}
+    }
+    
+    # Log distribution and create assignments
+    logger.info("\n=== Natural Level 1 Clustering Results ===")
+    logger.info(f"Created {n_l1_clusters} Level 1 clusters from {len(cluster_centers)} Level 2 clusters")
+    
+    for l1_cluster in unique_labels:
+        l2_clusters_in_l1 = level2_clusters[level1_labels == l1_cluster]
+        cluster_size = len(l2_clusters_in_l1)
+        clustering_details['cluster_sizes'][int(l1_cluster)] = cluster_size
+        
+        logger.info(f"  L1 Cluster {l1_cluster}: {cluster_size} Level 2 clusters")
+        
+        # Create assignments for each L2 cluster in this L1 cluster
+        for l2_cluster in l2_clusters_in_l1:
+            clustering_details['assignments'][int(l2_cluster)] = {
+                'level1_cluster': f'L1_Natural_{l1_cluster:02d}',
+                'level1_name': f'Natural Cluster {l1_cluster}',
+                'clustering_method': 'hdbscan'
+            }
+    
+    logger.info("=== End Natural L1 Clustering ===\n")
+    
+    return level1_labels, clustering_details
+
+
 def build_two_level_hierarchy(
     df: pd.DataFrame,
     text_column: str = 'Task',
     level2_clusters: int = 400,
+    l1_approach: str = 'semantic',
     force_regenerate: bool = False
 ) -> Tuple[pd.DataFrame, Dict[str, Any]]:
     """
-    Build complete 2-level hierarchy using improved approach
+    Build complete 2-level hierarchy using chosen approach
     
     Args:
         df: DataFrame with ONET tasks
         text_column: Column containing task text  
         level2_clusters: Number of Level 2 clusters
+        l1_approach: 'semantic' for predefined categories, 'natural' for HDBSCAN clustering
         force_regenerate: Force regeneration of all embeddings
         
     Returns:
         enhanced_df: DataFrame with Level 1 and Level 2 assignments
         metadata: Dictionary with hierarchy metadata and statistics
     """
-    logger.info("=== Building 2-Level Task Hierarchy (Improved Approach) ===")
+    logger.info(f"=== Building 2-Level Task Hierarchy ({l1_approach} L1 approach) ===")
     
     # Step 1: Create Level 2 clusters from task embeddings
     embeddings, level2_labels, cluster_centers = embed_onet_tasks(
         df, text_column, k=level2_clusters, force_regenerate=force_regenerate
     )
     
-    # Step 2: Assign Level 2 clusters to Level 1 categories using cosine similarity
+    # Step 2: Create Level 1 clusters/categories using chosen approach
     level2_cluster_indices = np.arange(level2_clusters)
-    level1_assignments, assignment_details = assign_clusters_to_level1_categories(
-        cluster_centers, level2_cluster_indices, force_regenerate=force_regenerate
-    )
+    
+    if l1_approach == 'natural':
+        # Use natural HDBSCAN clustering of Level 2 cluster centers
+        level1_assignments, assignment_details = cluster_level2_to_natural_level1(
+            cluster_centers, level2_cluster_indices
+        )
+    else:
+        # Use semantic assignment to predefined categories (default)
+        level1_assignments, assignment_details = assign_clusters_to_level1_categories(
+            cluster_centers, level2_cluster_indices, force_regenerate=force_regenerate
+        )
     
     # Step 3: Create enhanced DataFrame with both levels
     enhanced_df = df.copy()
@@ -325,23 +476,41 @@ def build_two_level_hierarchy(
     
     # Map each task to its Level 1 category
     level1_mapping = {}
+    level1_name_mapping = {}
     for level2_cluster, details in assignment_details['assignments'].items():
         level1_mapping[level2_cluster] = details['level1_cluster']
+        level1_name_mapping[details['level1_cluster']] = details['level1_name']
         
     enhanced_df['level1_cluster'] = enhanced_df['level2_cluster'].map(level1_mapping)
-    enhanced_df['level1_name'] = enhanced_df['level1_cluster'].map(LEVEL1_CATEGORIES)
+    
+    if l1_approach == 'natural':
+        enhanced_df['level1_name'] = enhanced_df['level1_cluster'].map(level1_name_mapping)
+    else:
+        enhanced_df['level1_name'] = enhanced_df['level1_cluster'].map(LEVEL1_CATEGORIES)
     
     # Step 4: Create metadata
-    metadata = {
-        'total_tasks': len(df),
-        'level2_clusters': level2_clusters,
-        'level1_categories': len(LEVEL1_CATEGORIES),
-        'assignment_details': assignment_details,
-        'level1_categories': LEVEL1_CATEGORIES
-    }
-    
-    logger.info("=== Hierarchy Building Complete ===")
-    logger.info(f"Tasks: {len(df)}, Level 2 Clusters: {level2_clusters}, Level 1 Categories: {len(LEVEL1_CATEGORIES)}")
+    if l1_approach == 'natural':
+        l1_count = assignment_details['n_level1_clusters']
+        metadata = {
+            'total_tasks': len(df),
+            'level2_clusters': level2_clusters,
+            'level1_categories': l1_count,
+            'assignment_details': assignment_details,
+            'l1_approach': 'natural_hdbscan'
+        }
+        logger.info("=== Hierarchy Building Complete ===")
+        logger.info(f"Tasks: {len(df)}, Level 2 Clusters: {level2_clusters}, Level 1 Clusters: {l1_count} (natural)")
+    else:
+        metadata = {
+            'total_tasks': len(df),
+            'level2_clusters': level2_clusters,
+            'level1_categories': len(LEVEL1_CATEGORIES),
+            'assignment_details': assignment_details,
+            'level1_categories_definitions': LEVEL1_CATEGORIES,
+            'l1_approach': 'semantic_cosine'
+        }
+        logger.info("=== Hierarchy Building Complete ===")
+        logger.info(f"Tasks: {len(df)}, Level 2 Clusters: {level2_clusters}, Level 1 Categories: {len(LEVEL1_CATEGORIES)} (semantic)")
     
     return enhanced_df, metadata
 

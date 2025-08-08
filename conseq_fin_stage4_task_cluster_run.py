@@ -75,8 +75,16 @@ def convert_numpy_types(obj):
         return {k: convert_numpy_types(v) for k, v in obj.items()}
     elif isinstance(obj, list):
         return [convert_numpy_types(item) for item in obj]
-    elif hasattr(obj, 'item'):  # numpy scalar
-        return obj.item()
+    elif hasattr(obj, 'item') and hasattr(obj, 'size'):  # numpy scalar or small array
+        if obj.size == 1:
+            return obj.item()
+        else:
+            return obj.tolist()  # Convert arrays to list
+    elif hasattr(obj, 'item'):  # other numpy-like objects with .item()
+        try:
+            return obj.item()
+        except ValueError:
+            return str(obj)  # fallback to string representation
     else:
         return obj
 
@@ -92,6 +100,8 @@ def main():
                        help='Only add Level 2 cluster names to existing CSV (skip clustering)')
     parser.add_argument('--log-dir', default='logs',
                        help='Directory for Inspect logs')
+    parser.add_argument('--l1', choices=['semantic', 'natural'], default='semantic',
+                       help='Level 1 clustering approach: semantic (cosine similarity to predefined categories) or natural (HDBSCAN clustering)')
     
     args = parser.parse_args()
     
@@ -103,13 +113,20 @@ def main():
     if args.addcluster2names and args.only_validation:
         parser.error("Cannot use --addcluster2names and --only-validation together")
     
-    logger.info(f"Starting ONET task clustering pipeline with k2={args.k2}, L1=12 semantic categories")
+    if args.l1 == 'natural':
+        logger.info(f"Starting ONET task clustering pipeline with k2={args.k2}, L1=natural HDBSCAN clustering")
+        l1_approach = 'natural_l1_clustering'
+        l1_count = 'auto'
+    else:
+        logger.info(f"Starting ONET task clustering pipeline with k2={args.k2}, L1=12 semantic categories")
+        l1_approach = 'semantic_l1_assignment'
+        l1_count = 12
     
     # Initialize summary
     summary = {
-        'parameters': {'k2': args.k2, 'k1': 12},  # L1 is always 12 semantic categories
+        'parameters': {'k2': args.k2, 'k1': l1_count, 'l1_approach': args.l1},
         'generated_at': datetime.now().isoformat(),
-        'approach': 'semantic_l1_assignment',
+        'approach': l1_approach,
         'statistics': {},
         'validation_scores': {}
     }
@@ -185,19 +202,25 @@ def main():
             summary['statistics']['total_tasks'] = len(df)
         
         if not args.only_validation:
-            # Step 2: Build complete 2-level hierarchy using semantic assignment
-            logger.info(f"Step 2: Building complete hierarchy - {args.k2} Level 2 clusters → 12 Level 1 semantic categories")
-            df, hierarchy_metadata = build_two_level_hierarchy(df, level2_clusters=args.k2)
+            # Step 2: Build complete 2-level hierarchy using chosen approach
+            if args.l1 == 'natural':
+                logger.info(f"Step 2: Building complete hierarchy - {args.k2} Level 2 clusters → natural Level 1 HDBSCAN clustering")
+            else:
+                logger.info(f"Step 2: Building complete hierarchy - {args.k2} Level 2 clusters → 12 Level 1 semantic categories")
+            df, hierarchy_metadata = build_two_level_hierarchy(df, level2_clusters=args.k2, l1_approach=args.l1)
             
             # Update summary with hierarchy results
             summary['statistics']['level2_clusters'] = hierarchy_metadata['level2_clusters']
             summary['statistics']['level1_categories'] = hierarchy_metadata['level1_categories']
-            summary['statistics']['assignment_quality'] = {
-                'avg_similarity': hierarchy_metadata['assignment_details']['avg_similarity'],
-                'min_similarity': hierarchy_metadata['assignment_details']['min_similarity'],
-                'max_similarity': hierarchy_metadata['assignment_details']['max_similarity'],
-                'category_avg_similarities': hierarchy_metadata['assignment_details']['category_avg_similarities']
-            }
+            
+            # Add assignment quality metrics (only available for semantic approach)
+            if args.l1 == 'semantic' and 'avg_similarity' in hierarchy_metadata['assignment_details']:
+                summary['statistics']['assignment_quality'] = {
+                    'avg_similarity': hierarchy_metadata['assignment_details']['avg_similarity'],
+                    'min_similarity': hierarchy_metadata['assignment_details']['min_similarity'],
+                    'max_similarity': hierarchy_metadata['assignment_details']['max_similarity'],
+                    'category_avg_similarities': hierarchy_metadata['assignment_details']['category_avg_similarities']
+                }
             summary['hierarchy_metadata'] = hierarchy_metadata
             
             # Get cluster statistics
@@ -206,8 +229,11 @@ def main():
             summary['statistics']['level2_stats'] = l2_stats
             summary['statistics']['level1_stats'] = l1_stats
             
-            logger.info("✅ Hierarchy building complete - Level 1 categories assigned via semantic similarity")
-            logger.info("ℹ️  Level 1 names are predefined semantic categories (no LLM naming needed)")
+            if args.l1 == 'natural':
+                logger.info("✅ Hierarchy building complete - Level 1 clusters created via natural HDBSCAN clustering")
+            else:
+                logger.info("✅ Hierarchy building complete - Level 1 categories assigned via semantic similarity")
+                logger.info("ℹ️  Level 1 names are predefined semantic categories (no LLM naming needed)")
         
         if not args.only_validation:
             # Step 3: Generate Level 2 cluster names via LLM
@@ -252,7 +278,8 @@ def l2_naming_task():
             validation_tasks = [
                 ('l3_to_l2', 'Level 3 (task) to Level 2 cluster assignment'),
                 ('l2_to_l1', 'Level 2 cluster to Level 1 category assignment'),
-                ('l3_to_l1', 'Level 3 (task) to Level 1 category direct assignment')
+                ('l3_to_l1', 'Level 3 (task) to Level 1 category direct assignment'),
+                ('subset_l2_l3', 'Level 3 (task) to Level 2 cluster assignment with focused subset')
             ]
             
             # Create JSONL files for each validation type
@@ -295,7 +322,11 @@ def l2_naming_task():
         logger.info("="*50)
         logger.info(f"Total tasks: {summary['statistics']['total_tasks']}")
         logger.info(f"Level 2 clusters: {summary['statistics']['level2_clusters']}")
-        logger.info("Level 1 categories: 12 (semantic)")
+        if args.l1 == 'natural':
+            l1_count = summary['statistics']['level1_categories']
+            logger.info(f"Level 1 categories: {l1_count} (natural HDBSCAN)")
+        else:
+            logger.info("Level 1 categories: 12 (semantic)")
         
         if 'assignment_quality' in summary['statistics']:
             quality = summary['statistics']['assignment_quality']
