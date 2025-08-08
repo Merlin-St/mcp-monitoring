@@ -14,6 +14,13 @@ import pandas as pd
 from pathlib import Path
 from typing import Dict, List, Any, Optional, Tuple
 import numpy as np
+from conseq_fin_stage4_task_llm import (
+    VALIDATION_SYSTEM_PROMPT, 
+    L3_TO_L2_VALIDATION_PROMPT,
+    L2_TO_L1_VALIDATION_PROMPT, 
+    L3_TO_L1_VALIDATION_PROMPT,
+    SUBSET_L2_L3_VALIDATION_PROMPT
+)
 
 # Configure logging
 logging.basicConfig(
@@ -148,12 +155,10 @@ def prepare_validation_samples(
         sampled_tasks = df.sample(n=min(n_samples, len(df)), random_state=42)
         
         for _, task in sampled_tasks.iterrows():
-            prompt = f"You are an expert at analyzing occupational tasks and categorizing them into appropriate clusters. The following is a description of an occupational task: {task['Task']}. "
-            prompt += f"Consider the following list of classification options: {all_l2_options}. "
-            prompt += "Your job is to identify which option best describes the cluster theme. "
-            prompt += "What is the answer? "
-            prompt += "If multiple options apply, choose the single-most pertinent one. "
-            prompt += "Respond with cluster ID: cluster name (e.g. L2_000: xxx)."
+            prompt = L3_TO_L2_VALIDATION_PROMPT.format(
+                task=task['Task'],
+                options=all_l2_options
+            )
             
             samples.append({
                 'input': prompt,
@@ -161,7 +166,8 @@ def prepare_validation_samples(
                 'metadata': {
                     'task_id': task['task_id'],
                     'level2_cluster': task['level2_cluster'],
-                    'validation_type': validation_type
+                    'validation_type': validation_type,
+                    'system_prompt': VALIDATION_SYSTEM_PROMPT
                 }
             })
     
@@ -175,12 +181,10 @@ def prepare_validation_samples(
         sampled = l2_clusters.sample(n=min(n_samples, len(l2_clusters)), random_state=42)
         
         for _, cluster in sampled.iterrows():
-            prompt = f"You are an expert at analyzing occupational tasks and categorizing them into appropriate clusters. The following is a description of a Level 2 cluster: {cluster['level2_name']}. "
-            prompt += f"Consider the following list of classification options: {all_l1_options}. "
-            prompt += "Your job is to identify which option best describes the cluster theme. "
-            prompt += "What is the answer? "
-            prompt += "If multiple options apply, choose the single-most pertinent one. "
-            prompt += "Respond with cluster ID: cluster name (e.g. L1_01: xxx)."
+            prompt = L2_TO_L1_VALIDATION_PROMPT.format(
+                cluster_name=cluster['level2_name'],
+                options=all_l1_options
+            )
             
             samples.append({
                 'input': prompt,
@@ -188,7 +192,8 @@ def prepare_validation_samples(
                 'metadata': {
                     'level2_cluster': cluster['level2_cluster'],
                     'level1_cluster': cluster['level1_cluster'],
-                    'validation_type': validation_type
+                    'validation_type': validation_type,
+                    'system_prompt': VALIDATION_SYSTEM_PROMPT
                 }
             })
     
@@ -201,12 +206,10 @@ def prepare_validation_samples(
         sampled_tasks = df.sample(n=min(n_samples, len(df)), random_state=42)
         
         for _, task in sampled_tasks.iterrows():
-            prompt = f"You are an expert at analyzing occupational tasks and categorizing them into appropriate clusters. The following is a description of an occupational task: {task['Task']}. "
-            prompt += f"Consider the following list of classification options: {all_l1_options}. "
-            prompt += "Your job is to identify which option best describes the cluster theme. "
-            prompt += "What is the answer? "
-            prompt += "If multiple options apply, choose the single-most pertinent one. "
-            prompt += "Respond with cluster ID: cluster name (e.g. L1_01: xxx)."
+            prompt = L3_TO_L1_VALIDATION_PROMPT.format(
+                task=task['Task'],
+                options=all_l1_options
+            )
             
             samples.append({
                 'input': prompt,
@@ -214,7 +217,8 @@ def prepare_validation_samples(
                 'metadata': {
                     'task_id': task['task_id'],
                     'level1_cluster': task['level1_cluster'],
-                    'validation_type': validation_type
+                    'validation_type': validation_type,
+                    'system_prompt': VALIDATION_SYSTEM_PROMPT
                 }
             })
     
@@ -240,15 +244,17 @@ def prepare_validation_samples(
             else:
                 subset_l2_options = l1_l2_clusters
             
-            # Create options string
+            # Create options string - format like other validation prompts
             options = []
             for _, option in subset_l2_options.iterrows():
                 options.append(f"{option['level2_cluster']}: {option['level2_name']}")
             
-            options_text = "\n- ".join([""] + sorted(options))
+            options_text = ", ".join(sorted(options))
             
-            prompt = f"Task: {task['Task']}\n\n"
-            prompt += f"Select the Level 2 cluster this task belongs to from the following options:{options_text}"
+            prompt = SUBSET_L2_L3_VALIDATION_PROMPT.format(
+                task=task['Task'],
+                options=options_text
+            )
             
             samples.append({
                 'input': prompt,
@@ -258,7 +264,8 @@ def prepare_validation_samples(
                     'correct_l2': correct_l2,
                     'correct_l2_name': correct_l2_name,
                     'correct_l1': correct_l1,
-                    'validation_type': validation_type
+                    'validation_type': validation_type,
+                    'system_prompt': VALIDATION_SYSTEM_PROMPT
                 }
             })
     
