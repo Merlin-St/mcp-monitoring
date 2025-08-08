@@ -15,8 +15,9 @@ from typing import Dict, List, Any
 import pandas as pd
 
 from inspect_ai import Task, task
-from inspect_ai.dataset import Sample
+from inspect_ai.dataset import Sample, json_dataset
 from inspect_ai.solver import generate, system_message
+from inspect_ai.scorer import includes
 from inspect_ai.analysis.beta import messages_df, samples_df, evals_df
 
 # Configure logging
@@ -36,8 +37,38 @@ Concise (6-13 words)
 Professional and clear
 Focused on the primary function/activity
 
-Example: 'Manage book and document publishing processes', 'Develop and maintain software applications and websites', 'Develop and maintain software applications and websites'
-"""
+Respond with ONLY the cluster name, no explanation or additional text."""
+
+# Validation system prompts
+VALIDATION_SYSTEM_PROMPT = """You are an expert at analyzing occupational tasks and categorizing them into appropriate clusters."""
+
+L3_TO_L2_VALIDATION_PROMPT = """The following is a description of an occupational task: {task}.
+Consider the following list of classification options: {options}.
+Your job is to identify which option best describes the cluster theme.
+What is the answer?
+If multiple options apply, choose the single-most pertinent one.
+Respond with cluster ID: cluster name (e.g. L2_000: xxx)."""
+
+L2_TO_L1_VALIDATION_PROMPT = """The following is a description of an occupational task cluster: {cluster_name}.
+Consider the following list of classification options: {options}.
+Your job is to identify which option best describes the cluster theme.
+What is the answer?
+If multiple options apply, choose the single-most pertinent one.
+Respond with cluster ID: cluster name (e.g. L1_01: xxx)."""
+
+L3_TO_L1_VALIDATION_PROMPT = """The following is a description of an occupational task: {task}.
+Consider the following list of classification options: {options}.
+Your job is to identify which option best describes the cluster theme.
+What is the answer?
+If multiple options apply, choose the single-most pertinent one.
+Respond with cluster ID: cluster name (e.g. L1_01: xxx)."""
+
+SUBSET_L2_L3_VALIDATION_PROMPT = """The following is a description of an occupational task: {task}.
+Consider the following list of classification options: {options}.
+Your job is to identify which option best describes the cluster theme.
+What is the answer?
+If multiple options apply, choose the single-most pertinent one.
+Respond with cluster ID: cluster name (e.g. L2_000: xxx)."""
 
 def prepare_cluster_naming_samples(clusters_info: Dict[str, Dict[str, Any]], level: str = 'level2') -> List[Sample]:
     """
@@ -55,15 +86,11 @@ def prepare_cluster_naming_samples(clusters_info: Dict[str, Dict[str, Any]], lev
     for cluster_identifier, info in clusters_info.items():
         if level == 'level2':
             # Use all tasks in the cluster
-            prompt = f"Here are the tasks in the cluster:\n\n"
-            prompt += "\n".join([f"- {task}" for task in info['tasks']])
-            prompt += "\n\nRespond with ONLY the cluster name, no explanation or additional text."
+            prompt = "\n".join([f"- {task}" for task in info['tasks']])
             metadata_key = "level2_cluster"
         else:  # level1
             # Use Level 2 cluster names that belong to this Level 1
-            prompt = f"Here are the middle-level clusters in this top-level category:\n\n"
-            prompt += "\n".join([f"- {name}" for name in info['l2_names']])
-            prompt += "\n\nRespond with ONLY the category name, no explanation or additional text."
+            prompt = "\n".join([f"- {name}" for name in info['l2_names']])
             metadata_key = "level1_cluster"
         
         samples.append(Sample(
@@ -173,48 +200,48 @@ def process_naming_results(log_dir: str, expected_clusters: List[str] = None) ->
 @task
 def l3_to_l2_validation():
     """Validate L3 to L2 classification"""
-    from inspect_ai.dataset import json_dataset
-    from inspect_ai.scorer import includes
-    
     return Task(
         dataset=json_dataset("conseq_fin_stage4_task_validation_l3_to_l2.jsonl"),
-        solver=[generate()],
+        solver=[
+            system_message(VALIDATION_SYSTEM_PROMPT),
+            generate()
+        ],
         scorer=includes()
     )
 
 @task
 def l2_to_l1_validation():
     """Validate L2 to L1 classification"""
-    from inspect_ai.dataset import json_dataset
-    from inspect_ai.scorer import includes
-    
     return Task(
         dataset=json_dataset("conseq_fin_stage4_task_validation_l2_to_l1.jsonl"),
-        solver=[generate()],
+        solver=[
+            system_message(VALIDATION_SYSTEM_PROMPT),
+            generate()
+        ],
         scorer=includes()
     )
 
 @task
 def l3_to_l1_validation():
     """Validate L3 to L1 classification"""
-    from inspect_ai.dataset import json_dataset
-    from inspect_ai.scorer import includes
-    
     return Task(
         dataset=json_dataset("conseq_fin_stage4_task_validation_l3_to_l1.jsonl"),
-        solver=[generate()],
+        solver=[
+            system_message(VALIDATION_SYSTEM_PROMPT),
+            generate()
+        ],
         scorer=includes()
     )
 
 @task
 def subset_l2_l3_validation():
     """Validate L3 to L2 classification using focused subset of L2 options"""
-    from inspect_ai.dataset import json_dataset
-    from inspect_ai.scorer import includes
-    
     return Task(
         dataset=json_dataset("conseq_fin_stage4_task_validation_subset_l2_l3.jsonl"),
-        solver=[generate()],
+        solver=[
+            system_message(VALIDATION_SYSTEM_PROMPT),
+            generate()
+        ],
         scorer=includes()
     )
 
