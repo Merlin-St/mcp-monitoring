@@ -11,6 +11,7 @@ This script uses the new approach:
 Usage:
     python conseq_fin_stage4_task_cluster_run.py --k2 400
     python conseq_fin_stage4_task_cluster_run.py --k2 400 --skip-validation
+    python conseq_fin_stage4_task_cluster_run.py --model openai/o3-mini --max-connections 100
 """
 
 import argparse
@@ -47,13 +48,15 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def run_inspect_eval(script_path: str, task_name: str, eval_name: str) -> str:
+def run_inspect_eval(script_path: str, task_name: str, eval_name: str, model: str = 'anthropic/claude-sonnet-4-20250514', max_connections: int = 50) -> str:
     """Run inspect eval and return log directory"""
     log_dir = f"logs/{eval_name}_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
     
     cmd = [
         'inspect', 'eval', f'{script_path}@{task_name}',
-        '--model', 'anthropic/claude-sonnet-4-20250514',
+        '--model', model,
+        '--max-connections', str(max_connections),
+        '--temperature', '0',
         '--log-dir', log_dir
     ]
     
@@ -102,6 +105,10 @@ def main():
                        help='Directory for Inspect logs')
     parser.add_argument('--l1', choices=['semantic', 'natural'], default='semantic',
                        help='Level 1 clustering approach: semantic (cosine similarity to predefined categories) or natural (HDBSCAN clustering)')
+    parser.add_argument('--model', default='anthropic/claude-sonnet-4-20250514',
+                       help='Model to use for Inspect eval (default: anthropic/claude-sonnet-4-20250514)')
+    parser.add_argument('--max-connections', type=int, default=50,
+                       help='Maximum connections for Inspect eval (default: 50)')
     
     args = parser.parse_args()
     
@@ -255,7 +262,7 @@ def l2_naming_task():
                 temp_module = f.name
             
             # Run Inspect evaluation
-            log_dir = run_inspect_eval(temp_module, 'l2_naming_task', 'l2_naming')
+            log_dir = run_inspect_eval(temp_module, 'l2_naming_task', 'l2_naming', args.model, args.max_connections)
             Path(temp_module).unlink()  # Clean up temp file
             
             # Process results
@@ -309,7 +316,7 @@ def l2_naming_task():
                 logger.info(f"Running {description}")
                 
                 # Use existing validation tasks directly
-                log_dir = run_inspect_eval('conseq_fin_stage4_task_llm.py', f'{task_type}_validation', f'{task_type}_validation')
+                log_dir = run_inspect_eval('conseq_fin_stage4_task_llm.py', f'{task_type}_validation', f'{task_type}_validation', args.model, args.max_connections)
                 
                 # Process validation results with validation_type parameter
                 validation_results = process_validation_results(log_dir, task_type)
