@@ -130,7 +130,7 @@ def prepare_validation_samples(
     
     Args:
         df: DataFrame with cluster assignments
-        validation_type: One of 'l3_to_l2', 'l2_to_l1', 'l3_to_l1'
+        validation_type: One of 'l3_to_l2', 'l2_to_l1', 'l3_to_l1', 'subset_l2_l3'
         n_samples: Number of samples per cluster
         
     Returns:
@@ -148,12 +148,12 @@ def prepare_validation_samples(
         sampled_tasks = df.sample(n=min(n_samples, len(df)), random_state=42)
         
         for _, task in sampled_tasks.iterrows():
-            prompt = f"The following is a description of an occupational task: {task['Task']}. "
+            prompt = f"You are an expert at analyzing occupational tasks and categorizing them into appropriate clusters. The following is a description of an occupational task: {task['Task']}. "
             prompt += f"Consider the following list of classification options: {all_l2_options}. "
-            prompt += "Your job is to identify which option best describes the occupational task. "
-            prompt += "What is the answer? You MUST provide an option exactly as written above. "
+            prompt += "Your job is to identify which option best describes the cluster theme. "
+            prompt += "What is the answer? "
             prompt += "If multiple options apply, choose the single-most pertinent one. "
-            prompt += "Respond ONLY with the cluster ID (e.g. L2_001 or similar)."
+            prompt += "Respond with cluster ID: cluster name (e.g. L2_000: xxx)."
             
             samples.append({
                 'input': prompt,
@@ -175,12 +175,12 @@ def prepare_validation_samples(
         sampled = l2_clusters.sample(n=min(n_samples, len(l2_clusters)), random_state=42)
         
         for _, cluster in sampled.iterrows():
-            prompt = f"The following is a description of an occupational task: {cluster['level2_name']}. "
+            prompt = f"You are an expert at analyzing occupational tasks and categorizing them into appropriate clusters. The following is a description of a Level 2 cluster: {cluster['level2_name']}. "
             prompt += f"Consider the following list of classification options: {all_l1_options}. "
-            prompt += "Your job is to identify which option best describes the occupational task. "
-            prompt += "What is the answer? You MUST provide an option exactly as written above. "
+            prompt += "Your job is to identify which option best describes the cluster theme. "
+            prompt += "What is the answer? "
             prompt += "If multiple options apply, choose the single-most pertinent one. "
-            prompt += "Respond ONLY with the cluster ID (e.g. L1_01 or similar)."
+            prompt += "Respond with cluster ID: cluster name (e.g. L1_01: xxx)."
             
             samples.append({
                 'input': prompt,
@@ -201,12 +201,12 @@ def prepare_validation_samples(
         sampled_tasks = df.sample(n=min(n_samples, len(df)), random_state=42)
         
         for _, task in sampled_tasks.iterrows():
-            prompt = f"The following is a description of an occupational task: {task['Task']}. "
+            prompt = f"You are an expert at analyzing occupational tasks and categorizing them into appropriate clusters. The following is a description of an occupational task: {task['Task']}. "
             prompt += f"Consider the following list of classification options: {all_l1_options}. "
-            prompt += "Your job is to identify which option best describes the occupational task. "
-            prompt += "What is the answer? You MUST provide an option exactly as written above. "
+            prompt += "Your job is to identify which option best describes the cluster theme. "
+            prompt += "What is the answer? "
             prompt += "If multiple options apply, choose the single-most pertinent one. "
-            prompt += "Respond ONLY with the cluster ID (e.g. L1_01 or similar)."
+            prompt += "Respond with cluster ID: cluster name (e.g. L1_01: xxx)."
             
             samples.append({
                 'input': prompt,
@@ -214,6 +214,50 @@ def prepare_validation_samples(
                 'metadata': {
                     'task_id': task['task_id'],
                     'level1_cluster': task['level1_cluster'],
+                    'validation_type': validation_type
+                }
+            })
+    
+    elif validation_type == 'subset_l2_l3':
+        # Create subset L2 validation with focused options based on correct L1
+        # Sample random tasks
+        sampled_tasks = df.sample(n=min(n_samples, len(df)), random_state=42)
+        
+        for _, task in sampled_tasks.iterrows():
+            correct_l1 = task['level1_cluster']
+            correct_l2 = task['level2_cluster']
+            correct_l2_name = task['level2_name']
+            
+            # Get all L2 clusters that belong to the same L1 as the correct answer
+            l1_l2_clusters = df[df['level1_cluster'] == correct_l1][['level2_cluster', 'level2_name']].drop_duplicates()
+            
+            # Include some additional L2 clusters from other L1s as distractors (limit to ~16 total options)
+            other_l2_clusters = df[df['level1_cluster'] != correct_l1][['level2_cluster', 'level2_name']].drop_duplicates()
+            distractor_count = max(0, 16 - len(l1_l2_clusters))
+            if distractor_count > 0 and len(other_l2_clusters) > 0:
+                distractors = other_l2_clusters.sample(n=min(distractor_count, len(other_l2_clusters)), random_state=42)
+                subset_l2_options = pd.concat([l1_l2_clusters, distractors])
+            else:
+                subset_l2_options = l1_l2_clusters
+            
+            # Create options string
+            options = []
+            for _, option in subset_l2_options.iterrows():
+                options.append(f"{option['level2_cluster']}: {option['level2_name']}")
+            
+            options_text = "\n- ".join([""] + sorted(options))
+            
+            prompt = f"Task: {task['Task']}\n\n"
+            prompt += f"Select the Level 2 cluster this task belongs to from the following options:{options_text}"
+            
+            samples.append({
+                'input': prompt,
+                'target': correct_l2,
+                'metadata': {
+                    'task_id': task['task_id'],
+                    'correct_l2': correct_l2,
+                    'correct_l2_name': correct_l2_name,
+                    'correct_l1': correct_l1,
                     'validation_type': validation_type
                 }
             })

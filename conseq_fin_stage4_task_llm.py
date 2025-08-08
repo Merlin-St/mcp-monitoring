@@ -206,6 +206,18 @@ def l3_to_l1_validation():
         scorer=includes()
     )
 
+@task
+def subset_l2_l3_validation():
+    """Validate L3 to L2 classification using focused subset of L2 options"""
+    from inspect_ai.dataset import json_dataset
+    from inspect_ai.scorer import includes
+    
+    return Task(
+        dataset=json_dataset("conseq_fin_stage4_task_validation_subset_l2_l3.jsonl"),
+        solver=[generate()],
+        scorer=includes()
+    )
+
 def process_validation_results(log_dir: str, validation_type: str) -> Dict[str, Any]:
     """
     Process validation results and calculate accuracy
@@ -224,9 +236,6 @@ def process_validation_results(log_dir: str, validation_type: str) -> Dict[str, 
     errors = []
     
     try:
-        # Use evals_df to get evaluation results with scores
-        from inspect_ai.analysis.beta import evals_df
-        
         # Get evaluation dataframe
         df = evals_df(logs=log_dir, quiet=True)
         
