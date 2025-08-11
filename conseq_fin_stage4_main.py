@@ -8,7 +8,6 @@ End-to-end pipeline:
 - Define Inspect solvers + tasks:
     1) O*NET hierarchy (L1 -> L2 -> Task ID)
     2) Automation Level (0–5)
-    3) Collaboration Pattern (Directive/Feedback Loop/Task Iteration/Learning/Validation/None)
 - (Optional) run eval via `inspect eval this_file.py@task_name` for each task
 - Read logs with samples_df/messages_df and export one wide CSV
 
@@ -19,7 +18,6 @@ Usage:
     --onet conseq_fin_stage4_tasks_cluster_names.csv \
     --logs ./logs_onet \
     --logs-auto ./logs_auto \
-    --logs-collab ./logs_collab \
     --out conseq_fin_stage4_task_output.csv \
     --model openai/gpt-4o-mini \
     --finance \
@@ -70,17 +68,6 @@ Examples:
 ONLY REPLY WITH 0-5 or 'None' if you are unsure.
 """
 
-COLLAB_PATTERN_PROMPT = """Your task is to classify how humans would interact with this AI agent tool (not the full mcp server - only the specific tool) to identify the primary collaboration pattern.
-Patterns:
-'Directive' - Human delegates complete task execution to AI tool with minimal interaction
-'Feedback Loop' - Human and AI tool engage in iterative dialogue to complete task with human mainly providing feedback from the environment
-'Task Iteration' - Human and AI tool engage in iterative dialogue to complete a task with the human refining the AI tool outputs, e.g. by tool providing additional information or advise
-'Learning' - Human seeks understanding and explanation rather than direct task completion
-'Validation' - Human uses AI tool to check or validate their own work
-
-If multiple patterns are present, select the one that appears most frequently. If you are unsure, return 'None'. Use 'None' liberally---for only some tools will this task be possible.
-REPLY WITH A 'SINGLE TERM' or 'None'.
-"""
 
 # ---------- Helper Functions (moved up for use in data prep) ----------
 def _schema_str(schema) -> str:
@@ -364,44 +351,6 @@ def classify_automation_level():
     return solve
 
 
-# ---------- Solver 3: Collaboration Pattern ----------
-@solver
-def classify_collaboration_pattern():
-    allowed = {
-        "directive": "Directive",
-        "feedback loop": "Feedback Loop",
-        "task iteration": "Task Iteration",
-        "learning": "Learning",
-        "validation": "Validation",
-        "none": "None",
-    }
-
-    async def solve(state, generate):
-        prompt = COLLAB_PATTERN_PROMPT
-        for _ in range(3):
-            state.messages.append(ChatMessageUser(content=prompt))
-            state = await generate(state)
-            ans = (state.output.completion or "").strip().lower()
-            # normalize common variants
-            ans_norm = ans.replace("-", " ").replace("_", " ").strip()
-            # exact map or fallback when startswith one of keys
-            val = None
-            for k, proper in allowed.items():
-                if ans_norm == k or ans_norm.startswith(k):
-                    val = proper
-                    break
-            if val:
-                state.metadata["collaboration_pattern"] = val
-                return state
-            # tighten instruction
-            prompt = (
-                "Reply with EXACTLY ONE of: "
-                "Directive, Feedback Loop, Task Iteration, Learning, Validation, None."
-            )
-        state.metadata["collaboration_pattern"] = "None"
-        return state
-
-    return solve
 
 
 # ---------- Tasks (module-level so inspect can find them) ----------
@@ -434,18 +383,6 @@ def mcp_automation_level_task():
     )
 
 
-@task
-def mcp_collab_pattern_task():
-    samples_path = "conseq_fin_stage4_samples.jsonl"
-    if not Path(samples_path).exists():
-        raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
-    return Task(
-        dataset=json_dataset(samples_path),
-        solver=chain(
-            system_message("Reply strictly as instructed. No extra words."),
-            classify_collaboration_pattern(),
-        ),
-    )
 
 
 # ---------- Post-processing to CSV ----------
@@ -466,13 +403,12 @@ def _read_latest_samples_df(logs_dir: str):
 def export_csv(
     onet_logs_dir: str,
     auto_logs_dir: Optional[str],
-    collab_logs_dir: Optional[str],
     tools_json_path: str,
     out_csv_path: str,
 ) -> None:
     """
     Build a wide CSV with tool fields + chosen L1/L2/Task IDs/names
-    + automation_level + collaboration_pattern.
+    + automation_level.
     """
     # Load base tool snapshot
     with open(tools_json_path, "r", encoding="utf-8") as f:
@@ -494,14 +430,6 @@ def export_csv(
         else:
             log.warning("No automation .eval files found; automation_level will be blank.")
 
-    # Read Collaboration results (optional)
-    collab_df, collab_eval_file = (None, None)
-    if collab_logs_dir and Path(collab_logs_dir).exists():
-        collab_df, collab_eval_file = _read_latest_samples_df(collab_logs_dir)
-        if collab_df is not None:
-            log.info(f"Processing most recent Collaboration eval: {collab_eval_file} ({len(collab_df)} samples)")
-        else:
-            log.warning("No collaboration .eval files found; collaboration_pattern will be blank.")
 
     # Build quick lookup maps from metadata
     def meta_lookup(df: Optional["pd.DataFrame"], keys: List[str]) -> Dict[str, Dict[str, Any]]:
@@ -519,14 +447,12 @@ def export_csv(
     import pandas as pd  # noqa: F401
     onet_meta = meta_lookup(onet_df, ["l1_id", "l1_name", "l2_id", "l2_name", "task_id", "task_name"])
     auto_meta = meta_lookup(auto_df, ["automation_level"])
-    collab_meta = meta_lookup(collab_df, ["collaboration_pattern"])
 
     # Build rows
     rows = []
     for tid, tinfo in tools_map.items():
         onet = onet_meta.get(tid, {})
         auto = auto_meta.get(tid, {})
-        colb = collab_meta.get(tid, {})
         rows.append({
             # original fields
             "tool_id": tid,
@@ -545,9 +471,8 @@ def export_csv(
             "level2_name": onet.get("l2_name"),
             "task_id": onet.get("task_id"),
             "task_name": onet.get("task_name"),
-            # New: automation + collab
+            # New: automation
             "automation_level": auto.get("automation_level", ""),
-            "collaboration_pattern": colb.get("collaboration_pattern", ""),
         })
 
     # Write CSV
@@ -565,7 +490,6 @@ def main():
     ap.add_argument("--onet", default="conseq_fin_stage4_tasks_cluster_names.csv", help="Path to O*NET tasks CSV")
     ap.add_argument("--logs", default=None, help="Log dir for O*NET task (auto-generated if not provided)")
     ap.add_argument("--logs-auto", default=None, help="Log dir for Automation Level task")
-    ap.add_argument("--logs-collab", default=None, help="Log dir for Collaboration Pattern task")
     ap.add_argument("--out", default="conseq_fin_stage4_task_output.csv", help="Output CSV path")
     ap.add_argument("--model", default="anthropic/claude-sonnet-4-20250514", help="Model string for inspect eval")
     ap.add_argument("--samples", default="conseq_fin_stage4_samples.jsonl", help="Samples JSONL path")
@@ -584,9 +508,6 @@ def main():
     if args.logs_auto is None:
         args.logs_auto = f"./logs_auto_{timestamp}"
         log.info(f"Using auto-generated Automation log directory: {args.logs_auto}")
-    if args.logs_collab is None:
-        args.logs_collab = f"./logs_collab_{timestamp}"
-        log.info(f"Using auto-generated Collaboration log directory: {args.logs_collab}")
 
     # 1) Data prep
     servers = load_filtered_dataset(args.servers)
@@ -602,7 +523,6 @@ def main():
         for which, logs_dir, task_name in [
             ("O*NET", args.logs, "mcp_onet_classify_task"),
             ("Automation", args.logs_auto, "mcp_automation_level_task"),
-            ("Collaboration", args.logs_collab, "mcp_collab_pattern_task"),
         ]:
             Path(logs_dir).mkdir(parents=True, exist_ok=True)
             this_file = Path(__file__).resolve()
@@ -625,13 +545,11 @@ def main():
             f"--log-dir {args.logs} --model {args.model}\n"
             f"inspect eval {this_file}@mcp_automation_level_task "
             f"--log-dir {args.logs_auto} --model {args.model}\n"
-            f"inspect eval {this_file}@mcp_collab_pattern_task "
-            f"--log-dir {args.logs_collab} --model {args.model}\n"
         )
 
     # 4) Export merged results (only if eval files exist)
     try:
-        export_csv(args.logs, args.logs_auto, args.logs_collab, args.tools_json, args.out)
+        export_csv(args.logs, args.logs_auto, args.tools_json, args.out)
     except ValueError as e:
         if "No .eval files found" in str(e):
             log.info("No evaluation results found yet. Run evaluations first to generate CSV output.")
