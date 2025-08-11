@@ -8,7 +8,7 @@ This pipeline implements a unified approach to clustering ~20,000 ONET occupatio
 - **Level 1**: 12 supercluster categories (via K-means on Level 2 cluster name embeddings)
 
 ## Quick start
-  python conseq_fin_stage4_task_cluster_run.py --k1 12 --k2 400 --skip-validation
+  python conseq_fin_stage4_task_clusters_run.py --k1 12 --k2 400 --skip-validation
 
   What to expect:
 
@@ -23,22 +23,22 @@ This pipeline implements a unified approach to clustering ~20,000 ONET occupatio
 
 ### Core Components
 
-1. **`conseq_fin_stage4_task_embeddings.py`** - Embedding generation and clustering
+1. **`conseq_fin_stage4_task_clusters_embeddings.py`** - Embedding generation and clustering
    - Flexible functions for embedding both ONET tasks and cluster names
    - K-means clustering with configurable k values
    - Embedding cache management
 
-2. **`conseq_fin_stage4_task_data.py`** - Data loading and management
+2. **`conseq_fin_stage4_task_clusters_data.py`** - Data loading and management
    - ONET task CSV loading
    - Incremental CSV updates throughout pipeline
    - Validation sample preparation
 
-3. **`conseq_fin_stage4_task_llm.py`** - LLM cluster naming
+3. **`conseq_fin_stage4_task_clusters_llm.py`** - LLM cluster naming
    - Inspect framework integration
    - Cluster name generation prompts
    - Result processing via messages_df
 
-4. **`conseq_fin_stage4_task_cluster_run.py`** - Main orchestration script
+4. **`conseq_fin_stage4_task_clusters_run.py`** - Main orchestration script
    - Complete pipeline execution
    - Validation task coordination
    - Summary generation
@@ -67,13 +67,13 @@ Final CSV + Summary
 
 ```bash
 # Default configuration (k1=12, k2=400)
-python conseq_fin_stage4_task_cluster_run.py
+python conseq_fin_stage4_task_clusters_run.py
 
 # Custom cluster counts
-python conseq_fin_stage4_task_cluster_run.py --k1 10 --k2 300
+python conseq_fin_stage4_task_clusters_run.py --k1 10 --k2 300
 
 # Skip validation for faster execution
-python conseq_fin_stage4_task_cluster_run.py --skip-validation
+python conseq_fin_stage4_task_clusters_run.py --skip-validation
 ```
 
 ### Prerequisites
@@ -109,11 +109,11 @@ python conseq_fin_stage4_task_cluster_run.py --skip-validation
   ```
 
 ### Cache Files
-- **`conseq_fin_stage4_task_embeddings_onet.npz`** - Cached ONET task embeddings
-- **`conseq_fin_stage4_task_embeddings_l2.npz`** - Cached Level 2 name embeddings
+- **`conseq_fin_stage4_task_clusters_embeddings_onet.npz`** - Cached ONET task embeddings
+- **`conseq_fin_stage4_task_clusters_embeddings_l2.npz`** - Cached Level 2 name embeddings
 
 ### Logs
-- **`conseq_fin_stage4_task_cluster_run.log`** - Main pipeline execution log
+- **`conseq_fin_stage4_task_clusters_run.log`** - Main pipeline execution log
 - **`logs/`** - Inspect evaluation logs for naming and validation
 
 ## Implementation Details
