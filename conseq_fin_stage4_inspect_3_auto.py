@@ -59,7 +59,7 @@ Tool: execute_trade - Places buy/sell orders on stock exchange
 Level: 4 (RESTRICTED EXECUTION - modifies external trading environment)
 
 Tool: run_shell_command - Executes arbitrary system commands
-Level: 5 (UNRESTRICTED EXECUTION - can modify anything on the system)
+Level: 5 (UNRESTRICTED EXECUTION - can modify anything on the system or arbitrary internet actions)
 
 Based on your analysis, classify this tool's automation level. Consider what the tool actually does and its potential impact on external systems. ONLY REPLY WITH A SINGLE DIGIT NUMBER 0-5."""
 
