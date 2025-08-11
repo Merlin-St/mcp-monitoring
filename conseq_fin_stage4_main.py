@@ -42,7 +42,7 @@ from inspect_ai.dataset import Sample, json_dataset
 from inspect_ai.model import ChatMessageUser
 from inspect_ai.solver import chain, solver, system_message
 # analysis dataframes  
-from inspect_ai.analysis import samples_df, messages_df  # noqa: F401
+from inspect_ai.analysis.beta import samples_df, messages_df  # noqa: F401
 
 # ---------- Logging ----------
 logging.basicConfig(
@@ -58,38 +58,54 @@ AUTOMATION_LEVEL_PROMPT = """Your task is to classify this AI agent tool's (not 
 1: MONITORING - Read-only access, information retrieval only
 2: ANALYSIS - Processes and analyzes data, provides recommendations
 3: META - Coordinates other tools/servers for execution
-4: RESTRICTED EXECUTION - Modifies specific external environments (e.g., executes transactions on specific systems)
-5: UNRESTRICTED EXECUTION - Full execution capabilities (e.g., arbitrary code execution, system-wide modifications)
+4: RESTRICTED EXECUTION - Modifies pre-specified external environments (e.g., executes transactions on specific systems)
+5: UNRESTRICTED EXECUTION - Full execution capabilities (e.g., arbitrary code execution, unspecified modification capability across system/internet)
 
 Examples:
-Tool: get_account_balance - Retrieves current balance from bank account
-Level: 1 (MONITORING - only reads data, no modifications)
-
-Tool: analyze_portfolio - Analyzes investment holdings and provides recommendations
-Level: 2 (ANALYSIS - processes data and advises, but doesn't modify anything)
-
-Tool: execute_trade - Places buy/sell orders on stock exchange
-Level: 4 (RESTRICTED EXECUTION - modifies external trading environment)
-
-Tool: run_shell_command - Executes arbitrary system commands
-Level: 5 (UNRESTRICTED EXECUTION - can modify anything on the system or arbitrary internet actions)
-
-Based on your analysis, classify this tool's automation level. Consider what the tool actually does and its potential impact on external systems. ONLY REPLY WITH A SINGLE DIGIT NUMBER 0-5.
+1: get_account_balance - Retrieves current balance from bank account
+2: analyze_portfolio - Analyzes investment holdings and provides recommendations
+3: run_daily_tasks - Coordinates multiple tools to perform daily tasks 
+4: execute_trade - Places buy/sell orders on stock exchange
+5: run_shell_command - Executes arbitrary system commands
+ONLY REPLY WITH 0-5 or 'None' if you are unsure.
 """
 
-COLLAB_PATTERN_PROMPT = """Your task is to classify how humans would interact with this AI agent tool (not the full mcp server - only the specific tool) to identify the primary collaboration pattern. Focus on how humans would structure their requests and engage with this tool.
-
-Classify the tool according to these collaboration patterns:
-
+COLLAB_PATTERN_PROMPT = """Your task is to classify how humans would interact with this AI agent tool (not the full mcp server - only the specific tool) to identify the primary collaboration pattern.
+Patterns:
 'Directive' - Human delegates complete task execution to AI tool with minimal interaction
 'Feedback Loop' - Human and AI tool engage in iterative dialogue to complete task with human mainly providing feedback from the environment
 'Task Iteration' - Human and AI tool engage in iterative dialogue to complete a task with the human refining the AI tool outputs, e.g. by tool providing additional information or advise
 'Learning' - Human seeks understanding and explanation rather than direct task completion
 'Validation' - Human uses AI tool to check or validate their own work
 
-Based on your analysis, identify which of the above is most representative of how users would interact with this tool. If multiple patterns are present, select the one that appears most frequently. If you are unsure or there is not enough context to determine the most representative pattern, return 'None' as your answer. Use 'None' liberally---for only some tools will this task be possible.
-REPLY WITH A 'SINGLE TERM'.
+If multiple patterns are present, select the one that appears most frequently. If you are unsure, return 'None'. Use 'None' liberally---for only some tools will this task be possible.
+REPLY WITH A 'SINGLE TERM' or 'None'.
 """
+
+# ---------- Helper Functions (moved up for use in data prep) ----------
+def _schema_str(schema) -> str:
+    """Convert schema to string, returning empty for null-like values."""
+    try:
+        s = json.dumps(schema, ensure_ascii=False)
+    except Exception:
+        s = str(schema) if schema is not None else ""
+    return "" if s in ("{}", "[]", "null", '""') else s
+
+
+def _format_tool_context(tool: Dict[str, Any]) -> str:
+    """
+    Normalized context block for all prompts.
+    Creates human-readable formatted text instead of JSON.
+    """
+    return (
+        f"Tool Name: {tool.get('tool_name','')}\n"
+        f"Tool Description & Input Schema: {tool.get('tool_description','')}\n {_schema_str(tool.get('tool_input_schema',''))}\n"
+        f"Server name & Description & readme summary:\n"
+        f"  - {tool.get('server_name','')}\n"
+        f"  - {tool.get('server_description','')}\n"
+        f"  - {tool.get('readme_summary','')}\n"
+    )
+
 
 # ---------- Data Prep ----------
 def load_filtered_dataset(file_path: str) -> List[Dict[str, Any]]:
@@ -127,24 +143,19 @@ def extract_tools_from_servers(servers: List[Dict[str, Any]], finance_only: bool
 
 
 def create_inspect_samples_from_tools(tools: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-    """Make Inspect samples: input is a JSON string with tool/server context."""
+    """Make Inspect samples: input is formatted text, metadata contains raw tool data."""
     samples: List[Dict[str, Any]] = []
     for t in tools:
-        input_payload = {
-            "tool_name": t["tool_name"],
-            "tool_description": t["tool_description"],
-            "tool_input_schema": t["tool_input_schema"],
-            "server_name": t["server_name"],
-            "server_description": t["server_description"],
-            "readme_summary": t["readme_summary"],
-        }
+        # Use formatted text instead of JSON
+        ctx = _format_tool_context(t)
         samples.append({
-            "input": json.dumps(input_payload, ensure_ascii=False),
+            "input": ctx,  # Human-readable formatted text, NOT JSON
             "target": "",  # generation-only; no ground truth
             "id": t["tool_id"],
             "metadata": {
                 "stage": "onet_classification",
                 "server_id": t["server_id"],
+                "tool_data": t  # Store complete tool dict for solvers
             }
         })
     return samples
@@ -236,41 +247,27 @@ async def _pick(state, generate, prompt: str, valid_ids: List[str], numeric_only
     return state, None
 
 
-def _schema_str(schema) -> str:
-    try:
-        s = json.dumps(schema, ensure_ascii=False)
-    except Exception:
-        s = str(schema) if schema is not None else ""
-    # If it's effectively empty, return empty string
-    return "" if s in ("{}", "[]", "null", '""') else s
-
-
-def _format_tool_context(tool: Dict[str, Any]) -> str:
-    """
-    Normalized, de-duplicated context block used by all prompts.
-    Exactly the structure you asked for.
-    """
-    return (
-        f"Tool Name: {tool.get('tool_name','')}\n"
-        f"Tool Description: {tool.get('tool_description','')}\n"
-        f"Tool Input Schema: {_schema_str(tool.get('tool_input_schema',''))}\n"
-        f"Server name & Description & readme summary:\n"
-        f"  - Server: {tool.get('server_name','')}\n"
-        f"  - Description: {tool.get('server_description','')}\n"
-        f"  - README Summary: {tool.get('readme_summary','')}\n"
-    )
-
-
 def _parse_tool_from_state(state) -> Dict[str, Any]:
+    """
+    Parse tool data from state, preferring metadata.tool_data over JSON parsing.
+    Supports both new format (tool_data in metadata) and legacy format (JSON in input).
+    """
+    # Priority 1: New format with metadata.tool_data
+    if hasattr(state, "sample") and state.sample.metadata.get("tool_data"):
+        return state.sample.metadata["tool_data"]
+    
+    # Priority 2: Legacy JSON format in input text
     try:
-        # Try generic accessor for input text
         input_text = getattr(state, 'input_text', None)
-        if not input_text and hasattr(state, "sample") and getattr(state.sample, "input", None):
-            input_text = state.sample.input if isinstance(state.sample.input, str) else ""
-        tool = json.loads(input_text or "{}")
-    except Exception:
-        tool = {"tool_name": "", "tool_description": getattr(state, 'input_text', "")}
-    return tool
+        if not input_text and hasattr(state, "sample"):
+            input_text = getattr(state.sample, "input", "")
+        if input_text:
+            return json.loads(input_text)
+    except (json.JSONDecodeError, AttributeError, TypeError):
+        pass
+    
+    # Fallback: empty tool dict
+    return {}
 
 
 # ---------- Solver 1: O*NET hierarchical ----------
@@ -280,13 +277,9 @@ def classify_tool(csv_path: str):
     L1, L2, L3 = group_onet_levels(rows)
 
     async def solve(state, generate):
-        tool = _parse_tool_from_state(state)
-        ctx = _format_tool_context(tool)
-
         # Level 1
         p1 = (
             "Classify this MCP tool into an O*NET Level-1 cluster.\n\n"
-            f"{ctx}\n"
             f"Level-1 (id: name):\n{fmt_menu(L1)}\n\n"
             "Respond with ONLY the id."
         )
@@ -302,7 +295,6 @@ def classify_tool(csv_path: str):
             return state
         p2 = (
             f"Level-1 chosen: {l1_id}: {l1_name}\n\n"
-            f"{ctx}\n"
             f"Pick the SINGLE best Level-2 cluster id.\n"
             f"Level-2 (id: name):\n{fmt_menu(l2_opts)}\n\n"
             "Respond with ONLY the id."
@@ -319,7 +311,6 @@ def classify_tool(csv_path: str):
             return state
         p3 = (
             f"Level-2 chosen: {l2_id}: {l2_name}\n\n"
-            f"{ctx}\n"
             f"Pick the SINGLE best Level-3 Task ID (numeric).\n"
             f"Tasks (Task ID: Task):\n{fmt_menu(l3_opts)}\n\n"
             "Respond with ONLY the numeric Task ID."
@@ -353,11 +344,7 @@ def classify_automation_level():
     valid = set(list("012345"))
 
     async def solve(state, generate):
-        tool = _parse_tool_from_state(state)
-        ctx = _format_tool_context(tool)
-        prompt = (
-            ctx + "\n" + AUTOMATION_LEVEL_PROMPT
-        )
+        prompt = AUTOMATION_LEVEL_PROMPT
         # ask up to 3 times for a single digit 0-5
         for _ in range(3):
             state.messages.append(ChatMessageUser(content=prompt))
@@ -390,11 +377,7 @@ def classify_collaboration_pattern():
     }
 
     async def solve(state, generate):
-        tool = _parse_tool_from_state(state)
-        ctx = _format_tool_context(tool)
-        prompt = (
-            ctx + "\n" + COLLAB_PATTERN_PROMPT
-        )
+        prompt = COLLAB_PATTERN_PROMPT
         for _ in range(3):
             state.messages.append(ChatMessageUser(content=prompt))
             state = await generate(state)
