@@ -755,20 +755,20 @@ def main():
     ap.add_argument("--run", action="store_true", help="Also launch `inspect eval` to produce logs for all tasks")
     args = ap.parse_args()
 
-    # Generate dated log directories if not provided
+    # Generate dated log directories if not provided - all under .log parent directory
     from datetime import datetime
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if args.logs is None:
-        args.logs = f"./logs_onet_{timestamp}"
+        args.logs = f"./.log/onet_{timestamp}"
         log.info(f"Using auto-generated O*NET log directory: {args.logs}")
     if args.logs_auto is None:
-        args.logs_auto = f"./logs_auto_{timestamp}"
+        args.logs_auto = f"./.log/auto_{timestamp}"
         log.info(f"Using auto-generated Automation log directory: {args.logs_auto}")
     if args.logs_func is None:
-        args.logs_func = f"./logs_func_{timestamp}"
+        args.logs_func = f"./.log/func_{timestamp}"
         log.info(f"Using auto-generated Functionality log directory: {args.logs_func}")
     if args.logs_access is None:
-        args.logs_access = f"./logs_access_{timestamp}"
+        args.logs_access = f"./.log/access_{timestamp}"
         log.info(f"Using auto-generated Access Pattern log directory: {args.logs_access}")
 
     # 1) Data prep
