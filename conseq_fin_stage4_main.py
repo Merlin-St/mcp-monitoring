@@ -752,6 +752,7 @@ def main():
     ap.add_argument("--tools-json", default="conseq_fin_stage4_tools_full.json", help="Snapshot of tool records")
     ap.add_argument("--finance", action="store_true", help="Only finance-related servers (is_sector_52)")
     ap.add_argument("--limit", type=int, default=None, help="Limit number of samples processed by inspect eval")
+    ap.add_argument("--max-connections", type=int, default=None, help="Maximum number of concurrent connections for inspect eval")
     ap.add_argument("--run", action="store_true", help="Also launch `inspect eval` to produce logs for all tasks")
     args = ap.parse_args()
 
@@ -799,6 +800,8 @@ def main():
             ]
             if args.limit:
                 cmd.extend(["--limit", str(args.limit)])
+            if args.max_connections:
+                cmd.extend(["--max-connections", str(args.max_connections)])
             log.info("Running %s task: %s", which, " ".join(map(str, cmd)))
             subprocess.run(cmd, check=True)
     else:

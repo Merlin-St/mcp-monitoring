@@ -93,6 +93,77 @@ Raw Sources → Load Data → Process Sources → Deduplicate → Enhance → Sa
 - **ML Analysis**: Semantic embeddings, topic modeling, NAICS classification
 - **Finance Focus**: 966 finance-related servers with consequentiality scoring
 - **Processing Pipeline**: Unified dataset with deduplication and enhancement
+- **Usage Statistics**: Download statistics for PyPI and npm packages with 70.6% coverage
+
+## 📦 Usage Statistics Collection
+
+### Overview
+The project now includes comprehensive package usage statistics through a **strict 1:1 package-to-repository matching system** that replaces the previous Libraries.io approach. This system provides accurate download statistics from PyPI and npm while ensuring no repository is matched to multiple packages.
+
+### Key Improvements Over Previous System
+- **70.6% Coverage**: 3,450 matched packages out of 4,886 total discovered packages
+- **Strict 1:1 Matching**: Each repository matched to only ONE package (eliminates many-to-one conflicts)
+- **Direct API Sources**: PyPI BigQuery + npm registry APIs (replacing outdated Libraries.io data)
+- **Monthly Breakdown**: Download statistics from November 2024 to present
+
+### Package Discovery & Matching
+```bash
+# Final package matching results stored in:
+usage_match.json
+
+# Package discovery used search terms across PyPI and npm:
+# - 'mcp server', 'mcp-server', 'modelcontextprotocol', 'mcp'
+# - Found: 4,886 total packages (PyPI: 4,528, npm: 358)
+# - Matched: 3,450 packages via competitive 1:1 matching (70.6% coverage)
+```
+
+### Usage Statistics Integration
+The matched packages are integrated into the main dataset with download statistics:
+
+```bash
+# Collect and integrate usage statistics
+python usage_run.py                    # Full PyPI + npm collection (uses pre-downloaded PyPI data)
+python usage_run.py --skip-pypi        # npm only (faster testing)
+python usage_run.py --skip-npm         # PyPI only (uses pre-downloaded data)
+
+# Output: data_usage.json (890MB file with integrated usage fields)
+
+# PyPI Data Collection: 
+# Run this BigQuery query in Google Cloud Console and save as 'usage_bigquery_webresults_pypi.json':
+# SELECT file.project AS package_name, FORMAT_DATE('%Y-%m', DATE_TRUNC(DATE(timestamp), MONTH)) AS month, COUNT(*) AS downloads
+# FROM `bigquery-public-data.pypi.file_downloads` 
+# WHERE LOWER(file.project) LIKE '%mcp%' AND DATE(timestamp) >= '2024-11-01' AND DATE(timestamp) < '2025-09-01'
+# GROUP BY package_name, month ORDER BY package_name, month
+```
+
+### Dataset Enhancement
+The final `data_usage.json` (890MB) contains 16,940 repositories with integrated download statistics:
+
+- `usage_pypi_downloads`: Total PyPI downloads since Nov 2024
+- `usage_npm_downloads`: Total npm downloads since Nov 2024  
+- `usage_total_downloads`: Combined download count
+- `usage_monthly_breakdown`: Month-by-month download statistics (Nov 2024 - Aug 2025)
+- `usage_matched_packages`: List of matched PyPI/npm packages for each repository
+- `usage_last_updated`: Statistics collection date
+
+### Matching Strategy
+**Two-Tier Competitive Matching:**
+1. **Tier 1 (Confirmed)**: 783 exact URL/name matches from enhanced fuzzy matching
+2. **Tier 2 (Strict 1:1)**: 2,667 competitive matches using prefix indexing + fuzzy scoring
+
+**Quality Thresholds:**
+- 90+ confidence: 2,667 matches used for download statistics
+- Competitive assignment ensures each repository → single best package match
+- Eliminated previous many-to-one conflicts (e.g., 87+ packages to one repo)
+
+### Final Results Summary
+- **Total Downloads Collected**: 87.7 million (74.5M PyPI + 13.1M npm)
+- **Package Coverage**: 70.6% of discovered MCP packages matched to repositories (3,450/4,886)
+- **Repository Coverage**: 1,431 repositories with download statistics (8.4% of 16,940 total)
+- **PyPI Coverage**: 97.6% match rate (3,018/3,092 packages matched), 80.4% of all PyPI downloads captured
+- **npm Coverage**: 59.5% match rate (213/358 packages matched), 100% of matched packages have data
+- **Data Quality**: 90+ confidence threshold, strict 1:1 repository matching, monthly breakdown Nov 2024-Aug 2025
+- **Missing Downloads**: 18.2M PyPI downloads (19.6%) from 3,723 non-matched packages - requires manual mapping or dataset expansion
 
 ## 🧬 Topic Modeling & Optimization
 ```bash
@@ -147,6 +218,12 @@ python embed_hyperparameter_optimizer.py --finance --test-size 500 --max-combina
 - `github_data_run.py` - GitHub scanning (21,053 repos) 
 - `officiallist_data_run.py` - Official list (966 servers)
 
+### Usage Statistics
+- `usage_run.py` - Package download statistics collection (pre-downloaded PyPI data + npm API)
+- `usage_match.json` - Final 1:1 matched packages (3,450 packages, 70.6% coverage)
+- `usage_bigquery_webresults_pypi.json` - Pre-downloaded PyPI statistics (5,024 packages, 92.7M downloads)
+- `data_usage.json` - Final dataset with integrated download statistics (890MB, 87.7M downloads)
+
 ## 🎯 Research Focus
 Tracks AI tool ecosystem growth with specific attention to:
 - **Finance sector tools** and autonomous capabilities
@@ -180,3 +257,35 @@ python conseq_fin_stage3_visual.py
 **Pipeline Output:**
 - **Stage 1**: `conseq_fin_stage1_results.json/csv` (finance-relevant servers)
 - **Stage 3**: PNG charts + finance server analysis + summary statistics
+
+## 📊 LLM Validation Results
+
+Human-labeled validation against LLM consequentiality scoring across 92 servers shows **83.2% mean accuracy** across 15 fields with systematic over-estimation bias in level classification.
+
+### Consequentiality Level Performance
+
+**5-Level Classification:**
+- **Exact Accuracy**: 55.7% (49/88 servers)
+- **Off-by-one Accuracy**: 86.4% (acceptable for ordinal data)
+- **Mean Absolute Error**: 0.63 levels
+
+**Confusion Matrix (Rows=Human, Cols=LLM):**
+```
+     L1  L2  L3  L4  L5   (Human Distribution)
+L1:  15  22   1   3   0   (41 servers, 46.6%)
+L2:   2   9   1   3   0   (15 servers, 17.0%) 
+L3:   0   0   2   2   1   (5 servers, 5.7%)
+L4:   1   3   0  21   0   (25 servers, 28.4%)
+L5:   0   0   0   0   2   (2 servers, 2.3%)
+```
+
+**4-Level Classification (L1+L2 Combined):**
+- **Combined Accuracy**: 83.0% (73/88 servers) 
+- **Improvement**: +27.3 percentage points
+- **Key Fix**: 24/39 disagreements resolved by treating L1/L2 as single "Low Risk" category
+
+**Systematic Bias**: LLM over-estimates by 1+ levels in 33/39 disagreements (84.6%), particularly confusing information-gathering tools (Human L1) with limited-interaction tools (Human L2).
+
+**Validation Scripts**: `conseq_fin_stage2_validate.py`, `conseq_level_disagreement_analysis.py`
+
+**Takeaway**: LLM struggles to distinguish between low-risk information gathering (L1) and limited interaction (L2) categories, suggesting these should be combined for practical consequentiality assessment.

@@ -10,17 +10,14 @@ dependencies = [
     "inspect-ai>=0.3.78",
     "inspect-k8s-sandbox",
     "inspect_evals@git+https://github.com/UKGovernmentBEIS/inspect_evals",
-    
     # LLM API clients
     "anthropic>=0.8.0",
     "openai",
     "mistralai",
     "groq",
-    
     # Core HTTP libraries
     "requests>=2.31.0",
     "aiohttp>=3.9.0",
-    
     # Data analysis and visualization
     "pandas>=1.5.0",
     "numpy>=1.24.0",
@@ -29,20 +26,17 @@ dependencies = [
     "matplotlib>=3.7.0",
     "seaborn>=0.12.0",
     "scikit-learn>=1.3.0",
-    
     # Jupyter and notebook support
     "jupyter",
     "ipywidgets",
     "jupyterlab",
     "notebook",
     "ipykernel",
-    
     # Hugging Face ecosystem
     "transformers",
     "datasets",
     "huggingface_hub",
     "sentence-transformers>=2.2.0",
-    
     # Natural language processing and embeddings
     "nltk>=3.8.0",
     "umap-learn>=0.5.7",
@@ -55,19 +49,21 @@ dependencies = [
     "bertopic",
     "xformers",
     "wordcloud",
-    
     # Web dashboard and visualization
     "streamlit>=1.28.0",
-    
     # Web scraping
     "selenium>=4.15.0",
     "beautifulsoup4>=4.12.0",
     "lxml>=4.9.0",
-    
     # Essential utilities
     "python-dotenv>=1.0.1",
     "openpyxl",
     "mcp",
+    "db-dtypes>=1.0.0",
+    "google-cloud-bigquery", #for npm and pypi download stats
+    "pypistats>=1.7.0", #for pypi download stats API
+    "fuzzywuzzy>=0.18.0",
+    "python-levenshtein>=0.27.1",
 ]
 
 [project.optional-dependencies]
