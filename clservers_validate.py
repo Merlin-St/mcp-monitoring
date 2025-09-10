@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Finance Consequentiality Stage 2 Validation Script
+Finance Consequentiality CLServers Validation Script
 
 Compares human-labeled CSV (2025-07-labelling-finance-mcps.csv) against 
 LLM-labeled CSV (server_classified.csv) to evaluate accuracy and provide
@@ -22,7 +22,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('stage3_validate.log'),
+        logging.FileHandler('clservers_validate.log'),
         logging.StreamHandler()
     ]
 )
@@ -34,7 +34,7 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     logger.info("Loading datasets...")
     
     # Load human-labeled data
-    human_df = pd.read_csv("stage3_validate_labelled.csv")
+    human_df = pd.read_csv("clservers_validate_labelled.csv")
     logger.info(f"Human-labeled data: {len(human_df)} rows, {len(human_df.columns)} columns")
     
     # Load LLM-labeled data
@@ -496,15 +496,15 @@ def save_results(results: Dict[str, Any], summary: Dict[str, Any],
         }
     }
     
-    with open('stage3_validation.json', 'w') as f:
+    with open('clservers_validation.json', 'w') as f:
         json.dump(output, f, indent=2)
     
-    logger.info("Validation results saved to stage3_validation.json")
+    logger.info("Validation results saved to clservers_validation.json")
 
 
 def main():
     """Main validation workflow."""
-    logger.info("Starting Finance Consequentiality Stage 2 Validation")
+    logger.info("Starting Finance Consequentiality CLServers Validation")
     
     try:
         # Load and align datasets

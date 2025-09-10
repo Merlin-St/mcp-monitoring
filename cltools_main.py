@@ -12,13 +12,13 @@ End-to-end pipeline:
 - Read logs with samples_df/messages_df and export one wide CSV
 
 Usage:
-  python stage5_task_main.py --run  # (costly)
+  python cltools_main.py --run  # (costly)
   or manually:
-  python stage5_task_main.py \
-    --onet stage5_tasks_cluster_names.csv \
+  python cltools_main.py \
+    --onet task_clusters_names.csv \
     --logs ./logs_onet \
     --logs-auto ./logs_auto \
-    --out stage5_task_output.csv \
+    --out cltools_3_results.csv \
     --model openai/gpt-4o-mini \
     --finance \
     --limit 100 \
@@ -466,8 +466,8 @@ def classify_access_pattern():
 # ---------- Tasks (module-level so inspect can find them) ----------
 @task
 def mcp_onet_classify_task():
-    samples_path = "stage5_samples.jsonl"
-    csv_path = "stage5_tasks_cluster_names.csv"
+    samples_path = "cltools_samples.jsonl"
+    csv_path = "task_clusters_names.csv"
     if not Path(samples_path).exists():
         raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
     return Task(
@@ -481,7 +481,7 @@ def mcp_onet_classify_task():
 
 @task
 def mcp_automation_level_task():
-    samples_path = "stage5_samples.jsonl"
+    samples_path = "cltools_samples.jsonl"
     if not Path(samples_path).exists():
         raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
     return Task(
@@ -495,7 +495,7 @@ def mcp_automation_level_task():
 
 @task
 def mcp_functionality_task():
-    samples_path = "stage5_samples.jsonl"
+    samples_path = "cltools_samples.jsonl"
     if not Path(samples_path).exists():
         raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
     return Task(
@@ -509,7 +509,7 @@ def mcp_functionality_task():
 
 @task
 def mcp_access_pattern_task():
-    samples_path = "stage5_samples.jsonl"
+    samples_path = "cltools_samples.jsonl"
     if not Path(samples_path).exists():
         raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
     return Task(
@@ -741,15 +741,15 @@ def export_csv(
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--servers", default="data_unified_filtered.json", help="Path to filtered MCP servers JSON")
-    ap.add_argument("--onet", default="stage5_tasks_cluster_names.csv", help="Path to O*NET tasks CSV")
+    ap.add_argument("--onet", default="task_clusters_names.csv", help="Path to O*NET tasks CSV")
     ap.add_argument("--logs", default=None, help="Log dir for O*NET task (auto-generated if not provided)")
     ap.add_argument("--logs-auto", default=None, help="Log dir for Automation Level task")
     ap.add_argument("--logs-func", default=None, help="Log dir for Functionality task")
     ap.add_argument("--logs-access", default=None, help="Log dir for Access Pattern task")
-    ap.add_argument("--out", default="stage5_task_output.csv", help="Output CSV path")
+    ap.add_argument("--out", default="cltools_3_results.csv", help="Output CSV path")
     ap.add_argument("--model", default="anthropic/claude-sonnet-4-20250514", help="Model string for inspect eval")
-    ap.add_argument("--samples", default="stage5_samples.jsonl", help="Samples JSONL path")
-    ap.add_argument("--tools-json", default="stage5_tools_full.json", help="Snapshot of tool records")
+    ap.add_argument("--samples", default="cltools_samples.jsonl", help="Samples JSONL path")
+    ap.add_argument("--tools-json", default="cltools_prep.json", help="Snapshot of tool records")
     ap.add_argument("--finance", action="store_true", help="Only finance-related servers (is_sector_52)")
     ap.add_argument("--limit", type=int, default=None, help="Limit number of samples processed by inspect eval")
     ap.add_argument("--max-connections", type=int, default=None, help="Maximum number of concurrent connections for inspect eval")

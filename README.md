@@ -121,12 +121,17 @@ usage_match.json
 The matched packages are integrated into the main dataset with download statistics:
 
 ```bash
-# Collect and integrate usage statistics
-python usage_run.py                    # Full PyPI + npm collection (uses pre-downloaded PyPI data)
-python usage_run.py --skip-pypi        # npm only (faster testing)
-python usage_run.py --skip-npm         # PyPI only (uses pre-downloaded data)
+# Step 1: Collect npm download statistics (external API calls)
+python usage_collect_npm.py                         # Collect npm stats → usage_npm.json
+python usage_collect_npm.py --start-date 2024-01-01 # Custom date range
+python usage_collect_npm.py --packages custom.json  # Custom package list
 
-# Output: data_usage.json (890MB file with integrated usage fields)
+# Step 2: Integrate all usage statistics into dataset
+python data_unified_add_usage.py                    # Full PyPI + npm integration (uses pre-downloaded PyPI + pre-collected npm)
+python data_unified_add_usage.py --skip-pypi        # npm only (faster testing)
+python data_unified_add_usage.py --skip-npm         # PyPI only (uses pre-downloaded data)
+
+# Outputs: usage_npm.json (npm stats) + modifies data_unified_filtered.json in place
 
 # PyPI Data Collection: 
 # Run this BigQuery query in Google Cloud Console and save as 'usage_bigquery_webresults_pypi.json':
@@ -191,10 +196,13 @@ python embed_hyperparameter_optimizer.py --finance --test-size 500 --max-combina
 
 ## 📁 Key Files
 ### Main Data
-- `data_unified_processor.py` - Data unification (27,899 servers)
+- `data_unified_processor.py` - **Creates** `data_unified.json` from 3 sources (27,899 servers)
+- `data_unified_create_filtered_subset.py` - **Creates** `data_unified_filtered.json` (filtered subset)
+- `data_readme_filter_dfprocessing.py` - **Edits** `data_unified_filtered.json` (adds readme_filtered column)
+- `data_unified_add_usage.py` - **Modifies** `data_unified_filtered.json` (adds usage statistics in place)
 - `data_unified.json` - Full unified dataset (343MB, 27,899 servers)
+- `data_unified_summary.json` - Basic dataset statistics and metadata
 - `data_unified_filtered.json` - Filtered dataset (225MB, core fields only)
-- `data_unified_summary.json` - Dataset statistics and metadata
 
 ### ML Analysis
 - `embed_generate.py` - GPU-accelerated embedding generation
@@ -211,7 +219,8 @@ python embed_hyperparameter_optimizer.py --finance --test-size 500 --max-combina
 - `stage_data_prep.py` - Stage 1: Data preparation with sampling options (--samples 500, --all, --finance)
 - `stage_stage1_inspect.py` - Stage 1: Finance tool identification using Inspect framework
 - `stage_stage1_dfprocessing.py` - Stage 1: Process .eval files to JSON/CSV
-- `stage_stage3_visual.py` - Stage 3: Visualization and top tools analysis
+- `clservers_validate.py` - Validation script comparing human vs LLM labels
+- `clservers_validate_details.py` - Detailed analysis of validation disagreements
 
 ### Data Collection
 - `smithery_data_run.py` - Smithery API (6,434 servers)
@@ -219,9 +228,11 @@ python embed_hyperparameter_optimizer.py --finance --test-size 500 --max-combina
 - `officiallist_data_run.py` - Official list (966 servers)
 
 ### Usage Statistics
-- `usage_run.py` - Package download statistics collection (pre-downloaded PyPI data + npm API)
+- `usage_collect_npm.py` - **Collects** npm download statistics via npm API → `usage_npm.json`
+- `data_unified_add_usage.py` - **Integrates** usage statistics into `data_unified_filtered.json` (uses pre-downloaded PyPI + pre-collected npm)
 - `usage_match.json` - Final 1:1 matched packages (3,450 packages, 70.6% coverage)
 - `usage_bigquery_webresults_pypi.json` - Pre-downloaded PyPI statistics (5,024 packages, 92.7M downloads)
+- `usage_npm.json` - Pre-collected npm statistics (created by usage_collect_npm.py)
 - `data_usage.json` - Final dataset with integrated download statistics (890MB, 87.7M downloads)
 
 ## 🎯 Research Focus

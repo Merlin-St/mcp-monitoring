@@ -3,8 +3,8 @@
 Embedding-based MCP tool to ONET task matching using cosine similarity
 
 This script:
-1. Loads 100 samples from stage5_samples.jsonl (MCP server tools)
-2. Embeds the MCP tool descriptions using functions from stage5_task_clusters_embeddings.py
+1. Loads 100 samples from cltools_samples.jsonl (MCP server tools)
+2. Embeds the MCP tool descriptions using functions from task_clusters_embeddings.py
 3. Loads pre-embedded ONET tasks from the NPZ cache
 4. Computes cosine similarities between MCP tools and ONET tasks
 5. Finds best matches and generates analysis results
@@ -20,8 +20,8 @@ from pathlib import Path
 from typing import Dict, List, Tuple, Any
 from sklearn.metrics.pairwise import cosine_similarity
 
-# Import functions from the stage5 task embeddings module
-from stage5_task_clusters_embeddings import (
+# Import functions from the task embeddings module
+from task_clusters_embeddings import (
     get_embedding_model,
     load_or_generate_embeddings,
     EMBEDDING_MODEL_NAME
@@ -32,7 +32,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('stage5_task_clusters_embed_match.log'),
+        logging.FileHandler('task_clusters_embed_match.log'),
         logging.StreamHandler()
     ]
 )
@@ -43,10 +43,10 @@ class MCPToONETMatcher:
     
     def __init__(self):
         """Initialize the matcher with required data paths"""
-        self.mcp_input_file = "stage5_samples.jsonl"
-        self.onet_tasks_file = "stage5_onet_taskstatements.csv"
-        self.onet_embeddings_file = "stage5_task_clusters_embeddings_onet.npz"
-        self.mcp_embeddings_cache = "stage5_task_clusters_mcp_tool_embeddings.npz"
+        self.mcp_input_file = "cltools_samples.jsonl"
+        self.onet_tasks_file = "cl_onet_taskstatements.csv"
+        self.onet_embeddings_file = "task_clusters_embeddings_onet.npz"
+        self.mcp_embeddings_cache = "task_clusters_mcp_tool_embeddings.npz"
         
         # Data containers
         self.mcp_samples = []
@@ -59,7 +59,7 @@ class MCPToONETMatcher:
         self.best_matches = []
         
     def load_mcp_samples(self, limit: int = 100) -> None:
-        """Load MCP tool samples from stage5_samples.jsonl"""
+        """Load MCP tool samples from cltools_samples.jsonl"""
         logger.info(f"Loading MCP samples from {self.mcp_input_file}")
         
         samples = []
@@ -269,7 +269,7 @@ class MCPToONETMatcher:
         
         return analysis
     
-    def save_results(self, output_file: str = 'stage5_task_clusters_embed_match_results.json') -> None:
+    def save_results(self, output_file: str = 'task_clusters_embed_match_results.json') -> None:
         """Save all results to JSON file"""
         logger.info(f"Saving results to {output_file}")
         
@@ -337,7 +337,7 @@ def main():
         for occ, count in top_occs:
             logger.info(f"  - {occ}: {count} matches")
         
-        logger.info("\nDetailed results saved to: stage5_task_clusters_embed_match_results.json")
+        logger.info("\nDetailed results saved to: task_clusters_embed_match_results.json")
         
     except Exception as e:
         logger.error(f"Error during analysis: {e}")

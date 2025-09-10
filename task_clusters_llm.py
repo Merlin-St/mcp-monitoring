@@ -213,7 +213,7 @@ def process_naming_results(log_dir: str, expected_clusters: List[str] = None) ->
 def l3_to_l2_validation():
     """Validate L3 to L2 classification"""
     return Task(
-        dataset=json_dataset("stage5_task_clusters_validation_l3_to_l2.jsonl"),
+        dataset=json_dataset("task_clusters_validation_l3_to_l2.jsonl"),
         solver=[
             system_message(VALIDATION_SYSTEM_PROMPT),
             generate()
@@ -225,7 +225,7 @@ def l3_to_l2_validation():
 def l2_to_l1_validation():
     """Validate L2 to L1 classification"""
     return Task(
-        dataset=json_dataset("stage5_task_clusters_validation_l2_to_l1.jsonl"),
+        dataset=json_dataset("task_clusters_validation_l2_to_l1.jsonl"),
         solver=[
             system_message(VALIDATION_SYSTEM_PROMPT),
             generate()
@@ -237,7 +237,7 @@ def l2_to_l1_validation():
 def l3_to_l1_validation():
     """Validate L3 to L1 classification"""
     return Task(
-        dataset=json_dataset("stage5_task_clusters_validation_l3_to_l1.jsonl"),
+        dataset=json_dataset("task_clusters_validation_l3_to_l1.jsonl"),
         solver=[
             system_message(VALIDATION_SYSTEM_PROMPT),
             generate()
@@ -249,7 +249,7 @@ def l3_to_l1_validation():
 def subset_l2_l3_validation():
     """Validate L3 to L2 classification using focused subset of L2 options"""
     return Task(
-        dataset=json_dataset("stage5_task_clusters_validation_subset_l2_l3.jsonl"),
+        dataset=json_dataset("task_clusters_validation_subset_l2_l3.jsonl"),
         solver=[
             system_message(VALIDATION_SYSTEM_PROMPT),
             generate()

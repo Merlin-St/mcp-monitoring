@@ -112,11 +112,24 @@ python officiallist_data_run.py
 - `embed_apply_optimized_parameters.py` - Helper script to apply optimized parameters to embed_generate.py
 - `naics_classification_config.py` - NAICS sector definitions and keyword mappings
 
-**Consequentiality Scoring:**
+**Consequentiality Scoring - CLServers Pipeline:**
 - `data_tools_extraction_utils.py` - Tool extraction and access level classification utilities
-- `stage2_data_prep.py` - Stage 2: Finance data preparation for multi-stage analysis
-- `stage2_inspect.py` - Stage 2: Inspect task for finance-relevant server filtering
-- `stage2_dfprocessing.py` - Stage 2: DataFrame processing for .eval files
+- `clservers_1_dataprep.py` - CLServers Step 1: Finance data preparation for analysis
+- `clservers_2_inspect.py` - CLServers Step 2: Inspect task for finance-relevant server filtering
+- `clservers_3_dfprocessing.py` - CLServers Step 3: DataFrame processing for .eval files to JSON
+- `clservers_4_datamatch.py` - CLServers Step 4: Data matching and final CSV generation
+- `clservers_validate.py` - Validation script comparing human vs LLM labels
+- `clservers_validate_details.py` - Detailed analysis of validation disagreements
+
+**Consequentiality Scoring - CLTools Pipeline:**
+- `cltools_main.py` - Main O*NET task classification pipeline
+- `cltools_datamatch.py` - Enriches CLTools output with metadata from CLServers
+- `task_clusters_data.py` - O*NET task data loading and processing
+- `task_clusters_embeddings.py` - Embedding generation for task clustering
+- `task_clusters_llm.py` - LLM-based cluster naming and validation
+- `task_clusters_run.py` - Main runner for task clustering pipeline
+- `task_clusters_embed_match.py` - Matching MCP tools to O*NET tasks
+- `task_clusters.md` - Documentation for task clustering approach
 
 **README Content Filtering:**
 - `data_readme_filter_inspect.py` - LLM-based refinement using Inspect framework
@@ -152,7 +165,7 @@ The system extracts and classifies:
 
 ## Dashboard & Visualization
 
-**Note**: Dashboard components have been moved to https://github.com/AI-Safety-Institute/sr-mcp-dashboard from stage2.csv onwards. This repository focuses on data collection, processing, and analysis.
+**Note**: Dashboard components have been moved to https://github.com/AI-Safety-Institute/sr-mcp-dashboard from clservers_classified.csv onwards. This repository focuses on data collection, processing, and analysis.
 
 ## Key Dependencies
 
@@ -191,7 +204,7 @@ The system extracts and classifies:
 
 ### Dashboard Data Files
 - `data_unified.json` - Unified dashboard data (27MB, 27,899 servers)
-- `data_unified_summary.json` - Dashboard summary
+- `data_unified_summary.json` - Basic dashboard summary
 - `data_unified_filtered.json` - Filtered subset for analysis
 - `data_unified_filtered_summary.json` - Filtered summary
 
@@ -203,12 +216,25 @@ The system extracts and classifies:
 - `embeddings_cache/` - Cached embeddings to avoid recomputation
 
 ### Consequentiality Scoring Data Files
-- `conseq_ground_truth_tools_sample.json` - Random tools sample for ground truth scoring
-- `stage*` - Finance-specific consequentiality analysis files:
-  - `stage2_data_prep_summary.json` - Stage 2 data preparation summary
-  - `stage2_data_prep_servers_sample.json` - Stage 2 finance server sample
-  - `stage2_results.csv` - Stage 2 filtering results (CSV)
-  - `stage2_logs/` - Stage 2 processing logs
+
+**CLServers Pipeline Files:**
+- `clservers_1_dataprep_summary.json` - CLServers Step 1 data preparation summary
+- `clservers_1_dataprep_servers_sample.json` - CLServers Step 1 finance server sample
+- `clservers_input.jsonl` - Input for CLServers Inspect evaluation
+- `clservers_3_results.json` - CLServers Step 3 filtering results (JSON)
+- `clservers_classified.csv` - CLServers final classified servers with metadata (CSV)
+- `clservers_validation.json` - Validation results comparing human vs LLM labels
+- `clservers_validate_labelled.csv` - Human-labeled validation dataset
+
+**CLTools Pipeline Files:**
+- `cltools_samples.jsonl` - MCP tool samples for O*NET classification
+- `cltools_3_results.csv` - CLTools task classification results
+- `cltools_classified.csv` - CLTools enriched with metadata from CLServers
+- `cltools_prep.json` - Snapshot of all tool records (preprocessed data)
+- `task_clusters_names.csv` - O*NET task clusters with generated names
+- `task_clusters_*.json` - Various clustering summary and result files
+- `cl_onet_taskstatements.csv` - O*NET task statements database
+- `cl_onet_toolsused.csv` - O*NET tools usage database
 
 ### Test Data Files
 - Various test files for development and validation
@@ -259,7 +285,7 @@ The README filtering pipeline removes installation tips and setup instructions w
 
 ### Pipeline Stages
 1. **Stage 1**: Keyword-based filtering using pattern matching
-2. **Stage 2**: LLM-based refinement using Inspect framework
+2. **CLServers Step 2**: LLM-based refinement using Inspect framework
 
 ### What Gets Removed
 - Package manager commands (`npm install`, `pip install`, `docker run`, etc.)
@@ -402,37 +428,64 @@ python data_readme_filter_dfprocessing.py --eval-file specific.eval  # Process s
 source ~/si_setup/.venv/bin/activate
 
 # 1. Data Preparation - Create filtered dataset for analysis
-python stage2_data_prep.py                    # Default: 100 servers
-python stage2_data_prep.py --samples 500      # Custom sample size (more samples)
-python stage2_data_prep.py --samples 1000     # Large sample for comprehensive analysis
-python stage2_data_prep.py --all              # Process all servers
-python stage2_data_prep.py --finance          # Only finance-related servers
-python stage2_data_prep.py --samples 1000 --finance  # Large finance-focused sample
+python clservers_1_dataprep.py                    # Default: 100 servers
+python clservers_1_dataprep.py --samples 500      # Custom sample size (more samples)
+python clservers_1_dataprep.py --samples 1000     # Large sample for comprehensive analysis
+python clservers_1_dataprep.py --all              # Process all servers
+python clservers_1_dataprep.py --finance          # Only finance-related servers
+python clservers_1_dataprep.py --samples 1000 --finance  # Large finance-focused sample
 
-# 2. Stage 2 - Finance Tool Identification (uses Inspect framework)
-inspect eval stage2_inspect.py --model anthropic/claude-sonnet-4-20250514
-python stage2_dfprocessing.py                # Process .eval files to JSON/CSV
+# 2. CLServers Step 2 - Finance Tool Identification (uses Inspect framework)
+inspect eval clservers_2_inspect.py --model anthropic/claude-sonnet-4-20250514
 
+# 3. CLServers Step 3 - DataFrame Processing
+python clservers_3_dfprocessing.py                # Process .eval files to JSON
 
-# Complete 2-Stage Pipeline Workflow:
-# Stage 1: Data Prep → Finance Filter → Visualization
-#   - Data prep creates stage2_data_prep_servers_sample.json and stage2_input.jsonl
-#   - Stage 2 identifies finance-related servers using LLM evaluation via Inspect framework
-#     * Run inspect eval to generate .eval files in logs/
-#     * Run DataFrame processing to convert to CSV (stage2_results.csv)
-#   - Stage 4 creates visualizations and identifies top execution-level tools
-#     * Generates PNG charts and analysis based on Stage 1 outputs
-#     * Displays finance-related servers and tool analysis
-#     * Outputs comprehensive summary statistics
+# 4. CLServers Step 4 - Data Matching
+python clservers_4_datamatch.py                   # Add metadata and create final CSV
 
-# Stage Outputs:
-# - Stage 2: stage2_results.csv (finance-relevant servers)
+# CLTools Pipeline - O*NET Task Classification
+python cltools_main.py --run                      # Run full pipeline (costly)
+python cltools_main.py \
+    --onet task_clusters_names.csv \
+    --data data_unified_filtered.json \
+    --out cltools_3_results.csv \
+    --model openai/gpt-4o-mini \
+    --finance \
+    --limit 100
+
+# Enrich CLTools output with metadata
+python cltools_datamatch.py \
+    --stage4 cltools_3_results.csv \
+    --stage2 clservers_classified.csv \
+    --usage data_unified_filtered.json \
+    --output cltools_classified.csv
+
+# Task Clustering Pipeline
+python task_clusters_run.py --k2 400              # Run clustering with 400 L2 clusters
+python task_clusters_embed_match.py               # Match MCP tools to O*NET tasks
+
+# Complete Pipeline Workflow:
+# CLServers Pipeline: Finance Server Classification
+#   - Step 1: Creates clservers_1_dataprep_servers_sample.json and clservers_input.jsonl
+#   - Step 2: Identifies finance-related servers using LLM evaluation via Inspect
+#   - Step 3: Processes .eval files to JSON (clservers_3_results.json)
+#   - Step 4: Adds metadata and creates final CSV (clservers_classified.csv)
+
+# CLTools Pipeline: O*NET Task Mapping
+#   - Main: Maps MCP tools to O*NET occupational tasks
+#   - DataMatch: Enriches results with creation dates and usage data
+#   - Output: cltools_classified.csv with full task and metadata mapping
+
+# Outputs:
+# - CLServers: clservers_classified.csv (finance-relevant servers with metadata)
+# - CLTools: cltools_classified.csv (O*NET task mappings with metadata)
 
 # Requirements:
 # - ANTHROPIC_API_KEY environment variable set
 # - Inspect framework installed (pip install inspect_ai)
 # - data_unified_filtered.json must exist (run data_unified_create_filtered_subset.py first)
-# - matplotlib, seaborn, pandas for Stage 3 visualizations
+# - matplotlib, seaborn, pandas for CLServers visualizations
 ```
 
 ### Testing & Validation

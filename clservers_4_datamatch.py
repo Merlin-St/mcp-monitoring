@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Financial MCP Server Stage 2 - Data Matching
+CLServers Step 4: Financial MCP Server - Data Matching
 
-Matches the Stage 1 evaluation results with the unified dataset to add
+Matches the CLServers Step 3 evaluation results with the unified dataset to add
 creation dates and other metadata fields that weren't included in the
 original evaluation.
 
 This should be run after:
-    python stage2_dfprocessing.py
+    python clservers_3_dfprocessing.py
 
 Usage:
-    python stage2_datamatch.py
+    python clservers_4_datamatch.py
 """
 
 import json
@@ -26,7 +26,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('stage2_datamatch.log'),
+        logging.FileHandler('clservers_4_datamatch.log'),
         logging.StreamHandler()
     ]
 )
@@ -140,16 +140,16 @@ def expand_tools_columns(df):
 
 def main():
     """Main data matching function"""
-    logger.info("Starting Stage 2 Data Matching")
+    logger.info("Starting CLServers Step 4 Data Matching")
     
-    # Load Stage 1 results from JSON
-    stage1_json = "stage2_results.json"
-    if not Path(stage1_json).exists():
-        logger.error(f"Stage 1 results file {stage1_json} not found. Run stage2_dfprocessing.py first.")
+    # Load CLServers Step 3 results from JSON
+    clservers_json = "clservers_3_results.json"
+    if not Path(clservers_json).exists():
+        logger.error(f"CLServers Step 3 results file {clservers_json} not found. Run clservers_3_dfprocessing.py first.")
         return
     
     # Load JSON and convert to DataFrame
-    with open(stage1_json, 'r', encoding='utf-8') as f:
+    with open(clservers_json, 'r', encoding='utf-8') as f:
         json_data = json.load(f)
     
     # Handle both old format (list) and new format (dict with results key)
@@ -161,7 +161,7 @@ def main():
         results_data = json_data
     
     results_df = pd.DataFrame(results_data)
-    logger.info(f"Loaded {len(results_df)} Stage 1 results from {stage1_json}")
+    logger.info(f"Loaded {len(results_df)} CLServers Step 3 results from {clservers_json}")
     
     # Load the unified dataset for server metadata matching
     unified_file = 'data_unified_filtered.json'
@@ -292,7 +292,7 @@ def main():
     results_df = results_df[existing_columns]
     
     # Save the enhanced results
-    output_file = "server_classified.csv"
+    output_file = "clservers_classified.csv"
     results_df.to_csv(output_file, index=False)
     logger.info(f"Enhanced results saved to {output_file}")
     
@@ -337,15 +337,15 @@ def main():
     try:
         s3 = boto3.client('s3')
         s3.upload_file(
-            'server_classified.csv',
+            'clservers_classified.csv',
             os.environ['AISI_PLATFORM_BUCKET'],
             f'users/{os.environ["AISI_PLATFORM_USER"]}/server_classified.csv'
         )
-        logger.info("Successfully uploaded server_classified.csv to S3")
+        logger.info("Successfully uploaded clservers_classified.csv to S3")
     except Exception as e:
         logger.error(f"Error during S3 upload: {e}")
     
-    logger.info("Stage 2 data matching completed successfully!")
+    logger.info("CLServers Step 4 data matching completed successfully!")
 
 if __name__ == "__main__":
     main()

@@ -8,7 +8,7 @@ This pipeline implements a unified approach to clustering ~20,000 ONET occupatio
 - **Level 1**: 12 supercluster categories (via K-means on Level 2 cluster name embeddings)
 
 ## Quick start
-  python stage5_task_clusters_run.py --k1 12 --k2 400 --skip-validation
+  python task_clusters_run.py --k1 12 --k2 400 --skip-validation
 
   What to expect:
 
@@ -23,22 +23,22 @@ This pipeline implements a unified approach to clustering ~20,000 ONET occupatio
 
 ### Core Components
 
-1. **`stage5_task_clusters_embeddings.py`** - Embedding generation and clustering
+1. **`task_clusters_embeddings.py`** - Embedding generation and clustering
    - Flexible functions for embedding both ONET tasks and cluster names
    - K-means clustering with configurable k values
    - Embedding cache management
 
-2. **`stage5_task_clusters_data.py`** - Data loading and management
+2. **`task_clusters_data.py`** - Data loading and management
    - ONET task CSV loading
    - Incremental CSV updates throughout pipeline
    - Validation sample preparation
 
-3. **`stage5_task_clusters_llm.py`** - LLM cluster naming
+3. **`task_clusters_llm.py`** - LLM cluster naming
    - Inspect framework integration
    - Cluster name generation prompts
    - Result processing via messages_df
 
-4. **`stage5_task_clusters_run.py`** - Main orchestration script
+4. **`task_clusters_run.py`** - Main orchestration script
    - Complete pipeline execution
    - Validation task coordination
    - Summary generation
@@ -78,14 +78,14 @@ python stage5_task_clusters_run.py --skip-validation
 
 ### Prerequisites
 
-- ONET task data: `stage5_onet_taskstatements.csv`
+- ONET task data: `cl_onet_taskstatements.csv`
 - Anthropic API key set in environment
 - Inspect framework installed
 
 ## Output Files
 
 ### Primary Output
-- **`stage5_tasks_cluster_names.csv`** - Complete task assignments with cluster names
+- **`stage5_task_clusters_names.csv`** - Complete task assignments with cluster names
   ```
   task_id | onet_code | task | title | level2_cluster | level2_name | level1_cluster | level1_name
   ```

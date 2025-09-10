@@ -6,14 +6,14 @@ Uses Inspect framework to refine README content filtering using LLM-based analys
 Removes installation tips while preserving functional descriptions, tool information,
 and sector-relevant content for embedding analysis and consequentiality scoring.
 
-MODIFIED: Uses custom JSON structure validator scorer similar to stage2_inspect.py.
+MODIFIED: Uses custom JSON structure validator scorer similar to clservers_2_inspect.py.
 The scorer validates JSON structure, required fields, field types, and content quality.
 
 This file contains only the task definition for Inspect to run.
 Use data_readme_filter_dfprocessing.py to process the results.
 
 Usage:
-    python readme_content_filter.py                    # Run Stage 1 first
+    python readme_content_filter.py                    # Run initial filter first
     inspect eval data_readme_filter_inspect.py --model anthropic/claude-3-5-haiku-latest --max-connections 300
     python data_readme_filter_dfprocessing.py               # Process results
 """
@@ -103,7 +103,7 @@ Original README content:
 def readme_json_scorer() -> Scorer:
     """
     Custom scorer for validating JSON structure with required fields
-    Similar to stage2_inspect.py scorer but for README filtering
+    Similar to clservers_2_inspect.py scorer but for README filtering
     """
     async def _scorer(state: TaskState, target: Target):
         completion = state.output.completion.strip()
@@ -181,18 +181,18 @@ def prepare_readme_dataset():
     
     logger.info(f"Loaded {len(data)} servers from {input_file}")
     
-    # Filter to servers that have Stage 1 filtered README content
+    # Filter to servers that have initial filtered README content
     servers_with_readme = [
         server for server in data 
         if server.get('readme_filteredinitial') and server.get('readme_filteredinitial').strip()
     ]
     
-    logger.info(f"Found {len(servers_with_readme)} servers with Stage 1 filtered README content")
+    logger.info(f"Found {len(servers_with_readme)} servers with initial filtered README content")
     
     # Create dataset samples
     samples = []
     for server in servers_with_readme:
-        # Use only Stage 1 filtered content
+        # Use only initial filtered content
         readme_content = server.get('readme_filteredinitial', '')
         
         if readme_content and readme_content.strip():
@@ -205,10 +205,10 @@ def prepare_readme_dataset():
                 "target": "valid_json",  # Target for custom JSON scorer
                 "id": server.get('id', ''),
                 "metadata": {
-                    "stage": "readme_filter",
+                    "phase": "readme_filter",
                     "server_name": server.get('name', ''),
                     "original_length": len(server.get('readme_filteredinitial', '')),
-                    "stage1_length": len(readme_content)
+                    "initial_length": len(readme_content)
                 }
             }
             samples.append(sample)

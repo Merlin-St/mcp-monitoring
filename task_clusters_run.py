@@ -9,9 +9,9 @@ This script uses the new approach:
 4. Output results and summary
 
 Usage:
-    python stage5_task_clusters_run.py --k2 400
-    python stage5_task_clusters_run.py --k2 400 --skip-validation
-    python stage5_task_clusters_run.py --model openai/o3-mini --max-connections 100
+    python task_clusters_run.py --k2 400
+    python task_clusters_run.py --k2 400 --skip-validation
+    python task_clusters_run.py --model openai/o3-mini --max-connections 100
 """
 
 import argparse
@@ -35,12 +35,12 @@ except ImportError:
     INSPECT_ANALYSIS_AVAILABLE = False
 
 # Import our modules
-from stage5_task_clusters_embeddings import build_two_level_hierarchy, get_cluster_statistics
-from stage5_task_clusters_data import (
+from task_clusters_embeddings import build_two_level_hierarchy, get_cluster_statistics
+from task_clusters_data import (
     load_onet_tasks, update_cluster_csv, get_cluster_info, get_cluster_info_with_boundaries,
     prepare_validation_samples
 )
-from stage5_task_clusters_llm import (
+from task_clusters_llm import (
     process_naming_results, 
     process_validation_results
 )
@@ -50,7 +50,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('stage5_task_clusters_run.log'),
+        logging.FileHandler('task_clusters_run.log'),
         logging.StreamHandler()
     ]
 )
@@ -203,7 +203,7 @@ def main():
         if args.addcluster2names:
             logger.info("Running in add-cluster2-names-only mode")
             # Load existing CSV with cluster assignments
-            csv_file = 'stage5_tasks_cluster_names.csv'
+            csv_file = 'task_clusters_names.csv'
             if not Path(csv_file).exists():
                 logger.error(f"Cannot add cluster names: {csv_file} not found. Run full pipeline first.")
                 sys.exit(1)
@@ -253,7 +253,7 @@ def main():
         elif args.only_validation:
             logger.info("Running in validation-only mode")
             # Load existing CSV with all cluster assignments
-            csv_file = 'stage5_tasks_cluster_names.csv'
+            csv_file = 'task_clusters_names.csv'
             if not Path(csv_file).exists():
                 logger.error(f"Cannot run validation: {csv_file} not found. Run full pipeline first.")
                 sys.exit(1)
@@ -310,7 +310,7 @@ def main():
             if args.contrastive == 'yes':
                 logger.info(f"Using contrastive naming with {args.boundary_tasks} boundary tasks per cluster")
                 # Load task embeddings from cache (they should exist after Step 2)
-                embeddings_file = 'stage5_task_clusters_embeddings_onet.npz'
+                embeddings_file = 'task_clusters_embeddings_onet.npz'
                 if not Path(embeddings_file).exists():
                     logger.error(f"Task embeddings cache not found: {embeddings_file}. Cannot use contrastive mode.")
                     raise FileNotFoundError(f"Task embeddings required for contrastive mode: {embeddings_file}")
@@ -330,7 +330,7 @@ def main():
             with tempfile.NamedTemporaryFile(mode='w', suffix='.py', delete=False) as f:
                 f.write(f"""
 from inspect_ai import task
-from stage5_task_clusters_llm import generate_cluster_names
+from task_clusters_llm import generate_cluster_names
 
 clusters_info = {repr(l2_cluster_info)}
 
@@ -352,7 +352,7 @@ def l2_naming_task():
         
         # Save updated CSV with cluster assignments and names
         if not args.only_validation:
-            output_csv = 'stage5_tasks_cluster_names.csv'
+            output_csv = 'task_clusters_names.csv'
             df.to_csv(output_csv, index=False)
             logger.info(f"Saved complete task hierarchy to: {output_csv}")
         
@@ -372,7 +372,7 @@ def l2_naming_task():
             logger.info("Creating validation JSONL files")
             for task_type, _ in validation_tasks:
                 validation_samples = prepare_validation_samples(df, task_type)
-                jsonl_file = f'stage5_task_clusters_validation_{task_type}.jsonl'
+                jsonl_file = f'task_clusters_validation_{task_type}.jsonl'
                 
                 with open(jsonl_file, 'w') as f:
                     for sample in validation_samples:
@@ -395,7 +395,7 @@ def l2_naming_task():
                 logger.info(f"Running {description}")
                 
                 # Use existing validation tasks directly
-                log_dir = run_inspect_eval('stage5_task_clusters_llm.py', f'{task_type}_validation', f'{task_type}_validation', args.model, args.max_connections)
+                log_dir = run_inspect_eval('task_clusters_llm.py', f'{task_type}_validation', f'{task_type}_validation', args.model, args.max_connections)
                 
                 # Process validation results with validation_type parameter
                 validation_results = process_validation_results(log_dir, task_type)
@@ -450,7 +450,7 @@ def l2_naming_task():
             if key != 'validation_scores':
                 summary_ordered[key] = value
         
-        summary_file = 'stage5_task_clusters_summary.json'
+        summary_file = 'task_clusters_summary.json'
         with open(summary_file, 'w') as f:
             json.dump(summary_ordered, f, indent=2)
         logger.info(f"Saved summary to: {summary_file}")
@@ -462,7 +462,7 @@ def l2_naming_task():
         
         # Save error summary (convert numpy types to Python types for JSON serialization)
         summary_clean = convert_numpy_types(summary)
-        summary_file = 'stage5_task_clusters_summary_error.json'
+        summary_file = 'task_clusters_summary_error.json'
         with open(summary_file, 'w') as f:
             json.dump(summary_clean, f, indent=2)
         

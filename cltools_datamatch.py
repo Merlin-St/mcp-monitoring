@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """
-Stage 4 Task Data Enrichment Tool
+CLTools Data Matching Tool
 
-This module provides functionality to enrich the stage4 task output CSV with 
-creation_date information from the stage2 CSV file and usage data from 
+This module provides functionality to enrich the CLTools task output CSV with 
+creation_date information from the CLServers CSV file and usage data from 
 data_usage.json file.
 """
 
@@ -18,7 +18,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('stage5_dataenrichment.log'),
+        logging.FileHandler('cltools_datamatch.log'),
         logging.StreamHandler()
     ]
 )
@@ -26,19 +26,19 @@ logger = logging.getLogger(__name__)
 
 
 def enrich_with_metadata(
-    stage4_path: str = "stage5_task_output.csv",
-    stage2_path: str = "server_classified.csv",
-    usage_data_path: str = "data_usage.json",
+    cltools_path: str = "cltools_3_results.csv",
+    clservers_path: str = "clservers_classified.csv",
+    usage_data_path: str = "data_unified_filtered.json",
     output_path: Optional[str] = None
 ) -> str:
     """
-    Enrich task output CSV with creation_date and use_count from stage2 CSV,
-    plus usage data from data_usage.json.
+    Enrich task output CSV with creation_date and use_count from CLServers CSV,
+    plus usage data from data_unified_filtered.json.
     
     Args:
-        stage4_path: Path to the task output CSV file
-        stage2_path: Path to the stage2 CSV file containing creation dates and use counts
-        usage_data_path: Path to the data_usage.json file with detailed usage data
+        cltools_path: Path to the task output CSV file
+        clservers_path: Path to the CLServers CSV file containing creation dates and use counts
+        usage_data_path: Path to the data_unified_filtered.json file with detailed usage data
         output_path: Path for output file (default: adds '_enriched' suffix)
     
     Returns:
@@ -49,52 +49,52 @@ def enrich_with_metadata(
         ValueError: If required columns are missing
     """
     logger.info("Starting enrichment process")
-    logger.info(f"Task output file: {stage4_path}")
-    logger.info(f"Stage2 file: {stage2_path}")
+    logger.info(f"Task output file: {cltools_path}")
+    logger.info(f"CLServers file: {clservers_path}")
     logger.info(f"Usage data file: {usage_data_path}")
     
     # Validate input files exist
-    if not Path(stage4_path).exists():
-        raise FileNotFoundError(f"Task output file not found: {stage4_path}")
-    if not Path(stage2_path).exists():
-        raise FileNotFoundError(f"Stage2 file not found: {stage2_path}")
+    if not Path(cltools_path).exists():
+        raise FileNotFoundError(f"Task output file not found: {cltools_path}")
+    if not Path(clservers_path).exists():
+        raise FileNotFoundError(f"CLServers file not found: {clservers_path}")
     if not Path(usage_data_path).exists():
         raise FileNotFoundError(f"Usage data file not found: {usage_data_path}")
     
     # Set default output path
     if output_path is None:
-        stage4_stem = Path(stage4_path).stem
-        stage4_suffix = Path(stage4_path).suffix
-        output_path = f"{stage4_stem}_enriched{stage4_suffix}"
+        cltools_stem = Path(cltools_path).stem
+        cltools_suffix = Path(cltools_path).suffix
+        output_path = f"{cltools_stem}_enriched{cltools_suffix}"
     
     logger.info(f"Output file: {output_path}")
     
     # Read task output data
     logger.info("Loading task output data...")
     try:
-        stage4_df = pd.read_csv(stage4_path)
-        logger.info(f"Loaded {len(stage4_df)} rows from task output file")
+        cltools_df = pd.read_csv(cltools_path)
+        logger.info(f"Loaded {len(cltools_df)} rows from task output file")
     except Exception as e:
         logger.error(f"Error reading task output file: {e}")
         raise
     
     # Validate task output has required columns
-    if 'server_id' not in stage4_df.columns:
+    if 'server_id' not in cltools_df.columns:
         raise ValueError("Stage4 file missing required 'server_id' column")
     
-    # Read stage2 data (only needed columns for memory efficiency)
-    logger.info("Loading stage2 metadata (creation date and use count)...")
+    # Read CLServers data (only needed columns for memory efficiency)
+    logger.info("Loading CLServers metadata (creation date and use count)...")
     try:
-        stage2_df = pd.read_csv(stage2_path, usecols=['server_id', 'created_at', 'use_count'])
-        logger.info(f"Loaded {len(stage2_df)} rows from stage2 file")
+        clservers_df = pd.read_csv(clservers_path, usecols=['server_id', 'created_at', 'use_count'])
+        logger.info(f"Loaded {len(clservers_df)} rows from CLServers file")
     except Exception as e:
-        logger.error(f"Error reading stage2 file: {e}")
+        logger.error(f"Error reading CLServers file: {e}")
         raise
     
-    # Validate stage2 has required columns
-    if 'created_at' not in stage2_df.columns:
+    # Validate CLServers has required columns
+    if 'created_at' not in clservers_df.columns:
         raise ValueError("Stage2 file missing required 'created_at' column")
-    if 'use_count' not in stage2_df.columns:
+    if 'use_count' not in clservers_df.columns:
         raise ValueError("Stage2 file missing required 'use_count' column")
     
     # Read and process usage data
@@ -139,9 +139,9 @@ def enrich_with_metadata(
         raise
     
     # Perform the merges
-    logger.info("Merging with stage2 data on server_id...")
-    enriched_df = stage4_df.merge(
-        stage2_df[['server_id', 'created_at', 'use_count']], 
+    logger.info("Merging with CLServers data on server_id...")
+    enriched_df = cltools_df.merge(
+        clservers_df[['server_id', 'created_at', 'use_count']], 
         on='server_id', 
         how='left'
     )
@@ -158,8 +158,8 @@ def enrich_with_metadata(
     
     # Log merge statistics
     total_rows = len(enriched_df)
-    stage2_matched = enriched_df['creation_date'].notna().sum()
-    stage2_unmatched = total_rows - stage2_matched
+    clservers_matched = enriched_df['creation_date'].notna().sum()
+    clservers_unmatched = total_rows - clservers_matched
     
     # Check usage data matches (using priority usage field)
     usage_matched = 0
@@ -173,16 +173,16 @@ def enrich_with_metadata(
     
     logger.info("Merge complete:")
     logger.info(f"  Total rows: {total_rows}")
-    logger.info(f"  Stage2 matches (creation_date + use_count): {stage2_matched}")
-    logger.info(f"  Stage2 unmatched: {stage2_unmatched}")
+    logger.info(f"  CLServers matches (creation_date + use_count): {clservers_matched}")
+    logger.info(f"  CLServers unmatched: {clservers_unmatched}")
     logger.info(f"  Usage data matches: {usage_matched}")
     logger.info(f"  Usage data unmatched: {usage_unmatched}")
     
-    if stage2_unmatched > 0:
-        logger.warning(f"{stage2_unmatched} rows could not be matched with stage2 metadata")
+    if clservers_unmatched > 0:
+        logger.warning(f"{clservers_unmatched} rows could not be matched with CLServers metadata")
         # Log some examples of unmatched server_ids for debugging
         unmatched_servers = enriched_df[enriched_df['creation_date'].isna()]['server_id'].unique()[:5]
-        logger.warning(f"Examples of stage2 unmatched server_ids: {list(unmatched_servers)}")
+        logger.warning(f"Examples of CLServers unmatched server_ids: {list(unmatched_servers)}")
     
     if usage_unmatched > 0:
         logger.warning(f"{usage_unmatched} rows could not be matched with usage data")
@@ -210,22 +210,22 @@ def main():
     import argparse
     
     parser = argparse.ArgumentParser(
-        description="Enrich task output with creation dates, use counts from stage2, and usage data"
+        description="Enrich task output with creation dates, use counts from CLServers, and usage data"
     )
     parser.add_argument(
-        '--stage4', 
-        default="stage5_task_output.csv",
+        '--cltools', 
+        default="cltools_3_results.csv",
         help="Path to task output CSV file"
     )
     parser.add_argument(
-        '--stage2', 
-        default="server_classified.csv",
-        help="Path to stage2 CSV file with creation dates and use counts"
+        '--clservers', 
+        default="clservers_classified.csv",
+        help="Path to CLServers CSV file with creation dates and use counts"
     )
     parser.add_argument(
         '--usage-data', 
-        default="data_usage.json",
-        help="Path to data_usage.json file with detailed usage data"
+        default="data_unified_filtered.json",
+        help="Path to data_unified_filtered.json file with detailed usage data"
     )
     parser.add_argument(
         '--output', 
@@ -236,8 +236,8 @@ def main():
     
     try:
         output_file = enrich_with_metadata(
-            stage4_path=args.stage4,
-            stage2_path=args.stage2,
+            cltools_path=args.cltools,
+            clservers_path=args.clservers,
             usage_data_path=getattr(args, 'usage_data'),
             output_path=args.output
         )

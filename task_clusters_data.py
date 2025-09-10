@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-from stage5_task_clusters_llm import (
+from task_clusters_llm import (
     VALIDATION_SYSTEM_PROMPT, 
     L3_TO_L2_VALIDATION_PROMPT,
     L2_TO_L1_VALIDATION_PROMPT, 
@@ -29,7 +29,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def load_onet_tasks(csv_path: str = 'stage5_onet_taskstatements.csv') -> pd.DataFrame:
+def load_onet_tasks(csv_path: str = 'cl_onet_taskstatements.csv') -> pd.DataFrame:
     """
     Load ONET task statements from CSV
     
@@ -61,7 +61,7 @@ def update_cluster_csv(
     level2_names: Optional[Dict[str, str]] = None,
     level1_clusters: Optional[np.ndarray] = None,
     level1_names: Optional[Dict[str, str]] = None,
-    output_file: str = 'stage5_tasks_cluster_names.csv'
+    output_file: str = 'task_clusters_names.csv'
 ) -> pd.DataFrame:
     """
     Update DataFrame with cluster assignments and names
@@ -109,7 +109,7 @@ def update_cluster_csv(
     
     return df
 
-def save_cluster_csv(df: pd.DataFrame, output_file: str = 'stage5_tasks_cluster_names.csv'):
+def save_cluster_csv(df: pd.DataFrame, output_file: str = 'task_clusters_names.csv'):
     """Save DataFrame to CSV with proper column ordering"""
     # Define column order
     columns = ['task_id', 'O*NET-SOC Code', 'Task', 'Title']

@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Financial MCP Server Stage 1 Filter - Inspect Task Definition
+CLServers Step 2: Financial MCP Server Filter - Inspect Task Definition
 
 Uses Inspect framework to evaluate MCP servers for financial relevance
 using LLM-based analysis with threat model mapping.
 
 This file contains only the task definition for Inspect to run.
-Use stage2_dfprocessing.py to process the results.
+Use clservers_3_dfprocessing.py to process the results.
 
 Usage:
-    inspect eval stage2_inspect.py --model anthropic/claude-sonnet-4-20250514
+    inspect eval clservers_2_inspect.py --model anthropic/claude-sonnet-4-20250514
 """
 
 import json
@@ -402,7 +402,7 @@ def finance_identification_task():
     """
     Inspect task for identifying finance-related MCP servers using system_message solver
     """
-    dataset_file = "stage2_input.jsonl"
+    dataset_file = "clservers_input.jsonl"
     
     if not Path(dataset_file).exists():
         raise FileNotFoundError(f"Dataset file {dataset_file} not found")

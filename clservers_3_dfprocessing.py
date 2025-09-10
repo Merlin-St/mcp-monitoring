@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
 """
-Financial MCP Server Stage 1 - DataFrame Processing
+CLServers Step 3: Financial MCP Server - DataFrame Processing
 
-Processes the evaluation results from stage2_inspect.py
-by reading the .eval files and converting them to JSON and CSV formats.
+Processes the evaluation results from clservers_2_inspect.py
+by reading the .eval files and converting them to JSON format.
 
 This should be run after:
-    inspect eval stage2_inspect.py --model anthropic/claude-sonnet-4-20250514
+    inspect eval clservers_2_inspect.py --model anthropic/claude-sonnet-4-20250514
 
 Usage:
-    python stage2_dfprocessing.py
+    python clservers_3_dfprocessing.py
 """
 
 import json
@@ -23,7 +23,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('stage2_dfprocessing.log'),
+        logging.FileHandler('clservers_3_dfprocessing.log'),
         logging.StreamHandler()
     ]
 )
@@ -33,7 +33,7 @@ MODEL = "anthropic/claude-sonnet-4-20250514"
 
 def main():
     """Main DataFrame processing function"""
-    logger.info("Starting Stage 1 DataFrame Processing")
+    logger.info("Starting CLServers Step 3 DataFrame Processing")
     
     # Default log directory that Inspect uses
     log_dir = "logs"
@@ -43,22 +43,22 @@ def main():
         logger.error(f"Log directory {log_dir} not found. Run inspect eval first.")
         return
     
-    # Find the latest Stage 1 .eval file
-    stage1_files = list(Path(log_dir).glob("*finance-identification-task*.eval"))
-    if not stage1_files:
-        logger.error(f"No Stage 1 .eval files found in {log_dir}. Run inspect eval first.")
+    # Find the latest CLServers .eval file
+    clservers_files = list(Path(log_dir).glob("*finance-identification-task*.eval"))
+    if not clservers_files:
+        logger.error(f"No CLServers .eval files found in {log_dir}. Run inspect eval first.")
         return
     
-    # Get the most recent Stage 1 file
-    latest_stage1_file = max(stage1_files, key=lambda x: x.stat().st_mtime)
-    logger.info(f"Using latest Stage 1 file: {latest_stage1_file.name}")
+    # Get the most recent CLServers file
+    latest_clservers_file = max(clservers_files, key=lambda x: x.stat().st_mtime)
+    logger.info(f"Using latest CLServers file: {latest_clservers_file.name}")
     
     # Create a temporary directory with just this file for DataFrame processing
     import tempfile
     import shutil
     temp_dir = tempfile.mkdtemp()
-    temp_file = Path(temp_dir) / latest_stage1_file.name
-    shutil.copy2(latest_stage1_file, temp_file)
+    temp_file = Path(temp_dir) / latest_clservers_file.name
+    shutil.copy2(latest_clservers_file, temp_file)
     
     # Use the temp directory for DataFrame processing
     log_dir = temp_dir
@@ -345,7 +345,7 @@ def main():
         results_df = results_df[existing_columns]
         
         # Convert DataFrame to JSON format (list of dictionaries)
-        json_output_file = "stage2_results.json"
+        json_output_file = "clservers_3_results.json"
         results_list = results_df.to_dict('records')
         
         # Save as JSON

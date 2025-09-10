@@ -8,10 +8,10 @@ with direct PyPI and npm API queries based on strict 1:1 package-to-repository m
 
 Features:
 - Uses final matched packages from strict 1:1 matching (70.6% coverage)
-- Collects PyPI download stats from pre-downloaded BigQuery data
-- Collects npm download stats via npm API (free, no quotas)
+- Uses pre-downloaded PyPI stats from BigQuery data
+- Uses pre-collected npm stats from usage_npm.json
 - Monthly breakdown from Nov 2024 to present
-- Integrates stats into data_unified_filtered.json
+- Modifies data_unified_filtered.json in place
 
 PyPI Data Collection:
 To get PyPI download statistics, run this query in Google Cloud Console BigQuery web UI:
@@ -50,10 +50,11 @@ import requests
 # File paths
 MATCHED_PACKAGES_FILE = "usage_match.json"
 DATASET_FILE = "data_unified_filtered.json"
-OUTPUT_FILE = "data_unified_filtered_with_usage.json"
 
-# BigQuery configuration
-PYPI_TABLE = "bigquery-public-data.pypi.file_downloads"
+# Data source files
+pypi_data_file = "usage_bigquery_webresults_pypi.json"
+npm_data_file = "usage_npm.json"
+
 
 # Reporting window 
 START_DATE = dt.date(2024, 11, 1)
@@ -65,7 +66,7 @@ def setup_logging():
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler('usage_download_stats.log'),
+            logging.FileHandler('data_unified_add_usage.log'),
             logging.StreamHandler()
         ]
     )
@@ -156,7 +157,6 @@ def collect_pypi_downloads(pypi_packages: List[Dict], start_date: dt.date, end_d
     logger.info(f"Collecting PyPI download stats for {len(pypi_packages)} packages")
     
     # Load pre-downloaded PyPI data
-    pypi_data_file = "usage_bigquery_webresults_pypi.json"
     try:
         with open(pypi_data_file) as f:
             raw_pypi_data = json.load(f)
@@ -209,85 +209,61 @@ def collect_pypi_downloads(pypi_packages: List[Dict], start_date: dt.date, end_d
     
     return download_stats
 
-def collect_npm_downloads(npm_packages: List[Dict], start_date: dt.date, end_date: dt.date) -> Dict[str, Dict]:
-    """Collect npm download statistics using npm API."""
+def load_npm_downloads(npm_packages: List[Dict]) -> Dict[str, Dict]:
+    """Load npm download statistics from pre-collected usage_npm.json."""
     logger = logging.getLogger(__name__)
     
     if not npm_packages:
         logger.info("No npm packages to process")
         return {}
     
-    logger.info(f"Collecting npm download stats for {len(npm_packages)} packages")
+    logger.info(f"Loading npm download stats for {len(npm_packages)} packages")
     
+    # Load pre-collected npm data
+    try:
+        with open(npm_data_file) as f:
+            npm_data = json.load(f)
+        
+        packages_data = npm_data.get('packages', {})
+        logger.info(f"Loaded npm data from {npm_data_file} ({len(packages_data)} packages)")
+        
+        # Show collection metadata if available
+        if 'metadata' in npm_data:
+            metadata = npm_data['metadata']
+            logger.info(f"npm data collection date: {metadata.get('collection_date', 'unknown')}")
+            logger.info(f"npm data date range: {metadata.get('date_range', {}).get('start_date')} to {metadata.get('date_range', {}).get('end_date')}")
+            logger.info(f"npm total downloads in source: {metadata.get('total_downloads', 0):,}")
+        
+    except Exception as e:
+        logger.error(f"Failed to load npm data from {npm_data_file}: {e}")
+        return {}
+    
+    # Match our packages with the pre-collected data
     download_stats = {}
+    matched_packages = 0
+    total_downloads = 0
     
-    # Generate month list
-    months = []
-    current = start_date.replace(day=1)
-    end_month = end_date.replace(day=1)
-    
-    while current <= end_month:
-        months.append(current.strftime('%Y-%m'))
-        if current.month == 12:
-            current = current.replace(year=current.year + 1, month=1)
-        else:
-            current = current.replace(month=current.month + 1)
-    
-    # Collect stats for each package
-    for i, pkg in enumerate(npm_packages):
+    for pkg in npm_packages:
         package_name = pkg['name']
         
-        if (i + 1) % 50 == 0:
-            logger.info(f"Processing npm package {i+1}/{len(npm_packages)}: {package_name}")
-        
-        try:
-            # Use npm API to get download stats
-            # Format: YYYY-MM-DD:YYYY-MM-DD for date range
-            range_str = f"{start_date}:{end_date}"
-            url = f"https://api.npmjs.org/downloads/range/{range_str}/{package_name}"
-            
-            response = requests.get(url, timeout=10)
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                if 'downloads' in data:
-                    monthly_stats = {}
-                    total = 0
-                    
-                    # Aggregate daily downloads by month
-                    for download_entry in data['downloads']:
-                        date_str = download_entry['day']  # YYYY-MM-DD
-                        downloads = download_entry['downloads']
-                        month = date_str[:7]  # YYYY-MM
-                        
-                        if month not in monthly_stats:
-                            monthly_stats[month] = 0
-                        monthly_stats[month] += downloads
-                        total += downloads
-                    
-                    download_stats[package_name] = {
-                        'monthly': monthly_stats,
-                        'total': total
-                    }
-                    
-            elif response.status_code == 404:
-                # Package not found - this is normal for some packages
-                download_stats[package_name] = {
-                    'monthly': {},
-                    'total': 0
-                }
-            else:
-                logger.warning(f"npm API error for {package_name}: {response.status_code}")
-                
-        except Exception as e:
-            logger.warning(f"Error collecting npm stats for {package_name}: {e}")
-            
-        # Rate limiting
-        time.sleep(0.1)
+        if package_name in packages_data:
+            # Package found in pre-collected data
+            package_data = packages_data[package_name]
+            download_stats[package_name] = {
+                'monthly': package_data.get('monthly', {}),
+                'total': package_data.get('total', 0)
+            }
+            matched_packages += 1
+            total_downloads += package_data.get('total', 0)
+        else:
+            # Package not found in pre-collected data
+            download_stats[package_name] = {
+                'monthly': {},
+                'total': 0
+            }
     
-    total_downloads = sum(stats['total'] for stats in download_stats.values())
-    logger.info(f"Collected npm stats: {len(download_stats)} packages, {total_downloads:,} total downloads")
+    logger.info(f"Matched {matched_packages}/{len(npm_packages)} packages ({matched_packages/len(npm_packages)*100:.1f}%)")
+    logger.info(f"Loaded npm stats: {len(download_stats)} packages, {total_downloads:,} total downloads")
     
     return download_stats
 
@@ -387,13 +363,11 @@ def main():
     parser.add_argument("--matched-packages", default="usage_match.json", 
                        help="Final matched packages file")
     parser.add_argument("--dataset", default=DATASET_FILE, 
-                       help="Dataset file to integrate stats into")
-    parser.add_argument("--output", default=OUTPUT_FILE, 
-                       help="Output file with integrated usage stats")
+                       help="Dataset file to integrate stats into (modified in place)")
     parser.add_argument("--skip-pypi", action="store_true", 
                        help="Skip PyPI download collection")
     parser.add_argument("--skip-npm", action="store_true", 
-                       help="Skip npm download collection")
+                       help="Skip npm download loading")
     parser.add_argument("--pypi-batch-size", type=int, default=50,
                        help="Batch size for PyPI queries (smaller = less quota usage)")
     parser.add_argument("--test-pypi", action="store_true",
@@ -427,20 +401,20 @@ def main():
         logger.info("Skipping PyPI download collection")
     
     if not args.skip_npm:
-        npm_stats = collect_npm_downloads(packages_data['npm'], START_DATE, END_DATE)
+        npm_stats = load_npm_downloads(packages_data['npm'])
     else:
-        logger.info("Skipping npm download collection")
+        logger.info("Skipping npm download loading")
     
     # Integrate statistics into dataset
     updated_dataset = integrate_download_stats(
         args.dataset, pypi_stats, npm_stats, packages_data['mapping'], START_DATE, END_DATE
     )
     
-    # Save updated dataset
-    with open(args.output, 'w') as f:
+    # Save updated dataset back to the same file
+    with open(args.dataset, 'w') as f:
         json.dump(updated_dataset, f, indent=2)
     
-    logger.info(f"Saved updated dataset to {args.output}")
+    logger.info(f"Updated {args.dataset} with usage statistics")
     
     # Summary statistics
     total_pypi_downloads = sum(stats['total'] for stats in pypi_stats.values())

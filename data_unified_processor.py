@@ -831,7 +831,12 @@ class UnifiedMCPDataProcessor:
             logger.info(f"Successfully saved {len(serializable_data)} unified servers to {output_file}")
             
             # Generate summary statistics
-            self.generate_summary_stats(serializable_data, output_file.replace('.json', '_summary.json'))
+            if output_file == "data_unified.json":
+                # Create basic summary for main file
+                self.generate_basic_summary_stats(serializable_data, output_file.replace('.json', '_summary.json'))
+            else:
+                # Create detailed summary for other files
+                self.generate_summary_stats(serializable_data, output_file.replace('.json', '_summary.json'))
             
         except Exception as e:
             logger.error(f"Error saving unified data: {e}")
@@ -938,6 +943,45 @@ class UnifiedMCPDataProcessor:
             
         except Exception as e:
             logger.error(f"Error generating summary statistics: {e}")
+    
+    def generate_basic_summary_stats(self, data: List[Dict], summary_file: str):
+        """Generate basic summary statistics for main data_unified.json"""
+        logger.info("Generating basic summary statistics...")
+        
+        try:
+            total_servers = len(data)
+            
+            # Count by primary source
+            primary_source_counts = {}
+            
+            for server in data:
+                # Count primary sources
+                primary = server.get('primary_source')
+                if primary:
+                    primary_source_counts[primary] = primary_source_counts.get(primary, 0) + 1
+            
+            # Create basic summary
+            summary = {
+                'total_servers': total_servers,
+                'primary_source_distribution': primary_source_counts,
+                'processing_timestamp': datetime.now().isoformat(),
+                'data_quality': {
+                    'servers_with_github_data': len([s for s in data if 'github' in s.get('data_sources', [])]),
+                    'servers_with_smithery_data': len([s for s in data if 'smithery' in s.get('data_sources', [])]),
+                    'servers_with_official_data': len([s for s in data if 'official' in s.get('data_sources', [])]),
+                    'servers_with_multiple_sources': len([s for s in data if len(s.get('data_sources', [])) > 1])
+                }
+            }
+            
+            with open(summary_file, 'w', encoding='utf-8') as f:
+                json.dump(summary, f, indent=2, ensure_ascii=False)
+            
+            logger.info(f"Basic summary statistics saved to {summary_file}")
+            logger.info(f"Total unified servers: {total_servers}")
+            logger.info(f"Primary source distribution: {primary_source_counts}")
+            
+        except Exception as e:
+            logger.error(f"Error generating basic summary statistics: {e}")
     
     def process_all(self):
         """Main processing pipeline"""

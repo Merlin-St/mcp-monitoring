@@ -185,9 +185,9 @@ def clean_whitespace(content: str) -> str:
     
     return '\n'.join(lines)
 
-def filter_readme_content_stage1(content: str) -> str:
+def filter_readme_content_initial(content: str) -> str:
     """
-    Stage 1: Keyword-based filtering to remove installation content
+    Initial: Keyword-based filtering to remove installation content
     """
     if not content or not content.strip():
         return content
@@ -254,8 +254,8 @@ def apply_readme_filtering(data: List[Dict[str, Any]], apply_filtering: bool = T
         if original_readme and original_readme.strip():
             filtering_stats['servers_with_readme'] += 1
             
-            # Apply Stage 1 filtering
-            filtered_readme = filter_readme_content_stage1(original_readme)
+            # Apply initial filtering
+            filtered_readme = filter_readme_content_initial(original_readme)
             
             # Calculate stats
             stats = calculate_filtering_stats(original_readme, filtered_readme)

@@ -249,7 +249,7 @@ def process_evaluation_results(eval_results: List[Dict[str, Any]],
             
             total_reduction += stats['total_reduction_pct']
             
-            # Update server with Stage 2 structured content
+            # Update server with LLM-refined structured content
             dataset[server_index]['readme_filtered'] = filtered_content
             dataset[server_index]['readme_summary'] = summary
             dataset[server_index]['readme_is_mcp_server'] = is_mcp_server

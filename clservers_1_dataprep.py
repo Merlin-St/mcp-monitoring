@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Financial MCP Server Data Preparation
+CLServers Step 1: Financial MCP Server Data Preparation
 
 Prepares MCP server data for financial risk analysis by:
 1. Loading filtered server dataset
@@ -9,9 +9,9 @@ Prepares MCP server data for financial risk analysis by:
 4. Creating Inspect-compatible JSONL dataset
 
 Usage:
-    python stage2_data_prep.py                    # Default: 100 servers
-    python stage2_data_prep.py --samples 500      # Custom sample size
-    python stage2_data_prep.py --all              # Process all servers
+    python clservers_1_dataprep.py                    # Default: 100 servers
+    python clservers_1_dataprep.py --samples 500      # Custom sample size
+    python clservers_1_dataprep.py --all              # Process all servers
 """
 
 import json
@@ -27,7 +27,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('stage2_data_prep.log'),
+        logging.FileHandler('clservers_1_dataprep.log'),
         logging.StreamHandler()
     ]
 )
@@ -76,9 +76,9 @@ def clean_server_data(server: Dict[str, Any]) -> Dict[str, Any]:
     
     return cleaned
 
-def create_stage1_sample(server: Dict[str, Any]) -> Dict[str, Any]:
+def create_clservers_sample(server: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Create a Stage 1 sample for finance identification
+    Create a CLServers sample for finance identification
     """
     # Truncate readme content to manage token limits
     # Use readme_filtered if available, fallback to readme_filteredinitial
@@ -103,7 +103,7 @@ def create_stage1_sample(server: Dict[str, Any]) -> Dict[str, Any]:
         "input": json.dumps(sample_input),
         "target": "",
         "id": server.get('id', ''),
-        "metadata": {"stage": "finance_filter"}
+        "metadata": {"phase": "finance_filter"}
     }
 
 def sample_servers(servers: List[Dict[str, Any]], sample_size: int) -> List[Dict[str, Any]]:
@@ -210,24 +210,24 @@ def main():
         cleaned = clean_server_data(server)
         cleaned_servers.append(cleaned)
     
-    # Create Stage 1 samples for Inspect
-    stage1_samples = []
+    # Create CLServers samples for Inspect
+    clservers_samples = []
     for server in cleaned_servers:
-        sample = create_stage1_sample(server)
-        stage1_samples.append(sample)
+        sample = create_clservers_sample(server)
+        clservers_samples.append(sample)
     
     # Save cleaned server data
-    output_file = 'stage2_data_prep_servers_sample.json'
+    output_file = 'clservers_1_dataprep_servers_sample.json'
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(cleaned_servers, f, indent=2, ensure_ascii=False)
     logger.info(f"Saved {len(cleaned_servers)} cleaned servers to {output_file}")
     
-    # Save Stage 1 input in JSONL format for Inspect
-    stage1_file = 'stage2_input.jsonl'
-    with open(stage1_file, 'w', encoding='utf-8') as f:
-        for sample in stage1_samples:
+    # Save CLServers input in JSONL format for Inspect
+    clservers_file = 'clservers_input.jsonl'
+    with open(clservers_file, 'w', encoding='utf-8') as f:
+        for sample in clservers_samples:
             f.write(json.dumps(sample, ensure_ascii=False) + '\n')
-    logger.info(f"Saved {len(stage1_samples)} Stage 1 samples to {stage1_file}")
+    logger.info(f"Saved {len(clservers_samples)} CLServers samples to {clservers_file}")
     
     # Generate summary statistics
     summary = {
@@ -258,13 +258,13 @@ def main():
         summary["tools_distribution"][category] = summary["tools_distribution"].get(category, 0) + 1
     
     # Save summary
-    summary_file = 'stage2_data_prep_summary.json'
+    summary_file = 'clservers_1_dataprep_summary.json'
     with open(summary_file, 'w', encoding='utf-8') as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
     logger.info(f"Saved processing summary to {summary_file}")
     
     logger.info("Data preparation completed successfully!")
-    logger.info("Next step: Run Stage 2 evaluation with: inspect eval stage2_inspect.py --model claude-sonnet-4-20250514")
+    logger.info("Next step: Run CLServers Step 2 evaluation with: inspect eval clservers_2_inspect.py --model anthropic/claude-sonnet-4-20250514")
 
 if __name__ == "__main__":
     main()
