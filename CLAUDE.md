@@ -114,7 +114,7 @@ python officiallist_data_run.py
 
 **Consequentiality Scoring:**
 - `data_tools_extraction_utils.py` - Tool extraction and access level classification utilities
-- `stage1_data_prep.py` - Stage 1: Finance data preparation for multi-stage analysis
+- `stage2_data_prep.py` - Stage 2: Finance data preparation for multi-stage analysis
 - `stage2_inspect.py` - Stage 2: Inspect task for finance-relevant server filtering
 - `stage2_dfprocessing.py` - Stage 2: DataFrame processing for .eval files
 
@@ -205,9 +205,8 @@ The system extracts and classifies:
 ### Consequentiality Scoring Data Files
 - `conseq_ground_truth_tools_sample.json` - Random tools sample for ground truth scoring
 - `stage*` - Finance-specific consequentiality analysis files:
-  - `stage1_data_prep_summary.json` - Stage 1 data preparation summary
-  - `stage1_data_prep_servers_sample.json` - Stage 1 finance server sample
-  - `stage2_results.json` - Stage 2 filtering results
+  - `stage2_data_prep_summary.json` - Stage 2 data preparation summary
+  - `stage2_data_prep_servers_sample.json` - Stage 2 finance server sample
   - `stage2_results.csv` - Stage 2 filtering results (CSV)
   - `stage2_logs/` - Stage 2 processing logs
 
@@ -403,12 +402,12 @@ python data_readme_filter_dfprocessing.py --eval-file specific.eval  # Process s
 source ~/si_setup/.venv/bin/activate
 
 # 1. Data Preparation - Create filtered dataset for analysis
-python stage1_data_prep.py                    # Default: 100 servers
-python stage1_data_prep.py --samples 500      # Custom sample size (more samples)
-python stage1_data_prep.py --samples 1000     # Large sample for comprehensive analysis
-python stage1_data_prep.py --all              # Process all servers
-python stage1_data_prep.py --finance          # Only finance-related servers
-python stage1_data_prep.py --samples 1000 --finance  # Large finance-focused sample
+python stage2_data_prep.py                    # Default: 100 servers
+python stage2_data_prep.py --samples 500      # Custom sample size (more samples)
+python stage2_data_prep.py --samples 1000     # Large sample for comprehensive analysis
+python stage2_data_prep.py --all              # Process all servers
+python stage2_data_prep.py --finance          # Only finance-related servers
+python stage2_data_prep.py --samples 1000 --finance  # Large finance-focused sample
 
 # 2. Stage 2 - Finance Tool Identification (uses Inspect framework)
 inspect eval stage2_inspect.py --model anthropic/claude-sonnet-4-20250514
@@ -417,17 +416,17 @@ python stage2_dfprocessing.py                # Process .eval files to JSON/CSV
 
 # Complete 2-Stage Pipeline Workflow:
 # Stage 1: Data Prep → Finance Filter → Visualization
-#   - Data prep creates stage1_data_prep_servers_sample.json and stage2_input.jsonl
+#   - Data prep creates stage2_data_prep_servers_sample.json and stage2_input.jsonl
 #   - Stage 2 identifies finance-related servers using LLM evaluation via Inspect framework
 #     * Run inspect eval to generate .eval files in logs/
-#     * Run DataFrame processing to convert to JSON/CSV (stage2_results.json/.csv)
+#     * Run DataFrame processing to convert to CSV (stage2_results.csv)
 #   - Stage 4 creates visualizations and identifies top execution-level tools
 #     * Generates PNG charts and analysis based on Stage 1 outputs
 #     * Displays finance-related servers and tool analysis
 #     * Outputs comprehensive summary statistics
 
 # Stage Outputs:
-# - Stage 2: stage2_results.json/csv (finance-relevant servers)
+# - Stage 2: stage2_results.csv (finance-relevant servers)
 
 # Requirements:
 # - ANTHROPIC_API_KEY environment variable set

@@ -205,30 +205,7 @@ def main():
                 "total_tokens": total_input_tokens + total_output_tokens
             }
         
-        # Save results
-        output_data = {
-            "summary": summary,
-            "results": results
-        }
-        
-        # Convert any pandas NA values to None for JSON serialization
-        def convert_na_to_none(obj):
-            if isinstance(obj, dict):
-                return {k: convert_na_to_none(v) for k, v in obj.items()}
-            elif isinstance(obj, list):
-                return [convert_na_to_none(v) for v in obj]
-            elif pd.isna(obj):
-                return None
-            else:
-                return obj
-        
-        output_data = convert_na_to_none(output_data)
-        
-        output_file = "stage2_results.json"
-        with open(output_file, 'w', encoding='utf-8') as f:
-            json.dump(output_data, f, indent=2, ensure_ascii=False)
-        
-        # Also save DataFrame as CSV for easy inspection using pandas
+        # Save DataFrame as CSV for easy inspection using pandas
         results_df = pd.DataFrame(results)
         
         # Extract input_data fields into separate columns
@@ -367,11 +344,15 @@ def main():
         existing_columns = [col for col in ordered_columns if col in results_df.columns]
         results_df = results_df[existing_columns]
         
-        df_output_file = "stage2_results.csv"
-        results_df.to_csv(df_output_file, index=False)
+        # Convert DataFrame to JSON format (list of dictionaries)
+        json_output_file = "stage2_results.json"
+        results_list = results_df.to_dict('records')
         
-        logger.info(f"Results saved to {output_file}")
-        logger.info(f"DataFrame saved to {df_output_file}")
+        # Save as JSON
+        with open(json_output_file, 'w', encoding='utf-8') as f:
+            json.dump(results_list, f, indent=2, ensure_ascii=False)
+        
+        logger.info(f"Results saved to {json_output_file}")
         logger.info(f"Summary: {valid_responses}/{len(results)} valid responses, {finance_identified} servers identified as finance-related")
         
         # Quick analysis overview for the 18 CSV fields

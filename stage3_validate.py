@@ -3,7 +3,7 @@
 Finance Consequentiality Stage 2 Validation Script
 
 Compares human-labeled CSV (2025-07-labelling-finance-mcps.csv) against 
-LLM-labeled CSV (stage3.csv) to evaluate accuracy and provide
+LLM-labeled CSV (server_classified.csv) to evaluate accuracy and provide
 comprehensive validation metrics for each overlapping field.
 
 Inspired by the stage1 inspect validation methodology.
@@ -38,7 +38,7 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     logger.info(f"Human-labeled data: {len(human_df)} rows, {len(human_df.columns)} columns")
     
     # Load LLM-labeled data
-    llm_df = pd.read_csv("stage3.csv")
+    llm_df = pd.read_csv("server_classified.csv")
     logger.info(f"LLM-labeled data: {len(llm_df)} rows, {len(llm_df.columns)} columns")
     
     return human_df, llm_df

@@ -9,9 +9,9 @@ Prepares MCP server data for financial risk analysis by:
 4. Creating Inspect-compatible JSONL dataset
 
 Usage:
-    python stage1_data_prep.py                    # Default: 100 servers
-    python stage1_data_prep.py --samples 500      # Custom sample size
-    python stage1_data_prep.py --all              # Process all servers
+    python stage2_data_prep.py                    # Default: 100 servers
+    python stage2_data_prep.py --samples 500      # Custom sample size
+    python stage2_data_prep.py --all              # Process all servers
 """
 
 import json
@@ -27,7 +27,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('stage1_data_prep.log'),
+        logging.FileHandler('stage2_data_prep.log'),
         logging.StreamHandler()
     ]
 )
@@ -217,7 +217,7 @@ def main():
         stage1_samples.append(sample)
     
     # Save cleaned server data
-    output_file = 'stage1_data_prep_servers_sample.json'
+    output_file = 'stage2_data_prep_servers_sample.json'
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(cleaned_servers, f, indent=2, ensure_ascii=False)
     logger.info(f"Saved {len(cleaned_servers)} cleaned servers to {output_file}")
@@ -258,7 +258,7 @@ def main():
         summary["tools_distribution"][category] = summary["tools_distribution"].get(category, 0) + 1
     
     # Save summary
-    summary_file = 'stage1_data_prep_summary.json'
+    summary_file = 'stage2_data_prep_summary.json'
     with open(summary_file, 'w', encoding='utf-8') as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
     logger.info(f"Saved processing summary to {summary_file}")

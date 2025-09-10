@@ -30,7 +30,7 @@ def load_aligned_data() -> tuple[pd.DataFrame, pd.DataFrame]:
     
     # Load datasets
     human_df = pd.read_csv("stage3_validate_labelled.csv")
-    llm_df = pd.read_csv("stage3.csv", low_memory=False)
+    llm_df = pd.read_csv("server_classified.csv", low_memory=False)
     
     # Clean server_id columns
     human_df['server_id'] = human_df['server_id'].astype(str).str.strip()

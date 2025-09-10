@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 def enrich_with_metadata(
     stage4_path: str = "stage5_task_output.csv",
-    stage2_path: str = "stage3.csv",
+    stage2_path: str = "server_classified.csv",
     usage_data_path: str = "data_usage.json",
     output_path: Optional[str] = None
 ) -> str:
@@ -219,7 +219,7 @@ def main():
     )
     parser.add_argument(
         '--stage2', 
-        default="stage3.csv",
+        default="server_classified.csv",
         help="Path to stage2 CSV file with creation dates and use counts"
     )
     parser.add_argument(

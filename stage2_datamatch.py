@@ -10,7 +10,7 @@ This should be run after:
     python stage2_dfprocessing.py
 
 Usage:
-    python stage3_datamatch.py
+    python stage2_datamatch.py
 """
 
 import json
@@ -26,7 +26,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('stage3_datamatch.log'),
+        logging.FileHandler('stage2_datamatch.log'),
         logging.StreamHandler()
     ]
 )
@@ -142,14 +142,26 @@ def main():
     """Main data matching function"""
     logger.info("Starting Stage 2 Data Matching")
     
-    # Load Stage 1 results
-    stage1_csv = "stage2_results.csv"
-    if not Path(stage1_csv).exists():
-        logger.error(f"Stage 1 results file {stage1_csv} not found. Run stage2_dfprocessing.py first.")
+    # Load Stage 1 results from JSON
+    stage1_json = "stage2_results.json"
+    if not Path(stage1_json).exists():
+        logger.error(f"Stage 1 results file {stage1_json} not found. Run stage2_dfprocessing.py first.")
         return
     
-    results_df = pd.read_csv(stage1_csv)
-    logger.info(f"Loaded {len(results_df)} Stage 1 results from {stage1_csv}")
+    # Load JSON and convert to DataFrame
+    with open(stage1_json, 'r', encoding='utf-8') as f:
+        json_data = json.load(f)
+    
+    # Handle both old format (list) and new format (dict with results key)
+    if isinstance(json_data, list):
+        results_data = json_data
+    elif isinstance(json_data, dict) and 'results' in json_data:
+        results_data = json_data['results']
+    else:
+        results_data = json_data
+    
+    results_df = pd.DataFrame(results_data)
+    logger.info(f"Loaded {len(results_df)} Stage 1 results from {stage1_json}")
     
     # Load the unified dataset for server metadata matching
     unified_file = 'data_unified_filtered.json'
@@ -169,6 +181,62 @@ def main():
     
     # Match additional metadata fields
     logger.info("Matching creation dates and metadata...")
+    
+    # Extract fields from nested structures if they're not already columns
+    if 'server_id' not in results_df.columns:
+        results_df['server_id'] = results_df['input_data'].apply(
+            lambda x: x.get('server_id', '') if isinstance(x, dict) else ''
+        )
+    
+    if 'server_name' not in results_df.columns:
+        results_df['server_name'] = results_df['input_data'].apply(
+            lambda x: x.get('server_name', '') if isinstance(x, dict) else ''
+        )
+    
+    if 'description' not in results_df.columns:
+        results_df['description'] = results_df['input_data'].apply(
+            lambda x: x.get('description', '') if isinstance(x, dict) else ''
+        )
+    
+    if 'readme_filtered' not in results_df.columns:
+        results_df['readme_filtered'] = results_df['input_data'].apply(
+            lambda x: x.get('readme_filtered', '') if isinstance(x, dict) else ''
+        )
+    
+    if 'readme_summary' not in results_df.columns:
+        results_df['readme_summary'] = results_df['input_data'].apply(
+            lambda x: x.get('readme_summary', '') if isinstance(x, dict) else ''
+        )
+    
+    if 'tools' not in results_df.columns:
+        results_df['tools'] = results_df['input_data'].apply(
+            lambda x: str(x.get('tools', [])) if isinstance(x, dict) else '[]'
+        )
+    
+    if 'topics' not in results_df.columns:
+        results_df['topics'] = results_df['input_data'].apply(
+            lambda x: str(x.get('topics', [])) if isinstance(x, dict) else '[]'
+        )
+    
+    if 'data_sources' not in results_df.columns:
+        results_df['data_sources'] = results_df['input_data'].apply(
+            lambda x: str(x.get('data_sources', [])) if isinstance(x, dict) else '[]'
+        )
+    
+    # Extract fields from parsed_output if they're not already columns
+    parsed_fields = [
+        'analysis_notes', 'is_finance_llm', 'asset_type', 'level',
+        'research_and_risk_assessment', 'documentation_gathering', 'application_and_review',
+        'identity_verification', 'authorization_account_transactions', 'account_opening',
+        'transfer_bank_and_fund_bank_account', 'transfer_credit_card', 'transfer_paypal_stripe_payments',
+        'transfer_stock_invest', 'transfer_crypto_and_stablecoin', 'sensitive_data_required'
+    ]
+    
+    for field in parsed_fields:
+        if field not in results_df.columns:
+            results_df[field] = results_df['parsed_output'].apply(
+                lambda x: x.get(field, '') if isinstance(x, dict) else ''
+            )
     
     # Add creation dates
     results_df['created_at'] = results_df['server_id'].apply(
@@ -224,7 +292,7 @@ def main():
     results_df = results_df[existing_columns]
     
     # Save the enhanced results
-    output_file = "stage3.csv"
+    output_file = "server_classified.csv"
     results_df.to_csv(output_file, index=False)
     logger.info(f"Enhanced results saved to {output_file}")
     
@@ -262,22 +330,18 @@ def main():
         except Exception as e:
             logger.warning(f"Could not analyze creation dates: {e}")
     
-    # Save summary
-    summary_file = "stage3_datamatch_summary.json"
-    with open(summary_file, 'w', encoding='utf-8') as f:
-        json.dump(summary, f, indent=2, ensure_ascii=False)
-    logger.info(f"Summary saved to {summary_file}")
+    # Summary generated for logging purposes only
     
     # Upload to AWS S3
     logger.info("Uploading results to AWS S3...")
     try:
         s3 = boto3.client('s3')
         s3.upload_file(
-            'stage3.csv',
+            'server_classified.csv',
             os.environ['AISI_PLATFORM_BUCKET'],
-            f'users/{os.environ["AISI_PLATFORM_USER"]}/stage3.csv'
+            f'users/{os.environ["AISI_PLATFORM_USER"]}/server_classified.csv'
         )
-        logger.info("Successfully uploaded stage3.csv to S3")
+        logger.info("Successfully uploaded server_classified.csv to S3")
     except Exception as e:
         logger.error(f"Error during S3 upload: {e}")
     
