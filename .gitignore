@@ -48,6 +48,7 @@ data/
 cache/
 temp/
 *.npz
+*.jsonl
 
 # OS
 .DS_Store

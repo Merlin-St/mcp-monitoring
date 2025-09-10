@@ -6,7 +6,7 @@ Uses Inspect framework to refine README content filtering using LLM-based analys
 Removes installation tips while preserving functional descriptions, tool information,
 and sector-relevant content for embedding analysis and consequentiality scoring.
 
-MODIFIED: Uses custom JSON structure validator scorer similar to conseq_fin_stage1_inspect.py.
+MODIFIED: Uses custom JSON structure validator scorer similar to stage2_inspect.py.
 The scorer validates JSON structure, required fields, field types, and content quality.
 
 This file contains only the task definition for Inspect to run.
@@ -103,7 +103,7 @@ Original README content:
 def readme_json_scorer() -> Scorer:
     """
     Custom scorer for validating JSON structure with required fields
-    Similar to conseq_fin_stage1_inspect.py scorer but for README filtering
+    Similar to stage2_inspect.py scorer but for README filtering
     """
     async def _scorer(state: TaskState, target: Target):
         completion = state.output.completion.strip()

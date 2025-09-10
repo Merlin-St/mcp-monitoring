@@ -104,7 +104,7 @@ python officiallist_data_run.py
 
 **Data Processing & Analysis:**
 - `data_unified_processor.py` - Unified data processing (27,899 servers)
-- `data_create_filtered_subset.py` - Create filtered subsets for analysis
+- `data_unified_create_filtered_subset.py` - Create filtered subsets for analysis
 
 **ML Analysis & Embeddings:**
 - `embed_generate.py` - GPU-accelerated embedding generation with NAICS classification
@@ -114,10 +114,9 @@ python officiallist_data_run.py
 
 **Consequentiality Scoring:**
 - `data_tools_extraction_utils.py` - Tool extraction and access level classification utilities
-- `conseq_fin_data_prep.py` - Finance data preparation for multi-stage analysis
-- `conseq_fin_stage1_inspect.py` - Stage 1: Inspect task for finance-relevant server filtering
-- `conseq_fin_stage1_dfprocessing.py` - Stage 1: DataFrame processing for .eval files
-- `conseq_fin_stage3_visual.py` - Stage 3: Visualization and analysis
+- `stage1_data_prep.py` - Stage 1: Finance data preparation for multi-stage analysis
+- `stage2_inspect.py` - Stage 2: Inspect task for finance-relevant server filtering
+- `stage2_dfprocessing.py` - Stage 2: DataFrame processing for .eval files
 
 **README Content Filtering:**
 - `data_readme_filter_inspect.py` - LLM-based refinement using Inspect framework
@@ -205,12 +204,12 @@ The system extracts and classifies:
 
 ### Consequentiality Scoring Data Files
 - `conseq_ground_truth_tools_sample.json` - Random tools sample for ground truth scoring
-- `conseq_fin_*` - Finance-specific consequentiality analysis files:
-  - `conseq_fin_data_prep_summary.json` - Data preparation summary
-  - `conseq_fin_servers_sample.json` - Finance server sample
-  - `conseq_fin_stage1_results.json` - Stage 1 filtering results
-  - `conseq_fin_stage1_results.csv` - Stage 1 filtering results (CSV)
-  - `conseq_fin_stage1_logs/` - Stage 1 processing logs
+- `stage*` - Finance-specific consequentiality analysis files:
+  - `stage1_data_prep_summary.json` - Stage 1 data preparation summary
+  - `stage1_data_prep_servers_sample.json` - Stage 1 finance server sample
+  - `stage2_results.json` - Stage 2 filtering results
+  - `stage2_results.csv` - Stage 2 filtering results (CSV)
+  - `stage2_logs/` - Stage 2 processing logs
 
 ### Test Data Files
 - Various test files for development and validation
@@ -326,7 +325,7 @@ python officiallist_github_fetcher.py
 python data_unified_processor.py
 
 # Create filtered subset for analysis
-python data_create_filtered_subset.py
+python data_unified_create_filtered_subset.py
 ```
 
 ### ML Analysis Pipeline
@@ -404,39 +403,36 @@ python data_readme_filter_dfprocessing.py --eval-file specific.eval  # Process s
 source ~/si_setup/.venv/bin/activate
 
 # 1. Data Preparation - Create filtered dataset for analysis
-python conseq_fin_data_prep.py                    # Default: 100 servers
-python conseq_fin_data_prep.py --samples 500      # Custom sample size (more samples)
-python conseq_fin_data_prep.py --samples 1000     # Large sample for comprehensive analysis
-python conseq_fin_data_prep.py --all              # Process all servers
-python conseq_fin_data_prep.py --finance          # Only finance-related servers
-python conseq_fin_data_prep.py --samples 1000 --finance  # Large finance-focused sample
+python stage1_data_prep.py                    # Default: 100 servers
+python stage1_data_prep.py --samples 500      # Custom sample size (more samples)
+python stage1_data_prep.py --samples 1000     # Large sample for comprehensive analysis
+python stage1_data_prep.py --all              # Process all servers
+python stage1_data_prep.py --finance          # Only finance-related servers
+python stage1_data_prep.py --samples 1000 --finance  # Large finance-focused sample
 
-# 2. Stage 1 - Finance Tool Identification (uses Inspect framework)
-inspect eval conseq_fin_stage1_inspect.py --model anthropic/claude-sonnet-4-20250514
-python conseq_fin_stage1_dfprocessing.py                # Process .eval files to JSON/CSV
+# 2. Stage 2 - Finance Tool Identification (uses Inspect framework)
+inspect eval stage2_inspect.py --model anthropic/claude-sonnet-4-20250514
+python stage2_dfprocessing.py                # Process .eval files to JSON/CSV
 
-# 3. Stage 3 - Visualization & Analysis (requires Stage 1 completion)
-python conseq_fin_stage3_visual.py                      # Generate charts and top tools analysis
 
 # Complete 2-Stage Pipeline Workflow:
 # Stage 1: Data Prep → Finance Filter → Visualization
-#   - Data prep creates conseq_fin_servers_sample.json and conseq_fin_stage1_input.jsonl
-#   - Stage 1 identifies finance-related servers using LLM evaluation via Inspect framework
+#   - Data prep creates stage1_data_prep_servers_sample.json and stage2_input.jsonl
+#   - Stage 2 identifies finance-related servers using LLM evaluation via Inspect framework
 #     * Run inspect eval to generate .eval files in logs/
-#     * Run DataFrame processing to convert to JSON/CSV (conseq_fin_stage1_results.json/.csv)
-#   - Stage 3 creates visualizations and identifies top execution-level tools
+#     * Run DataFrame processing to convert to JSON/CSV (stage2_results.json/.csv)
+#   - Stage 4 creates visualizations and identifies top execution-level tools
 #     * Generates PNG charts and analysis based on Stage 1 outputs
 #     * Displays finance-related servers and tool analysis
 #     * Outputs comprehensive summary statistics
 
 # Stage Outputs:
-# - Stage 1: conseq_fin_stage1_results.json/csv (finance-relevant servers)
-# - Stage 3: PNG charts + console analysis + conseq_fin_stage3_visual.log
+# - Stage 2: stage2_results.json/csv (finance-relevant servers)
 
 # Requirements:
 # - ANTHROPIC_API_KEY environment variable set
 # - Inspect framework installed (pip install inspect_ai)
-# - data_unified_filtered.json must exist (run data_create_filtered_subset.py first)
+# - data_unified_filtered.json must exist (run data_unified_create_filtered_subset.py first)
 # - matplotlib, seaborn, pandas for Stage 3 visualizations
 ```
 

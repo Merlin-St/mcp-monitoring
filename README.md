@@ -12,7 +12,7 @@ uv sync # or old via source ~/si_setup/.venv/bin/activate
 python data_unified_processor.py
 
 # Create filtered subset for analysis
-python data_create_filtered_subset.py
+python data_unified_create_filtered_subset.py
 ```
 
 **Note**: Dashboard components have been moved to https://github.com/AI-Safety-Institute/sr-mcp-dashboard. This repository focuses on data collection, processing, and ML analysis.
@@ -208,10 +208,10 @@ python embed_hyperparameter_optimizer.py --finance --test-size 500 --max-combina
 ### Consequentiality Scoring (2-Stage Pipeline)
 - `data_tools_extraction_utils.py` - Tool extraction and access level classification utilities
 - `conseq_ground_truth_tools_sample.json` - Random tools sample for ground truth scoring
-- `conseq_fin_data_prep.py` - Stage 1: Data preparation with sampling options (--samples 500, --all, --finance)
-- `conseq_fin_stage1_inspect.py` - Stage 1: Finance tool identification using Inspect framework
-- `conseq_fin_stage1_dfprocessing.py` - Stage 1: Process .eval files to JSON/CSV
-- `conseq_fin_stage3_visual.py` - Stage 3: Visualization and top tools analysis
+- `stage_data_prep.py` - Stage 1: Data preparation with sampling options (--samples 500, --all, --finance)
+- `stage_stage1_inspect.py` - Stage 1: Finance tool identification using Inspect framework
+- `stage_stage1_dfprocessing.py` - Stage 1: Process .eval files to JSON/CSV
+- `stage_stage3_visual.py` - Stage 3: Visualization and top tools analysis
 
 ### Data Collection
 - `smithery_data_run.py` - Smithery API (6,434 servers)
@@ -237,25 +237,25 @@ Tracks AI tool ecosystem growth with specific attention to:
 ### Stage 1: Data Preparation & Finance Filtering
 ```bash
 # Data preparation with various sampling options
-python conseq_fin_data_prep.py --samples 500           # Analyze 500 servers
-python conseq_fin_data_prep.py --samples 1000          # Analyze 1000 servers  
-python conseq_fin_data_prep.py --all                   # Analyze all servers
-python conseq_fin_data_prep.py --finance               # Only finance-related servers
-python conseq_fin_data_prep.py --samples 1000 --finance # Large finance-focused sample
+python stage_data_prep.py --samples 500           # Analyze 500 servers
+python stage_data_prep.py --samples 1000          # Analyze 1000 servers  
+python stage_data_prep.py --all                   # Analyze all servers
+python stage_data_prep.py --finance               # Only finance-related servers
+python stage_data_prep.py --samples 1000 --finance # Large finance-focused sample
 
 # Finance tool identification using LLM evaluation
-inspect eval conseq_fin_stage1_inspect.py --model anthropic/claude-sonnet-4-20250514
-python conseq_fin_stage1_dfprocessing.py               # Convert .eval files to JSON/CSV
+inspect eval stage_stage1_inspect.py --model anthropic/claude-sonnet-4-20250514
+python stage_stage1_dfprocessing.py               # Convert .eval files to JSON/CSV
 ```
 
 ### Stage 3: Visualization & Analysis
 ```bash
 # Generate charts and analysis based on Stage 1 results
-python conseq_fin_stage3_visual.py
+python stage_stage3_visual.py
 ```
 
 **Pipeline Output:**
-- **Stage 1**: `conseq_fin_stage1_results.json/csv` (finance-relevant servers)
+- **Stage 1**: `stage_stage1_results.json/csv` (finance-relevant servers)
 - **Stage 3**: PNG charts + finance server analysis + summary statistics
 
 ## 📊 LLM Validation Results
@@ -286,6 +286,6 @@ L5:   0   0   0   0   2   (2 servers, 2.3%)
 
 **Systematic Bias**: LLM over-estimates by 1+ levels in 33/39 disagreements (84.6%), particularly confusing information-gathering tools (Human L1) with limited-interaction tools (Human L2).
 
-**Validation Scripts**: `conseq_fin_stage2_validate.py`, `conseq_level_disagreement_analysis.py`
+**Validation Scripts**: `stage_stage2_validate.py`, `conseq_level_disagreement_analysis.py`
 
 **Takeaway**: LLM struggles to distinguish between low-risk information gathering (L1) and limited interaction (L2) categories, suggesting these should be combined for practical consequentiality assessment.
