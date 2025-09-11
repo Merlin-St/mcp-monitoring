@@ -19,7 +19,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('data_unified_create_filtered_subset.log'),
+        logging.FileHandler('logs/data_unified_create_filtered_subset.log'),
         logging.StreamHandler()
     ]
 )
@@ -287,7 +287,7 @@ def create_filtered_subset(enable_readme_filtering: bool = True):
     """Create filtered subset based on quality criteria"""
     
     logger.info("Loading unified dashboard data...")
-    with open('data_unified.json', 'r') as f:
+    with open('data/initial/data_unified.json', 'r') as f:
         data = json.load(f)
     
     logger.info(f"Original dataset: {len(data)} servers")
@@ -342,7 +342,7 @@ def create_filtered_subset(enable_readme_filtering: bool = True):
     filtered_data, filtering_stats = apply_readme_filtering(filtered_data, enable_readme_filtering)
     
     # Save filtered dataset
-    output_file = 'data_unified_filtered.json'
+    output_file = 'data/initial/data_unified_filtered.json'
     with open(output_file, 'w') as f:
         json.dump(filtered_data, f, indent=2)
     
@@ -373,7 +373,7 @@ def create_filtered_subset(enable_readme_filtering: bool = True):
         'processing_timestamp': datetime.now().isoformat()
     }
     
-    summary_file = 'data_unified_filtered_summary.json'
+    summary_file = 'data/initial/data_unified_filtered_summary.json'
     with open(summary_file, 'w') as f:
         json.dump(summary, f, indent=2)
     

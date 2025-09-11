@@ -22,7 +22,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('clservers_validate.log'),
+        logging.FileHandler('logs/clservers_validate.log'),
         logging.StreamHandler()
     ]
 )
@@ -34,7 +34,7 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     logger.info("Loading datasets...")
     
     # Load human-labeled data
-    human_df = pd.read_csv("clservers_validate_labelled.csv")
+    human_df = pd.read_csv("data/external-cl/clservers_validate_labelled.csv")
     logger.info(f"Human-labeled data: {len(human_df)} rows, {len(human_df.columns)} columns")
     
     # Load LLM-labeled data
@@ -496,10 +496,10 @@ def save_results(results: Dict[str, Any], summary: Dict[str, Any],
         }
     }
     
-    with open('clservers_validation.json', 'w') as f:
+    with open('output-validation/cl-validation/clservers_validation.json', 'w') as f:
         json.dump(output, f, indent=2)
     
-    logger.info("Validation results saved to clservers_validation.json")
+    logger.info("Validation results saved to output-validation/cl-validation/clservers_validation.json")
 
 
 def main():

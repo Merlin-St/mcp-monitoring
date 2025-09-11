@@ -168,8 +168,8 @@ def prepare_readme_dataset():
     """
     Prepare dataset from data_unified_filtered.json for README filtering
     """
-    input_file = 'data_unified_filtered.json'
-    dataset_file = 'data_readme_filter_input.jsonl'
+    input_file = 'data/initial/data_unified_filtered.json'
+    dataset_file = 'data/internal-cl/data_readme_filter_input.jsonl'
     
     if not Path(input_file).exists():
         logger.error(f"Input file {input_file} not found. Run readme_content_filter.py first.")

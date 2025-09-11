@@ -48,12 +48,12 @@ import pandas as pd
 import requests
 
 # File paths
-MATCHED_PACKAGES_FILE = "usage_match.json"
-DATASET_FILE = "data_unified_filtered.json"
+MATCHED_PACKAGES_FILE = "data/external-usage/usage_match.json"
+DATASET_FILE = "data/initial/data_unified_filtered.json"
 
 # Data source files
-pypi_data_file = "usage_bigquery_webresults_pypi.json"
-npm_data_file = "usage_npm.json"
+pypi_data_file = "data/external-usage/usage_bigquery_webresults_pypi.json"
+npm_data_file = "data/external-usage/usage_npm.json"
 
 
 # Reporting window 
@@ -66,7 +66,7 @@ def setup_logging():
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler('data_unified_add_usage.log'),
+            logging.FileHandler('logs/data_unified_add_usage.log'),
             logging.StreamHandler()
         ]
     )
@@ -360,7 +360,7 @@ def integrate_download_stats(dataset_file: str, pypi_stats: Dict, npm_stats: Dic
 
 def main():
     parser = argparse.ArgumentParser(description="Collect and integrate MCP package usage statistics")
-    parser.add_argument("--matched-packages", default="usage_match.json", 
+    parser.add_argument("--matched-packages", default="data/external-usage/usage_match.json", 
                        help="Final matched packages file")
     parser.add_argument("--dataset", default=DATASET_FILE, 
                        help="Dataset file to integrate stats into (modified in place)")

@@ -50,7 +50,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('task_clusters_run.log'),
+        logging.FileHandler('logs/task_clusters_run.log'),
         logging.StreamHandler()
     ]
 )
@@ -203,7 +203,7 @@ def main():
         if args.addcluster2names:
             logger.info("Running in add-cluster2-names-only mode")
             # Load existing CSV with cluster assignments
-            csv_file = 'task_clusters_names.csv'
+            csv_file = 'data/internal-task-clusters/task_clusters_names.csv'
             if not Path(csv_file).exists():
                 logger.error(f"Cannot add cluster names: {csv_file} not found. Run full pipeline first.")
                 sys.exit(1)
@@ -253,7 +253,7 @@ def main():
         elif args.only_validation:
             logger.info("Running in validation-only mode")
             # Load existing CSV with all cluster assignments
-            csv_file = 'task_clusters_names.csv'
+            csv_file = 'data/internal-task-clusters/task_clusters_names.csv'
             if not Path(csv_file).exists():
                 logger.error(f"Cannot run validation: {csv_file} not found. Run full pipeline first.")
                 sys.exit(1)
@@ -352,7 +352,7 @@ def l2_naming_task():
         
         # Save updated CSV with cluster assignments and names
         if not args.only_validation:
-            output_csv = 'task_clusters_names.csv'
+            output_csv = 'data/internal-task-clusters/task_clusters_names.csv'
             df.to_csv(output_csv, index=False)
             logger.info(f"Saved complete task hierarchy to: {output_csv}")
         
@@ -372,7 +372,7 @@ def l2_naming_task():
             logger.info("Creating validation JSONL files")
             for task_type, _ in validation_tasks:
                 validation_samples = prepare_validation_samples(df, task_type)
-                jsonl_file = f'task_clusters_validation_{task_type}.jsonl'
+                jsonl_file = f'data/internal-task-clusters/task_clusters_validation_{task_type}.jsonl'
                 
                 with open(jsonl_file, 'w') as f:
                     for sample in validation_samples:
@@ -450,7 +450,7 @@ def l2_naming_task():
             if key != 'validation_scores':
                 summary_ordered[key] = value
         
-        summary_file = 'task_clusters_summary.json'
+        summary_file = 'data/internal-task-clusters/task_clusters_summary.json'
         with open(summary_file, 'w') as f:
             json.dump(summary_ordered, f, indent=2)
         logger.info(f"Saved summary to: {summary_file}")
@@ -462,7 +462,7 @@ def l2_naming_task():
         
         # Save error summary (convert numpy types to Python types for JSON serialization)
         summary_clean = convert_numpy_types(summary)
-        summary_file = 'task_clusters_summary_error.json'
+        summary_file = 'data/internal-task-clusters/task_clusters_summary_error.json'
         with open(summary_file, 'w') as f:
             json.dump(summary_clean, f, indent=2)
         

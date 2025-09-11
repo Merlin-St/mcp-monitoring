@@ -28,7 +28,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('data_readme_filter_dfprocessing.log'),
+        logging.FileHandler('logs/data_readme_filter_dfprocessing.log'),
         logging.StreamHandler()
     ]
 )
@@ -405,7 +405,7 @@ def main():
     eval_results = load_eval_results(args.logs_dir)
     
     # Load original dataset (preserves full dataset regardless of evaluation sample size)
-    dataset_file = 'data_unified_filtered.json'
+    dataset_file = 'data/initial/data_unified_filtered.json'
     if not Path(dataset_file).exists():
         logger.error(f"Dataset file {dataset_file} not found")
         return
@@ -438,7 +438,7 @@ def main():
         "validation_stats": validation_stats
     }
     
-    summary_file = 'data_readme_filter_dfprocessing_summary.json'
+    summary_file = 'data/initial/data_readme_filter_dfprocessing_summary.json'
     with open(summary_file, 'w', encoding='utf-8') as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
     

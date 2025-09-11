@@ -21,7 +21,7 @@ from typing import Dict, List, Tuple, Any
 from sklearn.metrics.pairwise import cosine_similarity
 
 # Import functions from the task embeddings module
-from task_clusters_embeddings import (
+from .task_clusters_embeddings import (
     get_embedding_model,
     load_or_generate_embeddings,
     EMBEDDING_MODEL_NAME
@@ -32,7 +32,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('task_clusters_embed_match.log'),
+        logging.FileHandler('logs/task_clusters_embed_match.log'),
         logging.StreamHandler()
     ]
 )
@@ -43,7 +43,7 @@ class MCPToONETMatcher:
     
     def __init__(self):
         """Initialize the matcher with required data paths"""
-        self.mcp_input_file = "cltools_samples.jsonl"
+        self.mcp_input_file = "data/internal-cl/cltools_samples.jsonl"
         self.onet_tasks_file = "cl_onet_taskstatements.csv"
         self.onet_embeddings_file = "task_clusters_embeddings_onet.npz"
         self.mcp_embeddings_cache = "task_clusters_mcp_tool_embeddings.npz"
@@ -269,7 +269,7 @@ class MCPToONETMatcher:
         
         return analysis
     
-    def save_results(self, output_file: str = 'task_clusters_embed_match_results.json') -> None:
+    def save_results(self, output_file: str = 'output-validation/task-validation/task_clusters_embed_match_results.json') -> None:
         """Save all results to JSON file"""
         logger.info(f"Saving results to {output_file}")
         
@@ -337,7 +337,7 @@ def main():
         for occ, count in top_occs:
             logger.info(f"  - {occ}: {count} matches")
         
-        logger.info("\nDetailed results saved to: task_clusters_embed_match_results.json")
+        logger.info("\nDetailed results saved to: output-validation/task-validation/task_clusters_embed_match_results.json")
         
     except Exception as e:
         logger.error(f"Error during analysis: {e}")

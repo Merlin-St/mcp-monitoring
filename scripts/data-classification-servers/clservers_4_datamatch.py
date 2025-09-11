@@ -26,7 +26,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('clservers_4_datamatch.log'),
+        logging.FileHandler('logs/clservers_4_datamatch.log'),
         logging.StreamHandler()
     ]
 )
@@ -143,7 +143,7 @@ def main():
     logger.info("Starting CLServers Step 4 Data Matching")
     
     # Load CLServers Step 3 results from JSON
-    clservers_json = "clservers_3_results.json"
+    clservers_json = "data/internal-cl/clservers_3_results.json"
     if not Path(clservers_json).exists():
         logger.error(f"CLServers Step 3 results file {clservers_json} not found. Run clservers_3_dfprocessing.py first.")
         return
@@ -164,7 +164,7 @@ def main():
     logger.info(f"Loaded {len(results_df)} CLServers Step 3 results from {clservers_json}")
     
     # Load the unified dataset for server metadata matching
-    unified_file = 'data_unified_filtered.json'
+    unified_file = 'data/initial/data_unified_filtered.json'
     if not Path(unified_file).exists():
         logger.error(f"Unified dataset {unified_file} not found")
         return
@@ -292,7 +292,7 @@ def main():
     results_df = results_df[existing_columns]
     
     # Save the enhanced results
-    output_file = "clservers_classified.csv"
+    output_file = "data/final/clservers_classified.csv"
     results_df.to_csv(output_file, index=False)
     logger.info(f"Enhanced results saved to {output_file}")
     
@@ -337,11 +337,11 @@ def main():
     try:
         s3 = boto3.client('s3')
         s3.upload_file(
-            'clservers_classified.csv',
+            'data/final/clservers_classified.csv',
             os.environ['AISI_PLATFORM_BUCKET'],
             f'users/{os.environ["AISI_PLATFORM_USER"]}/server_classified.csv'
         )
-        logger.info("Successfully uploaded clservers_classified.csv to S3")
+        logger.info("Successfully uploaded data/final/clservers_classified.csv to S3")
     except Exception as e:
         logger.error(f"Error during S3 upload: {e}")
     

@@ -9,7 +9,7 @@ import re
 from typing import Dict, List, Tuple
 import csv
 from datetime import datetime
-from naics_classification_config import NAICS_KEYWORDS
+from ..data_analysis_topics.naics_classification_config import NAICS_KEYWORDS
 
 class FinanceMCPSearcher:
     def __init__(self, data_file: str = 'mcp_repositories.json'):

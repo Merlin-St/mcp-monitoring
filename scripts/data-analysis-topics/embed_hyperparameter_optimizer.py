@@ -16,13 +16,13 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 import warnings
 # Import the original functions from embed_generate
-from embed_generate import (
+from .embed_generate import (
     generate_high_quality_embeddings,
     calculate_topic_coherence,
     prepare_texts_parallel,
     setup_gpu_optimizations
 )
-from naics_classification_config import NAICS_SECTORS, NAICS_KEYWORDS
+from .naics_classification_config import NAICS_SECTORS, NAICS_KEYWORDS
 
 warnings.filterwarnings('ignore')
 
@@ -47,7 +47,7 @@ class OptimizationResult:
 class HyperparameterOptimizer:
     """Automated hyperparameter optimization for BERTopic models"""
     
-    def __init__(self, data_file: str = 'data_unified_filtered.json', 
+    def __init__(self, data_file: str = 'data/initial/data_unified_filtered.json', 
                  test_size: int = 1000, cache_embeddings: bool = True,
                  sector_filter: Optional[int] = None, include_kmeans: bool = False,
                  min_topics_sector: int = 10, min_topics_full: int = MIN_TOPICS_REQUIRED):
@@ -65,7 +65,7 @@ class HyperparameterOptimizer:
     def _setup_logging(self) -> logging.Logger:
         """Setup logging configuration"""
         suffix = f"_sector_{self.sector_filter}" if self.sector_filter else ""
-        log_filename = f'embed_hyperparameter_optimization{suffix}.log'
+        log_filename = f'logs/embed_hyperparameter_optimization{suffix}.log'
         
         # Clear existing handlers
         for handler in logging.root.handlers[:]:
