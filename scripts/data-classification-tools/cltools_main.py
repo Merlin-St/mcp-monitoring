@@ -15,7 +15,7 @@ Usage:
   python cltools_main.py --run  # (costly)
   or manually:
   python cltools_main.py \
-    --onet task_clusters_names.csv \
+    --onet data/internal-task-clusters/task_clusters_names.csv \
     --logs ./logs_onet \
     --logs-auto ./logs_auto \
     --out cltools_3_results.csv \
@@ -466,7 +466,7 @@ def classify_access_pattern():
 # ---------- Tasks (module-level so inspect can find them) ----------
 @task
 def mcp_onet_classify_task():
-    samples_path = "cltools_samples.jsonl"
+    samples_path = "data/internal-cl/cltools_samples.jsonl"
     csv_path = "data/internal-task-clusters/task_clusters_names.csv"
     if not Path(samples_path).exists():
         raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
@@ -481,7 +481,7 @@ def mcp_onet_classify_task():
 
 @task
 def mcp_automation_level_task():
-    samples_path = "cltools_samples.jsonl"
+    samples_path = "data/internal-cl/cltools_samples.jsonl"
     if not Path(samples_path).exists():
         raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
     return Task(
@@ -495,7 +495,7 @@ def mcp_automation_level_task():
 
 @task
 def mcp_functionality_task():
-    samples_path = "cltools_samples.jsonl"
+    samples_path = "data/internal-cl/cltools_samples.jsonl"
     if not Path(samples_path).exists():
         raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
     return Task(
@@ -509,7 +509,7 @@ def mcp_functionality_task():
 
 @task
 def mcp_access_pattern_task():
-    samples_path = "cltools_samples.jsonl"
+    samples_path = "data/internal-cl/cltools_samples.jsonl"
     if not Path(samples_path).exists():
         raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
     return Task(
@@ -748,8 +748,8 @@ def main():
     ap.add_argument("--logs-access", default=None, help="Log dir for Access Pattern task")
     ap.add_argument("--out", default="data/internal-cl/cltools_3_results.csv", help="Output CSV path")
     ap.add_argument("--model", default="anthropic/claude-sonnet-4-20250514", help="Model string for inspect eval")
-    ap.add_argument("--samples", default="cltools_samples.jsonl", help="Samples JSONL path")
-    ap.add_argument("--tools-json", default="cltools_prep.json", help="Snapshot of tool records")
+    ap.add_argument("--samples", default="data/internal-cl/cltools_samples.jsonl", help="Samples JSONL path")
+    ap.add_argument("--tools-json", default="data/internal-cl/cltools_prep.json", help="Snapshot of tool records")
     ap.add_argument("--finance", action="store_true", help="Only finance-related servers (is_sector_52)")
     ap.add_argument("--limit", type=int, default=None, help="Limit number of samples processed by inspect eval")
     ap.add_argument("--max-connections", type=int, default=None, help="Maximum number of concurrent connections for inspect eval")
@@ -760,16 +760,16 @@ def main():
     from datetime import datetime
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if args.logs is None:
-        args.logs = f"./logs/onet_{timestamp}"
+        args.logs = f"logs/onet_{timestamp}"
         log.info(f"Using auto-generated O*NET log directory: {args.logs}")
     if args.logs_auto is None:
-        args.logs_auto = f"./.log/auto_{timestamp}"
+        args.logs_auto = f"logs/auto_{timestamp}"
         log.info(f"Using auto-generated Automation log directory: {args.logs_auto}")
     if args.logs_func is None:
-        args.logs_func = f"./.log/func_{timestamp}"
+        args.logs_func = f"logs/func_{timestamp}"
         log.info(f"Using auto-generated Functionality log directory: {args.logs_func}")
     if args.logs_access is None:
-        args.logs_access = f"./.log/access_{timestamp}"
+        args.logs_access = f"logs/access_{timestamp}"
         log.info(f"Using auto-generated Access Pattern log directory: {args.logs_access}")
 
     # 1) Data prep

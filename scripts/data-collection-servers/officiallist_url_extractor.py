@@ -25,7 +25,7 @@ class MCPServerURLExtractor:
         self.logger = logging.getLogger(__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            file_handler = logging.FileHandler('officiallist_data_run.log')
+            file_handler = logging.FileHandler('logs/officiallist_data_run.log')
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             file_handler.setFormatter(formatter)
@@ -363,7 +363,7 @@ class MCPServerURLExtractor:
         self.logger.info(f"  GitHub URLs: {github_count}")
         self.logger.info(f"  External URLs: {external_count}")
     
-    def save_urls(self, filename='officiallist_urls.json'):
+    def save_urls(self, filename='data/external-servers/officiallist_urls.json'):
         """Save extracted URLs to JSON file"""
         output_data = {
             'extraction_date': datetime.now().isoformat(),
@@ -378,7 +378,7 @@ class MCPServerURLExtractor:
         
         self.logger.info(f"URLs saved to {filename}")
     
-    def save_historical_data(self, filename='officiallist_history.json'):
+    def save_historical_data(self, filename='data/external-servers/officiallist_history.json'):
         """Save historical data to JSON file"""
         if not self.historical_data:
             self.logger.info("No historical data to save")
@@ -434,9 +434,9 @@ def main():
                        help='Days of history to collect (0 = current only)')
     parser.add_argument('--monthly-history', type=int, default=0,
                        help='Months of history to collect (0 = current only)')
-    parser.add_argument('--output', default='officiallist_urls.json',
+    parser.add_argument('--output', default='data/external-servers/officiallist_urls.json',
                        help='Output JSON file for URLs')
-    parser.add_argument('--history-output', default='officiallist_history.json',
+    parser.add_argument('--history-output', default='data/external-servers/officiallist_history.json',
                        help='Output JSON file for historical data')
     args = parser.parse_args()
     
@@ -446,7 +446,7 @@ def main():
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),
-            logging.FileHandler('officiallist_data_run.log')
+            logging.FileHandler('logs/officiallist_data_run.log')
         ]
     )
     logger = logging.getLogger(__name__)

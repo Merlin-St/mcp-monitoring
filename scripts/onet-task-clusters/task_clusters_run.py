@@ -310,7 +310,7 @@ def main():
             if args.contrastive == 'yes':
                 logger.info(f"Using contrastive naming with {args.boundary_tasks} boundary tasks per cluster")
                 # Load task embeddings from cache (they should exist after Step 2)
-                embeddings_file = 'task_clusters_embeddings_onet.npz'
+                embeddings_file = 'embeddings_cache/task_clusters_embeddings_onet.npz'
                 if not Path(embeddings_file).exists():
                     logger.error(f"Task embeddings cache not found: {embeddings_file}. Cannot use contrastive mode.")
                     raise FileNotFoundError(f"Task embeddings required for contrastive mode: {embeddings_file}")

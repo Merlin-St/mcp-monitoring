@@ -359,7 +359,7 @@ class GitHubMCPCollector:
             # Handle resume mode
             existing_data = []
             if resume_mode:
-                partial_filename = 'github_mcp_repositories_test_partial.json' if test_mode else 'github_mcp_repositories_partial.json'
+                partial_filename = 'data/external-servers/github_mcp_repositories_test_partial.json' if test_mode else 'data/external-servers/github_mcp_repositories_partial.json'
                 existing_data = self.load_existing_data(partial_filename)
                 start_date = self.get_resume_date(existing_data)
             else:
@@ -491,7 +491,7 @@ class GitHubMCPCollector:
             
             # Save periodically
             if len(enriched_repos) % 50 == 0:
-                filename = 'github_mcp_repositories_test_partial.json' if test_mode else 'github_mcp_repositories_partial.json'
+                filename = 'data/external-servers/github_mcp_repositories_test_partial.json' if test_mode else 'data/external-servers/github_mcp_repositories_partial.json'
                 self.save_data(enriched_repos, filename)
         
         self.data = enriched_repos
@@ -537,7 +537,7 @@ class GitHubMCPCollector:
             logger.warning("No valid creation dates found in existing data, starting from default date")
             return datetime(2024, 11, 1)
 
-    def save_data(self, data: List[Dict], filename: str = 'github_mcp_repositories.json'):
+    def save_data(self, data: List[Dict], filename: str = 'data/external-servers/github_mcp_repositories.json'):
         """Save collected data to JSON file"""
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
@@ -594,7 +594,7 @@ async def main():
         
         # Save final data with standardized filename
         if test_mode:
-            filename = 'github_data_test.json'
+            filename = 'data/external-servers/github_data_test.json'
         else:
             filename = 'data/external-servers/github_data.json'
         collector.save_data(repositories, filename)
@@ -615,7 +615,7 @@ async def main():
             lang = repo.get('language', 'Unknown')
             summary['repositories_by_language'][lang] = summary['repositories_by_language'].get(lang, 0) + 1
         
-        summary_filename = 'github_data_summary_test.json' if test_mode else 'github_data_summary.json'
+        summary_filename = 'data/external-servers/github_data_summary_test.json' if test_mode else 'data/external-servers/github_data_summary.json'
         with open(summary_filename, 'w') as f:
             json.dump(summary, f, indent=2)
         
@@ -631,13 +631,13 @@ async def main():
         logger.warning("Collection interrupted by user")
         await collector.close_session()
         if collector.data:
-            interrupt_filename = 'github_mcp_repositories_test_interrupted.json' if test_mode else 'github_mcp_repositories_interrupted.json'
+            interrupt_filename = 'data/external-servers/github_mcp_repositories_test_interrupted.json' if test_mode else 'data/external-servers/github_mcp_repositories_interrupted.json'
             collector.save_data(collector.data, interrupt_filename)
     except Exception as e:
         logger.error(f"Error during collection: {e}")
         await collector.close_session()
         if collector.data:
-            error_filename = 'github_mcp_repositories_test_error.json' if test_mode else 'github_mcp_repositories_error.json'
+            error_filename = 'data/external-servers/github_mcp_repositories_test_error.json' if test_mode else 'data/external-servers/github_mcp_repositories_error.json'
             collector.save_data(collector.data, error_filename)
 
 

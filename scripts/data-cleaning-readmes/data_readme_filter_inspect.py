@@ -32,7 +32,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('data_readme_filter_inspect.log'),
+        logging.FileHandler('logs/data_readme_filter_inspect.log'),
         logging.StreamHandler()
     ]
 )

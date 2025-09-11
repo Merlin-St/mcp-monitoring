@@ -215,10 +215,10 @@ class OfficiallistGitHubFetcherLean:
         """Process all GitHub servers from officiallist_urls.json"""
         # Load URL data
         try:
-            with open('officiallist_urls.json', 'r', encoding='utf-8') as f:
+            with open('data/external-servers/officiallist_urls.json', 'r', encoding='utf-8') as f:
                 url_data = json.load(f)
         except FileNotFoundError:
-            self.logger.error("officiallist_urls.json not found")
+            self.logger.error("data/external-servers/officiallist_urls.json not found")
             return []
         
         # Filter GitHub servers
@@ -262,8 +262,8 @@ class OfficiallistGitHubFetcherLean:
             'servers': servers
         }
         
-        with open('officiallist_data_onlygithub.json', 'w', encoding='utf-8') as f:
+        with open('data/external-servers/officiallist_data_onlygithub.json', 'w', encoding='utf-8') as f:
             json.dump(output_data, f, indent=2, ensure_ascii=False)
         
-        self.logger.info("Results saved to officiallist_data_onlygithub.json")
+        self.logger.info("Results saved to data/external-servers/officiallist_data_onlygithub.json")
 

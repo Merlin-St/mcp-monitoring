@@ -61,7 +61,7 @@ def update_cluster_csv(
     level2_names: Optional[Dict[str, str]] = None,
     level1_clusters: Optional[np.ndarray] = None,
     level1_names: Optional[Dict[str, str]] = None,
-    output_file: str = 'task_clusters_names.csv'
+    output_file: str = 'data/internal-task-clusters/task_clusters_names.csv'
 ) -> pd.DataFrame:
     """
     Update DataFrame with cluster assignments and names
@@ -109,7 +109,7 @@ def update_cluster_csv(
     
     return df
 
-def save_cluster_csv(df: pd.DataFrame, output_file: str = 'task_clusters_names.csv'):
+def save_cluster_csv(df: pd.DataFrame, output_file: str = 'data/internal-task-clusters/task_clusters_names.csv'):
     """Save DataFrame to CSV with proper column ordering"""
     # Define column order
     columns = ['task_id', 'O*NET-SOC Code', 'Task', 'Title']

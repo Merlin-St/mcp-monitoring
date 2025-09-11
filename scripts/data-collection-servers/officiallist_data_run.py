@@ -50,9 +50,9 @@ class OfficialistDataRunner:
                 extractor.fetch_readme_history(days_back=30)
         
         # Save results
-        extractor.save_urls('officiallist_urls.json')
+        extractor.save_urls('data/external-servers/officiallist_urls.json')
         if extractor.historical_data:
-            extractor.save_historical_data('officiallist_history.json')
+            extractor.save_historical_data('data/external-servers/officiallist_history.json')
         
         extractor.print_summary()
         
@@ -65,11 +65,11 @@ class OfficialistDataRunner:
         
         # Load URLs from step 1
         try:
-            with open('officiallist_urls.json', 'r', encoding='utf-8') as f:
+            with open('data/external-servers/officiallist_urls.json', 'r', encoding='utf-8') as f:
                 url_data = json.load(f)
             servers = url_data.get('servers', [])
         except FileNotFoundError:
-            self.logger.error("officiallist_urls.json not found. Run URL extraction first.")
+            self.logger.error("data/external-servers/officiallist_urls.json not found. Run URL extraction first.")
             return 0
         
         # Filter for external (non-GitHub) servers
@@ -91,7 +91,7 @@ class OfficialistDataRunner:
             fetcher.fetch_external_html(max_external=len(external_servers) if not test_mode else 5)
             
             # Save enhanced results
-            output_filename = 'officiallist_data_onlyhtml.json' if not test_mode else 'officiallist_data_onlyhtml_test.json'
+            output_filename = 'data/external-servers/officiallist_data_onlyhtml.json' if not test_mode else 'data/external-servers/officiallist_data_onlyhtml_test.json'
             fetcher.save_results(output_filename)
             
             self.logger.info(f"✓ HTML fetching complete: {len(external_servers)} external servers processed")
@@ -150,7 +150,7 @@ class OfficialistDataRunner:
         
         # Load URL data (base data)
         try:
-            with open('officiallist_urls.json', 'r', encoding='utf-8') as f:
+            with open('data/external-servers/officiallist_urls.json', 'r', encoding='utf-8') as f:
                 data_sources['urls'] = json.load(f)
                 self.logger.info(f"Loaded URL data: {data_sources['urls']['total_servers']} servers")
         except FileNotFoundError:
@@ -158,7 +158,7 @@ class OfficialistDataRunner:
             return None
         
         # Load HTML data (check both test and production files)
-        html_files = ['officiallist_data_onlyhtml.json', 'officiallist_data_onlyhtml_test.json']
+        html_files = ['data/external-servers/officiallist_data_onlyhtml.json', 'data/external-servers/officiallist_data_onlyhtml_test.json']
         html_loaded = False
         
         for html_file in html_files:
@@ -177,11 +177,11 @@ class OfficialistDataRunner:
         
         # Load GitHub data  
         try:
-            with open('officiallist_data_onlygithub.json', 'r', encoding='utf-8') as f:
+            with open('data/external-servers/officiallist_data_onlygithub.json', 'r', encoding='utf-8') as f:
                 data_sources['github'] = json.load(f)
                 self.logger.info(f"Loaded GitHub data: {data_sources['github']['processed_count']} servers")
         except FileNotFoundError:
-            self.logger.warning("officiallist_data_onlygithub.json not found - continuing without GitHub data")
+            self.logger.warning("data/external-servers/officiallist_data_onlygithub.json not found - continuing without GitHub data")
             data_sources['github'] = {'servers': []}
         
         return data_sources
@@ -267,7 +267,7 @@ class OfficialistDataRunner:
     
     def merge_all_data(self):
         """Merge all data sources into final dataset"""
-        self.logger.info("Starting data merger for officiallist_data.json")
+        self.logger.info("Starting data merger for data/external-servers/officiallist_data.json")
         
         # Load all data sources
         data_sources = self.load_data_sources()
@@ -346,10 +346,10 @@ class OfficialistDataRunner:
     def cleanup_intermediate_files(self):
         """Remove intermediate files after successful merger"""
         intermediate_files = [
-            'officiallist_urls.json',
-            'officiallist_data_onlyhtml.json', 
-            'officiallist_data_onlyhtml_test.json',
-            'officiallist_data_onlygithub.json'
+            'data/external-servers/officiallist_urls.json',
+            'data/external-servers/officiallist_data_onlyhtml.json', 
+            'data/external-servers/officiallist_data_onlyhtml_test.json',
+            'data/external-servers/officiallist_data_onlygithub.json'
         ]
         
         cleaned_count = 0
@@ -449,10 +449,10 @@ class OfficialistDataRunner:
         }
         
         # Save summary
-        with open('officiallist_data_summary.json', 'w', encoding='utf-8') as f:
+        with open('data/external-servers/officiallist_data_summary.json', 'w', encoding='utf-8') as f:
             json.dump(summary_data, f, indent=2, ensure_ascii=False)
         
-        self.logger.info("Summary statistics saved to: officiallist_data_summary.json")
+        self.logger.info("Summary statistics saved to: data/external-servers/officiallist_data_summary.json")
     
     
     async def run_complete_pipeline(self, test_mode=False, fetch_history=True, history_months=None, skip_html=False, skip_github=False):
@@ -537,7 +537,7 @@ async def main():
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),
-            logging.FileHandler('officiallist_data_collection.log')
+            logging.FileHandler('logs/officiallist_data_collection.log')
         ]
     )
     logger = logging.getLogger(__name__)

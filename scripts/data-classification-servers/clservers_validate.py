@@ -38,7 +38,7 @@ def load_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     logger.info(f"Human-labeled data: {len(human_df)} rows, {len(human_df.columns)} columns")
     
     # Load LLM-labeled data
-    llm_df = pd.read_csv("server_classified.csv")
+    llm_df = pd.read_csv("data/final/clservers_classified.csv")
     logger.info(f"LLM-labeled data: {len(llm_df)} rows, {len(llm_df.columns)} columns")
     
     return human_df, llm_df

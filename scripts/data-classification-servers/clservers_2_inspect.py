@@ -402,7 +402,7 @@ def finance_identification_task():
     """
     Inspect task for identifying finance-related MCP servers using system_message solver
     """
-    dataset_file = "clservers_input.jsonl"
+    dataset_file = "data/internal-cl/clservers_input.jsonl"
     
     if not Path(dataset_file).exists():
         raise FileNotFoundError(f"Dataset file {dataset_file} not found")

@@ -67,31 +67,31 @@ Final CSV + Summary
 
 ```bash
 # Default configuration (k1=12, k2=400)
-python stage5_task_clusters_run.py
+python task_clusters_run.py
 
 # Custom cluster counts
-python stage5_task_clusters_run.py --k1 10 --k2 300
+python task_clusters_run.py --k1 10 --k2 300
 
 # Skip validation for faster execution
-python stage5_task_clusters_run.py --skip-validation
+python task_clusters_run.py --skip-validation
 ```
 
 ### Prerequisites
 
-- ONET task data: `cl_onet_taskstatements.csv`
+- ONET task data: `../../data/external-cl/cl_onet_taskstatements.csv`
 - Anthropic API key set in environment
 - Inspect framework installed
 
 ## Output Files
 
 ### Primary Output
-- **`stage5_task_clusters_names.csv`** - Complete task assignments with cluster names
+- **`../../data/internal-task-clusters/task_clusters_names.csv`** - Complete task assignments with cluster names
   ```
   task_id | onet_code | task | title | level2_cluster | level2_name | level1_cluster | level1_name
   ```
 
 ### Summary
-- **`stage5_task_summary.json`** - Pipeline statistics and validation scores
+- **`../../data/internal-task-clusters/task_clusters_summary.json`** - Pipeline statistics and validation scores
   ```json
   {
     "parameters": {"k1": 12, "k2": 400},
@@ -109,11 +109,11 @@ python stage5_task_clusters_run.py --skip-validation
   ```
 
 ### Cache Files
-- **`stage5_task_clusters_embeddings_onet.npz`** - Cached ONET task embeddings
-- **`stage5_task_clusters_embeddings_l2.npz`** - Cached Level 2 name embeddings
+- **`../../embeddings_cache/task_clusters_embeddings_onet.npz`** - Cached ONET task embeddings
+- **`../../embeddings_cache/task_clusters_embeddings_l2.npz`** - Cached Level 2 name embeddings
 
 ### Logs
-- **`stage5_task_clusters_run.log`** - Main pipeline execution log
+- **`logs/task_clusters_run.log`** - Main pipeline execution log
 - **`logs/`** - Inspect evaluation logs for naming and validation
 
 ## Implementation Details

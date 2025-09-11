@@ -17,7 +17,7 @@ MCP_MAX_WORKERS_BULK = 20 # Max concurrent workers for fetching server details
 API_DELAY_BULK = 0.05     # Small delay (in seconds) between paginated calls to the /servers list endpoint
 
 # --- Logging Setup for Bulk Download ---
-LOG_FILE_BULK = "bulk_mcp_download.log"
+LOG_FILE_BULK = "logs/bulk_mcp_download.log"
 
 # Remove existing handlers if re-running in an interactive environment
 for handler in logging.root.handlers[:]:

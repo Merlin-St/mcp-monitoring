@@ -12,7 +12,7 @@ from datetime import datetime
 from ..data_analysis_topics.naics_classification_config import NAICS_KEYWORDS
 
 class FinanceMCPSearcher:
-    def __init__(self, data_file: str = 'mcp_repositories.json'):
+    def __init__(self, data_file: str = 'data/external-servers/github_mcp_repositories.json'):
         self.data_file = data_file
         self.repositories = []
         # Get finance keywords from central configuration
@@ -162,15 +162,15 @@ class FinanceMCPSearcher:
     def save_results(self, finance_repos: List[Dict], report: Dict):
         """Save results to multiple formats"""
         # Save detailed JSON
-        with open('finance_mcp_repositories.json', 'w', encoding='utf-8') as f:
+        with open('data/external-servers/finance_mcp_repositories.json', 'w', encoding='utf-8') as f:
             json.dump(finance_repos, f, indent=2, ensure_ascii=False)
         
         # Save report
-        with open('finance_mcp_report.json', 'w', encoding='utf-8') as f:
+        with open('data/external-servers/finance_mcp_report.json', 'w', encoding='utf-8') as f:
             json.dump(report, f, indent=2, ensure_ascii=False)
         
         # Save CSV for easy viewing
-        with open('finance_mcp_repositories.csv', 'w', newline='', encoding='utf-8') as f:
+        with open('data/external-servers/finance_mcp_repositories.csv', 'w', newline='', encoding='utf-8') as f:
             writer = csv.DictWriter(f, fieldnames=[
                 'name', 'full_name', 'description', 'html_url', 'language',
                 'stars', 'relevance_score', 'matched_keywords', 'topics'

@@ -741,7 +741,7 @@ def main():
                        help='Number of samples to use for optimization (default: 1000)')
     parser.add_argument('--max-combinations', type=int, default=100,
                        help='Maximum number of parameter combinations to test (default: 100)')
-    parser.add_argument('--data-file', type=str, default='data_unified_filtered.json',
+    parser.add_argument('--data-file', type=str, default='data/initial/data_unified_filtered.json',
                        help='Data file to use for optimization')
     parser.add_argument('--no-cache', action='store_true',
                        help='Disable embedding caching')
@@ -798,7 +798,7 @@ def main():
     
     # Display final file names
     suffix = f"_sector_{selected_sector}" if selected_sector else ""
-    log_file = f'embed_hyperparameter_optimization{suffix}.log'
+    log_file = f'logs/embed_hyperparameter_optimization{suffix}.log'
     
     print(f"\nAll results logged to: {log_file}")
     print("Check the end of the log file for recommended configuration.")

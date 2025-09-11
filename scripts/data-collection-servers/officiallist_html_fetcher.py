@@ -26,7 +26,7 @@ class MCPServerHTMLFetcher:
         self.logger = logging.getLogger(__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            file_handler = logging.FileHandler('officiallist_data_run.log')
+            file_handler = logging.FileHandler('logs/officiallist_data_run.log')
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             file_handler.setFormatter(formatter)
@@ -344,9 +344,9 @@ class MCPServerHTMLFetcher:
 
 def main():
     parser = argparse.ArgumentParser(description='Fetch HTML from external MCP server URLs')
-    parser.add_argument('--input', default='officiallist_urls.json',
+    parser.add_argument('--input', default='data/external-servers/officiallist_urls.json',
                        help='Input JSON file with URLs from extractor')
-    parser.add_argument('--output', default='officiallist_servers_with_html.json',
+    parser.add_argument('--output', default='data/external-servers/officiallist_servers_with_html.json',
                        help='Output JSON file with HTML content')
     parser.add_argument('--batch-size', type=int, default=50,
                        help='Save progress every N servers')
@@ -362,7 +362,7 @@ def main():
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),
-            logging.FileHandler('officiallist_data_run.log')
+            logging.FileHandler('logs/officiallist_data_run.log')
         ]
     )
     logger = logging.getLogger(__name__)

@@ -31,7 +31,7 @@ This task-level approach provides granular insight into specific work activities
 
 ### Embedding-Based Approach (This Analysis)
 - **Model**: NovaSearch/stella_en_400M_v5 (1024-dimensional embeddings)
-- **Data**: 100 MCP tools from `stage5_samples.jsonl` (outdated - use stage5_samples in next iteration) matched against 18,796 ONET tasks
+- **Data**: 100 MCP tools from `../../data/internal-cl/cltools_samples.jsonl` matched against 18,796 ONET tasks
 - **Method**: Cosine similarity between tool descriptions and occupational task statements
 - **Advantage**: Scalable, consistent, and quantitative matching without LLM inference costs
 
@@ -533,4 +533,4 @@ The embedding-based analysis reveals **substantial semantic alignment** between 
 
 ---
 
-*Analysis completed using NovaSearch/stella_en_400M_v5 embeddings with 100 MCP tool samples matched against 18,796 ONET occupational tasks. Full results available in `stage5_task_clusters_embed_match_results.json`.*
+*Analysis completed using NovaSearch/stella_en_400M_v5 embeddings with 100 MCP tool samples matched against 18,796 ONET occupational tasks. Full results available in `task_clusters_embed_match_results.json`.*

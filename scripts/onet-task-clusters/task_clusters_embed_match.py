@@ -44,9 +44,9 @@ class MCPToONETMatcher:
     def __init__(self):
         """Initialize the matcher with required data paths"""
         self.mcp_input_file = "data/internal-cl/cltools_samples.jsonl"
-        self.onet_tasks_file = "cl_onet_taskstatements.csv"
-        self.onet_embeddings_file = "task_clusters_embeddings_onet.npz"
-        self.mcp_embeddings_cache = "task_clusters_mcp_tool_embeddings.npz"
+        self.onet_tasks_file = "data/external-cl/cl_onet_taskstatements.csv"
+        self.onet_embeddings_file = "embeddings_cache/task_clusters_embeddings_onet.npz"
+        self.mcp_embeddings_cache = "embeddings_cache/task_clusters_mcp_tool_embeddings.npz"
         
         # Data containers
         self.mcp_samples = []

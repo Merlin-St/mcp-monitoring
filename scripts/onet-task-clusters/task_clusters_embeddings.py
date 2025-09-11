@@ -158,7 +158,7 @@ def cluster_embeddings(embeddings: np.ndarray, k: int = 400) -> Tuple[np.ndarray
 def embed_onet_tasks(
     df: pd.DataFrame,
     text_column: str = 'Task',
-    cache_file: str = 'task_clusters_embeddings_onet.npz',
+    cache_file: str = 'embeddings_cache/task_clusters_embeddings_onet.npz',
     k: int = 400,
     force_regenerate: bool = False
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
@@ -199,7 +199,7 @@ def embed_onet_tasks(
 def assign_clusters_to_level1_categories(
     cluster_centers: np.ndarray,
     level2_clusters: np.ndarray,
-    cache_file: str = 'level1_embeddings.npz',
+    cache_file: str = 'embeddings_cache/level1_embeddings.npz',
     force_regenerate: bool = False
 ) -> Tuple[np.ndarray, Dict[str, Any]]:
     """
