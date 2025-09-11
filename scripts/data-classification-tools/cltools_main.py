@@ -29,14 +29,13 @@ import argparse
 import csv
 import json
 import logging
-import os
 import subprocess
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 # ---- Inspect AI imports (runtime + analysis beta) ----
 from inspect_ai import Task, task
-from inspect_ai.dataset import Sample, json_dataset
+from inspect_ai.dataset import json_dataset
 from inspect_ai.model import ChatMessageUser
 from inspect_ai.solver import chain, solver, system_message
 # analysis dataframes  
@@ -730,7 +729,6 @@ def export_csv(
         })
 
     # Write CSV
-    import pandas as pd
     out_df = pd.DataFrame(rows)
     Path(out_csv_path).parent.mkdir(parents=True, exist_ok=True)
     out_df.to_csv(out_csv_path, index=False, encoding="utf-8")

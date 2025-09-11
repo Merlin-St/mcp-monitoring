@@ -39,13 +39,9 @@ Export the results as JSON and save as 'usage_bigquery_webresults_pypi.json'
 import argparse
 import datetime as dt
 import json
-import os
-import time
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple
 import logging
 
-import pandas as pd
-import requests
 
 # File paths
 MATCHED_PACKAGES_FILE = "data/external-usage/usage_match.json"

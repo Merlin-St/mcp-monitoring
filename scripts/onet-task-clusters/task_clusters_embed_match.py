@@ -16,13 +16,11 @@ import json
 import logging
 import numpy as np
 import pandas as pd
-from pathlib import Path
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Any
 from sklearn.metrics.pairwise import cosine_similarity
 
 # Import functions from the task embeddings module
 from .task_clusters_embeddings import (
-    get_embedding_model,
     load_or_generate_embeddings,
     EMBEDDING_MODEL_NAME
 )

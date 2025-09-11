@@ -11,7 +11,7 @@ This module provides reusable functions for:
 import logging
 import numpy as np
 from pathlib import Path
-from typing import Tuple, Optional, Dict, Any
+from typing import Tuple, Dict, Any
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import KMeans
@@ -265,13 +265,13 @@ def assign_clusters_to_level1_categories(
     min_similarity = best_similarities.min()
     max_similarity = best_similarities.max()
     
-    logger.info(f"\nAssignment Quality:")
+    logger.info("\nAssignment Quality:")
     logger.info(f"  Average similarity: {avg_similarity:.4f}")
     logger.info(f"  Min similarity: {min_similarity:.4f}")
     logger.info(f"  Max similarity: {max_similarity:.4f}")
     
     # Report average similarity by Level 1 category
-    logger.info(f"\nAverage Similarity by Level 1 Category:")
+    logger.info("\nAverage Similarity by Level 1 Category:")
     category_similarities = {}
     for category_key in category_keys:
         category_sims = []
@@ -286,7 +286,7 @@ def assign_clusters_to_level1_categories(
             logger.info(f"  {category_key}: {avg_cat_sim:.4f} ({len(category_sims)} clusters) - {category_name}")
     
     # Report 20 lowest similarity assignments (poorest fits)
-    logger.info(f"\n20 Lowest Similarity Assignments (Poorest Category Fits):")
+    logger.info("\n20 Lowest Similarity Assignments (Poorest Category Fits):")
     low_similarity_indices = np.argsort(best_similarities)[:20]
     for i, idx in enumerate(low_similarity_indices):
         level2_cluster = level2_clusters[idx]
@@ -604,8 +604,6 @@ def log_cluster_validation_metrics(
     # Silhouette score
     silhouette = calculate_cluster_consistency_score(embeddings, cluster_labels, 'silhouette')
     
-    # Intra-cluster distance
-    intra_distance = calculate_cluster_consistency_score(embeddings, cluster_labels, 'intra_cluster_distance')
     
     # Log interpretation
     if silhouette > 0.5:

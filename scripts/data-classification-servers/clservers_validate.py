@@ -10,12 +10,10 @@ Inspired by the stage1 inspect validation methodology.
 """
 
 import json
-import math
 import pandas as pd
 import numpy as np
 import logging
-from typing import Dict, List, Any, Tuple
-from pathlib import Path
+from typing import Dict, Any, Tuple
 
 # Configure logging
 logging.basicConfig(
@@ -262,18 +260,18 @@ def calculate_level_metrics(human_values: pd.Series, llm_values: pd.Series) -> D
     
     # Build confusion matrix (5x5 for levels 1-5)
     confusion_matrix = [[0 for _ in range(5)] for _ in range(5)]
-    for h, l in zip(h_array, l_array):
-        confusion_matrix[int(h)-1][int(l)-1] += 1
+    for h, llm_score in zip(h_array, l_array):
+        confusion_matrix[int(h)-1][int(llm_score)-1] += 1
     
     # Analyze specific disagreement patterns
     disagreements = []
-    for i, (h, l) in enumerate(zip(h_array, l_array)):
-        if h != l:
+    for i, (h, llm_score) in enumerate(zip(h_array, l_array)):
+        if h != llm_score:
             disagreements.append({
                 'index': i,
                 'human_level': int(h),
-                'llm_level': int(l),
-                'difference': int(l) - int(h)
+                'llm_level': int(llm_score),
+                'difference': int(llm_score) - int(h)
             })
     
     # Calculate level distribution

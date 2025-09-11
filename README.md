@@ -1,8 +1,9 @@
-# What AI agents do - and how autonomously: Evidence from 100k MCP tools
---MCP server monitoring project--
+# MCP server monitoring project
 
-## Overview
-AI agents are starting to interact with the external environment, mostly via Model Context Protocol servers (MCPs) that provide tools to agents. We analyse over 100k MCP tools sourced from online repositories(Github, Smithery, official MCP repo) and a web server search (Shodan, tbd). We classify servers and tools through the lens of tasks in the O*NET Database and by their ability to modify external environments, and weight them by usage (as per pypi/npm downloads, and smithery API usage).
+**Status: Highly WIP. First full pipeline built, with outputs on https://sr-mcp-dashboard.apps.aisi.org.uk/. Not yet fully validated, readme needs clarification, ask Merlin for details**
+
+## Overview: What AI agents do - and how autonomously: Evidence from 70k MCP tools
+AI agents are starting to interact with the external environment, mostly via Model Context Protocol servers (MCPs) that provide tools to agents. We analyse over 70k MCP tools sourced from online repositories(Github, Smithery, official MCP repo) and a web server search (Shodan, tbd). We classify servers and tools through the lens of tasks in the O*NET Database and by their ability to modify external environments, and weight them by usage (as per pypi/npm downloads, and smithery API usage).
 
 ## 🚀 Quick Start
 ```bash
