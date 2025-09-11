@@ -18,14 +18,14 @@ from datetime import datetime
 from typing import Dict, List, Optional
 from dataclasses import dataclass
 from pathlib import Path
-from naics_classification_config import NAICS_KEYWORDS, NAICS_KEYWORDS_SUB
+from ..data_analysis_topics.naics_classification_config import NAICS_KEYWORDS, NAICS_KEYWORDS_SUB
 
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('data_unified_processor.log'),
+        logging.FileHandler('logs/data_unified_processor.log'),
         logging.StreamHandler()
     ]
 )
@@ -160,7 +160,7 @@ class UnifiedMCPDataProcessor:
         """Load all data files"""
         try:
             # Load Smithery data (detailed version with tools)
-            smithery_file = Path("smithery_data.json")
+            smithery_file = Path("data/external-servers/smithery_data.json")
             if smithery_file.exists():
                 with open(smithery_file, 'r', encoding='utf-8') as f:
                     self.smithery_data = json.load(f)
@@ -169,7 +169,7 @@ class UnifiedMCPDataProcessor:
                 logger.warning("Smithery data file not found")
                 
             # Load GitHub data
-            github_file = Path("github_data.json")
+            github_file = Path("data/external-servers/github_data.json")
             if github_file.exists():
                 with open(github_file, 'r', encoding='utf-8') as f:
                     self.github_data = json.load(f)
@@ -178,7 +178,7 @@ class UnifiedMCPDataProcessor:
                 logger.warning("GitHub data file not found")
                 
             # Load Official list data - only use the full file with GitHub metadata
-            official_full_file = Path("officiallist_data.json")
+            official_full_file = Path("data/external-servers/officiallist_data.json")
             
             if official_full_file.exists():
                 with open(official_full_file, 'r', encoding='utf-8') as f:
@@ -810,7 +810,7 @@ class UnifiedMCPDataProcessor:
         # Remove None values to reduce file size
         return {k: v for k, v in server_dict.items() if v is not None}
     
-    def save_unified_data(self, output_file: str = "data_unified.json"):
+    def save_unified_data(self, output_file: str = "data/initial/data_unified.json"):
         """Save unified data to JSON file with streaming for memory efficiency"""
         logger.info(f"Saving unified data to {output_file}...")
         
@@ -831,7 +831,7 @@ class UnifiedMCPDataProcessor:
             logger.info(f"Successfully saved {len(serializable_data)} unified servers to {output_file}")
             
             # Generate summary statistics
-            if output_file == "data_unified.json":
+            if output_file == "data/initial/data_unified.json":
                 # Create basic summary for main file
                 self.generate_basic_summary_stats(serializable_data, output_file.replace('.json', '_summary.json'))
             else:

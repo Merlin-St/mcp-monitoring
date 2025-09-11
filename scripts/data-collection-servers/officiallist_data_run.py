@@ -13,8 +13,8 @@ import asyncio
 from datetime import datetime
 
 # Import our modular components
-from officiallist_url_extractor import MCPServerURLExtractor
-from officiallist_html_fetcher import MCPServerHTMLFetcher
+from .officiallist_url_extractor import MCPServerURLExtractor
+from .officiallist_html_fetcher import MCPServerHTMLFetcher
 
 
 class OfficialistDataRunner:
@@ -25,7 +25,7 @@ class OfficialistDataRunner:
         self.logger = logging.getLogger(__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            file_handler = logging.FileHandler('officiallist_data_run.log')
+            file_handler = logging.FileHandler('logs/officiallist_data_run.log')
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             file_handler.setFormatter(formatter)
@@ -317,7 +317,7 @@ class OfficialistDataRunner:
         }
         
         # Save merged data
-        with open('officiallist_data.json', 'w', encoding='utf-8') as f:
+        with open('data/external-servers/officiallist_data.json', 'w', encoding='utf-8') as f:
             json.dump(final_data, f, indent=2, ensure_ascii=False)
         
         # Create and save summary
@@ -339,7 +339,7 @@ class OfficialistDataRunner:
         self.logger.info(f"  URLs: {data_sources['urls'].get('total_servers', 0)}")
         self.logger.info(f"  HTML: {len(lookups['html'])}")
         self.logger.info(f"  GitHub: {len(lookups['github'])}")
-        self.logger.info("Final dataset saved to: officiallist_data.json")
+        self.logger.info("Final dataset saved to: data/external-servers/officiallist_data.json")
         
         return True
     
@@ -504,7 +504,7 @@ class OfficialistDataRunner:
             self.logger.info(f"GitHub enhanced: {github_count}")
             self.logger.info(f"Data merger: {'✓ Success' if merger_success else '✗ Failed'}")
             
-            self.logger.info("\n✓ PIPELINE SUCCESSFUL - Data saved to: officiallist_data.json")
+            self.logger.info("\n✓ PIPELINE SUCCESSFUL - Data saved to: data/external-servers/officiallist_data.json")
             return True
                 
         except Exception as e:

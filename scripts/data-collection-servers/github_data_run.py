@@ -19,7 +19,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('github_data_run.log'),
+        logging.FileHandler('logs/github_data_run.log'),
         logging.StreamHandler()  # Keep console output for immediate feedback
     ]
 )
@@ -596,7 +596,7 @@ async def main():
         if test_mode:
             filename = 'github_data_test.json'
         else:
-            filename = 'github_data.json'
+            filename = 'data/external-servers/github_data.json'
         collector.save_data(repositories, filename)
         
         # Also save a summary

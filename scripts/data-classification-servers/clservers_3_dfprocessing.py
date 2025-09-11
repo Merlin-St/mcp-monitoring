@@ -23,7 +23,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('clservers_3_dfprocessing.log'),
+        logging.FileHandler('logs/clservers_3_dfprocessing.log'),
         logging.StreamHandler()
     ]
 )
@@ -345,7 +345,7 @@ def main():
         results_df = results_df[existing_columns]
         
         # Convert DataFrame to JSON format (list of dictionaries)
-        json_output_file = "clservers_3_results.json"
+        json_output_file = "data/internal-cl/clservers_3_results.json"
         results_list = results_df.to_dict('records')
         
         # Save as JSON

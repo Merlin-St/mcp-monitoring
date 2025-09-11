@@ -27,7 +27,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('clservers_1_dataprep.log'),
+        logging.FileHandler('logs/clservers_1_dataprep.log'),
         logging.StreamHandler()
     ]
 )
@@ -171,7 +171,7 @@ def main():
     random.seed(42)
     
     # Load dataset
-    input_file = 'data_unified_filtered.json'
+    input_file = 'data/initial/data_unified_filtered.json'
     if not Path(input_file).exists():
         logger.error(f"Input file {input_file} not found")
         return
@@ -217,13 +217,13 @@ def main():
         clservers_samples.append(sample)
     
     # Save cleaned server data
-    output_file = 'clservers_1_dataprep_servers_sample.json'
+    output_file = 'data/internal-cl/clservers_1_dataprep_servers_sample.json'
     with open(output_file, 'w', encoding='utf-8') as f:
         json.dump(cleaned_servers, f, indent=2, ensure_ascii=False)
     logger.info(f"Saved {len(cleaned_servers)} cleaned servers to {output_file}")
     
     # Save CLServers input in JSONL format for Inspect
-    clservers_file = 'clservers_input.jsonl'
+    clservers_file = 'data/internal-cl/clservers_input.jsonl'
     with open(clservers_file, 'w', encoding='utf-8') as f:
         for sample in clservers_samples:
             f.write(json.dumps(sample, ensure_ascii=False) + '\n')
@@ -258,7 +258,7 @@ def main():
         summary["tools_distribution"][category] = summary["tools_distribution"].get(category, 0) + 1
     
     # Save summary
-    summary_file = 'clservers_1_dataprep_summary.json'
+    summary_file = 'data/internal-cl/clservers_1_dataprep_summary.json'
     with open(summary_file, 'w', encoding='utf-8') as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
     logger.info(f"Saved processing summary to {summary_file}")

@@ -18,7 +18,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('cltools_datamatch.log'),
+        logging.FileHandler('logs/cltools_datamatch.log'),
         logging.StreamHandler()
     ]
 )
@@ -26,9 +26,9 @@ logger = logging.getLogger(__name__)
 
 
 def enrich_with_metadata(
-    cltools_path: str = "cltools_3_results.csv",
-    clservers_path: str = "clservers_classified.csv",
-    usage_data_path: str = "data_unified_filtered.json",
+    cltools_path: str = "data/internal-cl/cltools_3_results.csv",
+    clservers_path: str = "data/final/clservers_classified.csv",
+    usage_data_path: str = "data/initial/data_unified_filtered.json",
     output_path: Optional[str] = None
 ) -> str:
     """
@@ -214,18 +214,18 @@ def main():
     )
     parser.add_argument(
         '--cltools', 
-        default="cltools_3_results.csv",
+        default="data/internal-cl/cltools_3_results.csv",
         help="Path to task output CSV file"
     )
     parser.add_argument(
         '--clservers', 
-        default="clservers_classified.csv",
+        default="data/final/clservers_classified.csv",
         help="Path to CLServers CSV file with creation dates and use counts"
     )
     parser.add_argument(
         '--usage-data', 
-        default="data_unified_filtered.json",
-        help="Path to data_unified_filtered.json file with detailed usage data"
+        default="data/initial/data_unified_filtered.json",
+        help="Path to data/initial/data_unified_filtered.json file with detailed usage data"
     )
     parser.add_argument(
         '--output', 
