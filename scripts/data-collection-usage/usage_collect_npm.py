@@ -28,8 +28,8 @@ import logging
 import requests
 
 # Configuration
-DEFAULT_MATCHED_PACKAGES_FILE = "usage_match.json"
-DEFAULT_OUTPUT_FILE = "usage_npm.json"
+DEFAULT_MATCHED_PACKAGES_FILE = "data/external-usage/usage_match.json"
+DEFAULT_OUTPUT_FILE = "data/external-usage/usage_npm.json"
 DEFAULT_START_DATE = dt.date(2024, 11, 1)
 DEFAULT_END_DATE = dt.date.today()
 
@@ -39,7 +39,7 @@ def setup_logging():
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
-            logging.FileHandler('usage_collect_npm.log'),
+            logging.FileHandler('logs/usage_collect_npm.log'),
             logging.StreamHandler()
         ]
     )

@@ -22,7 +22,7 @@ from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import pickle
 import gc
-from naics_classification_config import NAICS_SECTORS, NAICS_KEYWORDS
+from .naics_classification_config import NAICS_SECTORS, NAICS_KEYWORDS
 
 # OPTIMIZATION 1: Enable mixed precision and optimize GPU settings
 def setup_gpu_optimizations():
@@ -531,7 +531,7 @@ def setup_logging(test_mode=False, sector_mode=None):
         filename_suffix += "_test"
     if sector_mode:
         filename_suffix += f"_sector_{sector_mode}"
-    log_filename = f'embed{filename_suffix}_generation.log'
+    log_filename = f'logs/embed{filename_suffix}_generation.log'
     
     # Clear any existing handlers
     for handler in logging.root.handlers[:]:
@@ -629,7 +629,7 @@ def main():
         filename_suffix += "_test"
     if selected_sector:
         filename_suffix += f"_sector_{selected_sector}"
-    log_file = f'embed{filename_suffix}_generation.log'
+    log_file = f'logs/embed{filename_suffix}_generation.log'
     print(f"Starting embedding generation in {mode}. Check {log_file} for detailed progress.")
     
     # Initialize progress bar for overall process and start timing
@@ -638,7 +638,7 @@ def main():
     progress_bar = tqdm(total=total_steps, desc="Overall Progress", unit="step", 
                        bar_format='{desc}: {percentage:3.0f}%|{bar}| {n_fmt}/{total_fmt} steps [{elapsed}]')
     
-    unified_data_file = 'data_unified_filtered.json'
+    unified_data_file = 'data/initial/data_unified_filtered.json'
     test_size = 1000
 
     try:
@@ -938,14 +938,14 @@ def main():
         if selected_sector:
             filename_suffix += f"_sector_{selected_sector}"
         
-        html_filename = f'embed{filename_suffix}_visualization.html'
+        html_filename = f'output-visuals/topics-embedding/embed{filename_suffix}_visualization.html'
         fig.write_html(html_filename)
         viz_duration = time.time() - viz_start
         logger.info(f"Visualization created in {viz_duration:.1f} seconds")
         logger.info(f"Interactive visualization saved to {html_filename}")
         
         # Save detailed results
-        output_file = f'embed{filename_suffix}_results.json'
+        output_file = f'output-visuals/topics-embedding/embed{filename_suffix}_results.json'
         results = df.to_dict('records')
         
         # Add topic information to results

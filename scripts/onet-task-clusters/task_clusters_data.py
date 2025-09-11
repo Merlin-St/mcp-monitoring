@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
-from task_clusters_llm import (
+from .task_clusters_llm import (
     VALIDATION_SYSTEM_PROMPT, 
     L3_TO_L2_VALIDATION_PROMPT,
     L2_TO_L1_VALIDATION_PROMPT, 
@@ -29,7 +29,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def load_onet_tasks(csv_path: str = 'cl_onet_taskstatements.csv') -> pd.DataFrame:
+def load_onet_tasks(csv_path: str = 'data/external-cl/cl_onet_taskstatements.csv') -> pd.DataFrame:
     """
     Load ONET task statements from CSV
     

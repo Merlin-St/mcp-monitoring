@@ -22,7 +22,7 @@ class OfficiallistGitHubFetcherLean:
         self.logger = logging.getLogger(__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            file_handler = logging.FileHandler('officiallist_data_run.log')
+            file_handler = logging.FileHandler('logs/officiallist_data_run.log')
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             file_handler.setFormatter(formatter)

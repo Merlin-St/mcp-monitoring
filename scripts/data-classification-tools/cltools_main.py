@@ -467,7 +467,7 @@ def classify_access_pattern():
 @task
 def mcp_onet_classify_task():
     samples_path = "cltools_samples.jsonl"
-    csv_path = "task_clusters_names.csv"
+    csv_path = "data/internal-task-clusters/task_clusters_names.csv"
     if not Path(samples_path).exists():
         raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
     return Task(
@@ -740,13 +740,13 @@ def export_csv(
 # ---------- CLI ----------
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--servers", default="data_unified_filtered.json", help="Path to filtered MCP servers JSON")
-    ap.add_argument("--onet", default="task_clusters_names.csv", help="Path to O*NET tasks CSV")
+    ap.add_argument("--servers", default="data/initial/data_unified_filtered.json", help="Path to filtered MCP servers JSON")
+    ap.add_argument("--onet", default="data/internal-task-clusters/task_clusters_names.csv", help="Path to O*NET tasks CSV")
     ap.add_argument("--logs", default=None, help="Log dir for O*NET task (auto-generated if not provided)")
     ap.add_argument("--logs-auto", default=None, help="Log dir for Automation Level task")
     ap.add_argument("--logs-func", default=None, help="Log dir for Functionality task")
     ap.add_argument("--logs-access", default=None, help="Log dir for Access Pattern task")
-    ap.add_argument("--out", default="cltools_3_results.csv", help="Output CSV path")
+    ap.add_argument("--out", default="data/internal-cl/cltools_3_results.csv", help="Output CSV path")
     ap.add_argument("--model", default="anthropic/claude-sonnet-4-20250514", help="Model string for inspect eval")
     ap.add_argument("--samples", default="cltools_samples.jsonl", help="Samples JSONL path")
     ap.add_argument("--tools-json", default="cltools_prep.json", help="Snapshot of tool records")
@@ -760,7 +760,7 @@ def main():
     from datetime import datetime
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if args.logs is None:
-        args.logs = f"./.log/onet_{timestamp}"
+        args.logs = f"./logs/onet_{timestamp}"
         log.info(f"Using auto-generated O*NET log directory: {args.logs}")
     if args.logs_auto is None:
         args.logs_auto = f"./.log/auto_{timestamp}"
