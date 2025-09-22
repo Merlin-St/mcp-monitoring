@@ -3,7 +3,7 @@ name = "mcp-monitoring"
 version = "0.1.0"
 description = "MCP Server Monitoring Dashboard - comprehensive analysis of Model Context Protocol servers across multiple data sources"
 readme = "README.md"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.13"
 dependencies = [
     # AISI and Inspect packages
     "aisitools@git+ssh://git@github.com/AI-Safety-Institute/aisi-inspect-tools",
@@ -19,9 +19,9 @@ dependencies = [
     "requests>=2.31.0",
     "aiohttp>=3.9.0",
     # Data analysis and visualization
-    "pandas>=1.5.0",
-    "numpy>=1.24.0",
-    "scipy>=1.10.0",
+    "pandas>=2.2.0",
+    "numpy>=1.26.0",
+    "scipy>=1.9.0",
     "plotly>=5.17.0",
     "matplotlib>=3.7.0",
     "seaborn>=0.12.0",
