@@ -107,6 +107,15 @@ Strict 1:1 package-to-repository matching of monthly download statistics from No
 # - Found: 4,886 total packages (PyPI: 4,528, npm: 358)
 # - Matched: 3,450 packages via competitive 1:1 matching (70.6% coverage)
 ```
+### Data labelling Pipeline (`make data-cl-all`)
+- Before: Filtering and cleaning (see above) with `make data-clean-readmes`.
+  - So far: Readme clean version, is mcp server?, 1 sentence summary, tool extraction.
+  - To add: Which are narrow-purpose vs. general-purpose tools (first say what is the 'action space' then narrow vs general purpose). Which are official vs. unofficial tools as judged by the author of the github repo.
+- Servers classification: Autonomy level
+  - So far: Is_finance, Finance asset type, Automation level, task capabilities, sensitive data inputs 
+- Tools classification:
+  - So far: Automation level, Functionality perception/reasoning/action, access write/read, O-Net cluster assignment
+
 
 ## 📁 Key Files
 ### Main Data
