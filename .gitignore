@@ -44,7 +44,6 @@ logs/
 
 # Cache and data directories
 embeddings_cache/
-data/
 cache/
 temp/
 *.npz
