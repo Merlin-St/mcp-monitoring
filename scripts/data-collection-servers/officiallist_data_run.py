@@ -13,8 +13,12 @@ import asyncio
 from datetime import datetime
 
 # Import our modular components
-from .officiallist_url_extractor import MCPServerURLExtractor
-from .officiallist_html_fetcher import MCPServerHTMLFetcher
+try:
+    from .officiallist_url_extractor import MCPServerURLExtractor
+    from .officiallist_html_fetcher import MCPServerHTMLFetcher
+except ImportError:
+    from officiallist_url_extractor import MCPServerURLExtractor
+    from officiallist_html_fetcher import MCPServerHTMLFetcher
 
 
 class OfficialistDataRunner:
@@ -215,6 +219,7 @@ class OfficialistDataRunner:
             'url': base_server.get('url'),
             'description': base_server.get('description', ''),
             'is_github': base_server.get('is_github', False),
+            'official': base_server.get('official', False),
             'extracted_date': base_server.get('extracted_date')
         }
         
@@ -298,13 +303,17 @@ class OfficialistDataRunner:
         external_servers = total_servers - github_servers
         servers_with_content = sum(1 for s in merged_servers if s.get('readme_content') or s.get('html_content'))
         github_enhanced = sum(1 for s in merged_servers if s.get('github_metadata'))
-        
+        official_servers = sum(1 for s in merged_servers if s.get('official', False))
+        community_servers = total_servers - official_servers
+
         # Create final output
         final_data = {
             'fetch_date': datetime.now().isoformat(),
             'total_servers': total_servers,
             'github_servers': github_servers,
             'external_servers': external_servers,
+            'official_servers': official_servers,
+            'community_servers': community_servers,
             'servers_with_content': servers_with_content,
             'github_enhanced_count': github_enhanced,
             'processed_count': servers_with_content,
@@ -333,6 +342,8 @@ class OfficialistDataRunner:
         self.logger.info(f"Total servers merged: {total_servers}")
         self.logger.info(f"  GitHub servers: {github_servers}")
         self.logger.info(f"  External servers: {external_servers}")
+        self.logger.info(f"  Official servers: {official_servers}")
+        self.logger.info(f"  Community servers: {community_servers}")
         self.logger.info(f"Servers with content: {servers_with_content}")
         self.logger.info(f"GitHub enhanced: {github_enhanced}")
         self.logger.info("Data sources merged:")

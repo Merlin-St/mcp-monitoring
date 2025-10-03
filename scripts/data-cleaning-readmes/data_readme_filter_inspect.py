@@ -14,7 +14,7 @@ Use data_readme_filter_dfprocessing.py to process the results.
 
 Usage:
     python readme_content_filter.py                    # Run initial filter first
-    inspect eval data_readme_filter_inspect.py --model anthropic/claude-3-5-haiku-latest --max-connections 300
+    inspect eval data_readme_filter_inspect.py --model anthropic/claude-sonnet-4-5-20250929 --temperature 0
     python data_readme_filter_dfprocessing.py               # Process results
 """
 
@@ -28,11 +28,12 @@ from inspect_ai.solver import generate, system_message, TaskState
 import logging
 
 # Configure logging
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler('logs/data_readme_filter_inspect.log'),
+        logging.FileHandler(PROJECT_ROOT / 'logs' / 'data_readme_filter_inspect.log'),
         logging.StreamHandler()
     ]
 )
@@ -59,7 +60,7 @@ REMOVE from filtered_content:
 Step 2: CLASSIFY server type:
 - is_mcp_server: 1 if this is an actual MCP server with tools/capabilities, 0 if it's just documentation, links, or references to MCP servers
 
-Step 3: 
+Step 3:
 EXTRACT tools information (try to copy the relevant exact text from the README):
 - Identify each distinct tool/function/capability mentioned
 - Extract name and description for each tool
@@ -76,7 +77,7 @@ OUTPUT: Valid JSON object only, with this exact structure:
       "description": "what this specific tool does and its purpose"
     },
     {
-      "name": "second_tool_name", 
+      "name": "second_tool_name",
       "description": "what this other tool does and its purpose"
     },
     ...
@@ -132,14 +133,14 @@ def readme_json_scorer() -> Scorer:
         # Check required fields exist
         required_fields = ["summary", "is_mcp_server", "filtered_content", "tools"]
         missing_fields = [field for field in required_fields if field not in json_obj]
-        
+
         if missing_fields:
             return Score(
                 value=0,
                 answer=completion,
                 explanation=f"Missing required fields: {missing_fields}"
             )
-        
+
         # Check basic field types
         if not isinstance(json_obj["tools"], list):
             return Score(
@@ -147,7 +148,7 @@ def readme_json_scorer() -> Scorer:
                 answer=completion,
                 explanation="Tools field must be an array"
             )
-        
+
         if json_obj["is_mcp_server"] not in [0, 1]:
             return Score(
                 value=0,
@@ -168,8 +169,9 @@ def prepare_readme_dataset():
     """
     Prepare dataset from data_unified_filtered.json for README filtering
     """
-    input_file = 'data/initial/data_unified_filtered.json'
-    dataset_file = 'data/internal-cl/data_readme_filter_input.jsonl'
+    PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+    input_file = PROJECT_ROOT / 'data' / 'initial' / 'data_unified_filtered.json'
+    dataset_file = PROJECT_ROOT / 'data' / 'internal-cl' / 'data_readme_filter_input.jsonl'
     
     if not Path(input_file).exists():
         logger.error(f"Input file {input_file} not found. Run readme_content_filter.py first.")
@@ -241,14 +243,14 @@ def readme_filter_task():
     """
     # Prepare dataset
     dataset_file, sample_count = prepare_readme_dataset()
-    
+
     # Set appropriate message limit
     dynamic_message_limit = sample_count + 10  # Add buffer for safety
-    
+
     logger.info(f"Setting message_limit to {dynamic_message_limit} for {sample_count} samples")
-    
+
     return Task(
-        dataset=json_dataset(dataset_file),
+        dataset=json_dataset(str(dataset_file)),
         solver=[
             system_message(README_FILTER_SYSTEM_PROMPT),
             generate()

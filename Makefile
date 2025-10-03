@@ -51,14 +51,17 @@ help:
 
 data-collect-servers:
 	@echo "🔄 Collecting MCP server data from all 3 sources..."
-	python scripts/data-collection-servers/smithery_data_run.py
-	python scripts/data-collection-servers/github_data_run.py
+	python scripts/data-collection-servers/smithery_data_run.py --resume
+	python scripts/data-collection-servers/github_data_run.py --resume
 	python scripts/data-collection-servers/officiallist_data_run.py
 	python scripts/data-collection-servers/officiallist_github_fetcher.py
 	@echo "✅ Server data collection complete"
 
 data-collect-usage:
 	@echo "🔄 Collecting usage statistics..."
+	@echo "  Step 1: Searching npm registry for MCP packages..."
+	python scripts/data-collection-usage/usage_npm_search.py --detailed
+	@echo "  Step 2: Fetching download statistics from npm API..."
 	python scripts/data-collection-usage/usage_collect_npm.py
 	@echo "✅ Usage data collection complete"
 
@@ -77,7 +80,7 @@ data-initial:
 
 data-clean-readmes:
 	@echo "🔄 Filtering README content using LLM..."
-	inspect eval scripts/data-cleaning-readmes/data_readme_filter_inspect.py --model anthropic/claude-sonnet-4-20250514
+	inspect eval scripts/data-cleaning-readmes/data_readme_filter_inspect.py --model anthropic/claude-sonnet-4-5-20250929 --temperature 0
 	python scripts/data-cleaning-readmes/data_readme_filter_dfprocessing.py
 	@echo "✅ README filtering complete"
 
@@ -123,8 +126,15 @@ data-task-clusters:
 data-cl-servers:
 	@echo "🔄 Running CLServers pipeline (server classification)..."
 	python scripts/data-classification-servers/clservers_1_dataprep.py
-	inspect eval scripts/data-classification-servers/clservers_2_inspect.py --model anthropic/claude-sonnet-4-20250514
-	python scripts/data-classification-servers/clservers_3_dfprocessing.py
+	@echo "  Running finance identification (evaluates all servers)..."
+	inspect eval scripts/data-classification-servers/clservers_2_inspect.py --model anthropic/claude-sonnet-4-5-20250929 --temperature 0
+	@echo "  Running NAICS industry classification..."
+	inspect eval scripts/data-classification-servers/clservers_2_inspect.py@naics_classification_task --model anthropic/claude-sonnet-4-5-20250929 --temperature 0
+	@echo "  Processing finance identification results..."
+	python scripts/data-classification-servers/clservers_3_dfprocessing.py --task finance-identification
+	@echo "  Processing NAICS classification results..."
+	python scripts/data-classification-servers/clservers_3_dfprocessing.py --task naics
+	@echo "  Matching and merging all results..."
 	python scripts/data-classification-servers/clservers_4_datamatch.py
 	@echo "✅ CLServers pipeline complete: data/final/clservers_classified.csv"
 

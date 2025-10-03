@@ -264,7 +264,7 @@ def main():
     logger.info(f"Saved processing summary to {summary_file}")
     
     logger.info("Data preparation completed successfully!")
-    logger.info("Next step: Run CLServers Step 2 evaluation with: inspect eval clservers_2_inspect.py --model anthropic/claude-sonnet-4-20250514")
+    logger.info("Next step: Run CLServers Step 2 evaluation with: inspect eval clservers_2_inspect.py --model anthropic/claude-sonnet-4-5-20250929 --temperature 0")
 
 if __name__ == "__main__":
     main()

@@ -253,7 +253,7 @@ def process_evaluation_results(eval_results: List[Dict[str, Any]],
             dataset[server_index]['readme_filtered'] = filtered_content
             dataset[server_index]['readme_summary'] = summary
             dataset[server_index]['readme_is_mcp_server'] = is_mcp_server
-            
+
             # Only add README-extracted tools if no existing tools
             existing_tools = dataset[server_index].get('tools', [])
             if not existing_tools and tools and isinstance(tools, list):
@@ -338,13 +338,13 @@ def validate_filtering_results(dataset: List[Dict[str, Any]]) -> Dict[str, Any]:
         # Count new fields
         if summary and summary.strip():
             validation_stats['servers_with_summary'] += 1
-        
+
         # Count MCP server classification
         if is_mcp_server == 1:
             validation_stats['servers_classified_as_mcp'] += 1
         elif is_mcp_server == 0:
             validation_stats['servers_classified_as_non_mcp'] += 1
-            
+
         if tools and isinstance(tools, list) and len(tools) > 0:
             validation_stats['servers_with_tools'] += 1
             validation_stats['total_tools_extracted'] += len(tools)

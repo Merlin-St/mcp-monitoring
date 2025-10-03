@@ -6,16 +6,18 @@ import requests
 import time
 import json
 import concurrent.futures
-from .smithery_bulk_mcp_config import ( # Assuming you are using smithery_bulk_mcp_config.py
-    bulk_logger as logger, MCP_API_BASE_URL, MCP_REQUEST_TIMEOUT, 
-    API_DELAY_BULK, MCP_PAGE_SIZE_BULK, MCP_MAX_WORKERS_BULK
-)
-# If you switched to config_utils.py, change the import above to:
-# from config_utils import (
-#     logger, MCP_API_BASE_URL, MCP_REQUEST_TIMEOUT,
-#     API_DELAY_BULK_LIST as API_DELAY_BULK, # Ensure variable names match
-#     MCP_PAGE_SIZE_BULK, MCP_MAX_WORKERS_BULK
-# )
+
+# Handle both direct execution and module imports
+try:
+    from .smithery_bulk_mcp_config import (
+        bulk_logger as logger, MCP_API_BASE_URL, MCP_REQUEST_TIMEOUT,
+        API_DELAY_BULK, MCP_PAGE_SIZE_BULK, MCP_MAX_WORKERS_BULK
+    )
+except ImportError:
+    from smithery_bulk_mcp_config import (
+        bulk_logger as logger, MCP_API_BASE_URL, MCP_REQUEST_TIMEOUT,
+        API_DELAY_BULK, MCP_PAGE_SIZE_BULK, MCP_MAX_WORKERS_BULK
+    )
 
 
 def _fetch_server_list_page(api_key, page, page_size, base_url):

@@ -356,11 +356,20 @@ class GitHubMCPCollector:
             # Generate daily searches from 2012 to current date
             from datetime import datetime, timedelta
             
-            # Handle resume mode
+            # Handle resume mode with fallback
             existing_data = []
             if resume_mode:
+                # Try partial file first, fallback to main github_data.json
                 partial_filename = 'data/external-servers/github_mcp_repositories_test_partial.json' if test_mode else 'data/external-servers/github_mcp_repositories_partial.json'
+                main_filename = 'data/external-servers/github_data_test.json' if test_mode else 'data/external-servers/github_data.json'
+
                 existing_data = self.load_existing_data(partial_filename)
+                if not existing_data:
+                    logger.info(f"Partial file not found, trying fallback to {main_filename}")
+                    existing_data = self.load_existing_data(main_filename)
+                    if existing_data:
+                        logger.info(f"RESUME MODE: Loaded {len(existing_data)} existing repos from {main_filename}")
+
                 start_date = self.get_resume_date(existing_data)
             else:
                 start_date = datetime(2024, 11, 1)
@@ -574,14 +583,15 @@ async def main():
         
         if resume_mode:
             logger.info("RESUME MODE: Will load existing data and continue from last processed date")
-        
+            logger.info("  (tries partial file first, falls back to github_data.json)")
+
         if use_rest:
             logger.info("Using REST API with full pagination to get all MCP repositories...")
         else:
             logger.info("Using async GraphQL API for faster collection...")
         logger.info("Use --test or -t flag to run a quick test with 10 repos")
         logger.info("Use --graphql or --gql flag to use GraphQL API (REST is default)")
-        logger.info("Use --resume or -r flag to resume from existing partial data")
+        logger.info("Use --resume or -r flag to resume from last collected date")
         
         start_time = time.time()
         repositories = await collector.collect_mcp_repositories(test_mode=test_mode, use_rest=use_rest, resume_mode=resume_mode)

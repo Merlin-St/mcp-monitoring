@@ -8,6 +8,7 @@ original evaluation.
 
 This should be run after:
     python clservers_3_dfprocessing.py
+    python clservers_3_dfprocessing.py --task naics
 
 Usage:
     python clservers_4_datamatch.py
@@ -16,10 +17,15 @@ Usage:
 import json
 import logging
 import os
+import sys
 import pandas as pd
 from pathlib import Path
 from datetime import datetime
 import boto3
+
+# Add script directory to path to import naics_3digit_data
+sys.path.insert(0, str(Path(__file__).parent))
+from naics_3digit_data import get_naics_title
 
 # Configure logging
 logging.basicConfig(
@@ -226,6 +232,7 @@ def main():
     # Extract fields from parsed_output if they're not already columns
     parsed_fields = [
         'analysis_notes', 'is_finance_llm', 'asset_type', 'level',
+        'action_space_description', 'generality_industry', 'generality_environment',
         'research_and_risk_assessment', 'documentation_gathering', 'application_and_review',
         'identity_verification', 'authorization_account_transactions', 'account_opening',
         'transfer_bank_and_fund_bank_account', 'transfer_credit_card', 'transfer_paypal_stripe_payments',
@@ -261,14 +268,79 @@ def main():
     logger.info(f"Matched creation dates: {matched_created_at}/{len(results_df)} ({matched_created_at/len(results_df)*100:.1f}%)")
     logger.info(f"Matched use counts: {matched_use_count}/{len(results_df)} ({matched_use_count/len(results_df)*100:.1f}%)")
     logger.info(f"Matched star counts: {matched_stars}/{len(results_df)} ({matched_stars/len(results_df)*100:.1f}%)")
-    
+
+    # Match NAICS classifications
+    naics_file = 'data/internal-cl/clservers_naics_results.json'
+    if Path(naics_file).exists():
+        logger.info("Matching NAICS classifications...")
+        try:
+            with open(naics_file, 'r', encoding='utf-8') as f:
+                naics_data = json.load(f)
+
+            # Extract results (handle both formats)
+            if isinstance(naics_data, dict) and 'results' in naics_data:
+                naics_results = naics_data['results']
+            else:
+                naics_results = naics_data
+
+            # Create lookup dictionary: server_id -> naics classification
+            naics_lookup = {}
+            for result in naics_results:
+                parsed_output = result.get('parsed_output', {})
+                if isinstance(parsed_output, dict):
+                    # Get server_id from input_data
+                    input_data = result.get('input_data', {})
+                    if isinstance(input_data, dict):
+                        server_id = input_data.get('server_id', '')
+                        naics_code = parsed_output.get('naics_code', '')
+                        reasoning = parsed_output.get('reasoning', '')
+
+                        if server_id and naics_code:
+                            naics_lookup[server_id] = {
+                                'naics_code': naics_code,
+                                'naics_reasoning': reasoning
+                            }
+
+            logger.info(f"Loaded {len(naics_lookup)} NAICS classifications")
+
+            # Add NAICS code and title to results
+            results_df['naics_code'] = results_df['server_id'].apply(
+                lambda server_id: naics_lookup.get(server_id, {}).get('naics_code', '')
+            )
+            results_df['naics_title'] = results_df['naics_code'].apply(
+                lambda code: get_naics_title(code) if code and code != 'cross-sector' else code
+            )
+            results_df['naics_reasoning'] = results_df['server_id'].apply(
+                lambda server_id: naics_lookup.get(server_id, {}).get('naics_reasoning', '')
+            )
+
+            matched_naics = len(results_df[results_df['naics_code'] != ''])
+            logger.info(f"Matched NAICS codes: {matched_naics}/{len(results_df)} ({matched_naics/len(results_df)*100:.1f}%)")
+
+            # Show distribution of top NAICS codes
+            if matched_naics > 0:
+                naics_dist = results_df[results_df['naics_code'] != '']['naics_code'].value_counts()
+                logger.info(f"Top 10 NAICS codes: {dict(list(naics_dist.items())[:10])}")
+
+        except Exception as e:
+            logger.warning(f"Could not load NAICS classifications: {e}")
+            results_df['naics_code'] = ''
+            results_df['naics_title'] = ''
+            results_df['naics_reasoning'] = ''
+    else:
+        logger.warning(f"NAICS results file not found: {naics_file}")
+        results_df['naics_code'] = ''
+        results_df['naics_title'] = ''
+        results_df['naics_reasoning'] = ''
+
     # Expand tools column into individual tool columns
     results_df = expand_tools_columns(results_df)
     
     # Reorder columns to put metadata fields after basic server info
-    input_columns = ['server_name', 'server_id', 'description', 'created_at', 'use_count', 'stargazers_count', 
+    input_columns = ['server_name', 'server_id', 'description', 'created_at', 'use_count', 'stargazers_count',
                      'readme_filtered', 'readme_summary', 'topics', 'data_sources']
-    analysis_columns = ['analysis_notes', 'is_finance_llm', 'asset_type', 'level']
+    naics_columns = ['naics_code', 'naics_title', 'naics_reasoning']
+    analysis_columns = ['analysis_notes', 'is_finance_llm', 'asset_type', 'level', 'action_space_description', 'generality_industry', 'generality_environment']
     capability_columns = [
         'research_and_risk_assessment', 'documentation_gathering', 'application_and_review',
         'identity_verification', 'authorization_account_transactions', 'account_opening'
@@ -277,15 +349,16 @@ def main():
         'transfer_bank_and_fund_bank_account', 'transfer_credit_card', 'transfer_paypal_stripe_payments',
         'transfer_stock_invest', 'transfer_crypto_and_stablecoin', 'sensitive_data_required'
     ]
-    
+    payment_columns = ['payments_analysis', 'payments_autonomy']
+
     # Get tool_count column and all tool columns (dynamically created)
     tool_count_column = ['tool_count'] if 'tool_count' in results_df.columns else []
-    tool_columns = [col for col in results_df.columns if col.startswith('tool_') and 
+    tool_columns = [col for col in results_df.columns if col.startswith('tool_') and
                    any(col.endswith(suffix) for suffix in ['_name', '_description', '_inputSchema'])]
     tool_columns.sort()  # Ensure consistent ordering
-    
+
     # Create ordered column list (excluding other_columns)
-    ordered_columns = input_columns + tool_count_column + tool_columns + analysis_columns + capability_columns + transfer_columns
+    ordered_columns = input_columns + naics_columns + tool_count_column + tool_columns + analysis_columns + capability_columns + transfer_columns + payment_columns
     
     # Select only columns that exist in the DataFrame and exclude unwanted columns
     existing_columns = [col for col in ordered_columns if col in results_df.columns]

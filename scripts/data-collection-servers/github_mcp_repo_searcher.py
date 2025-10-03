@@ -9,7 +9,14 @@ import re
 from typing import Dict, List, Tuple
 import csv
 from datetime import datetime
-from ..data_analysis_topics.naics_classification_config import NAICS_KEYWORDS
+
+try:
+    from ..data_analysis_topics.naics_classification_config import NAICS_KEYWORDS
+except ImportError:
+    import sys
+    import os
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+    from data_analysis_topics.naics_classification_config import NAICS_KEYWORDS
 
 class FinanceMCPSearcher:
     def __init__(self, data_file: str = 'data/external-servers/github_mcp_repositories.json'):

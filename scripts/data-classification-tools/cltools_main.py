@@ -795,6 +795,7 @@ def main():
                 task_ref,
                 "--log-dir", logs_dir,
                 "--model", args.model,
+                "--temperature", "0",
             ]
             if args.limit:
                 cmd.extend(["--limit", str(args.limit)])
@@ -807,13 +808,13 @@ def main():
         log.info("Not running eval automatically. To run manually, use:")
         print(
             f"\ninspect eval {this_file}@mcp_onet_classify_task "
-            f"--log-dir {args.logs} --model {args.model}\n"
+            f"--log-dir {args.logs} --model {args.model} --temperature 0\n"
             f"inspect eval {this_file}@mcp_automation_level_task "
-            f"--log-dir {args.logs_auto} --model {args.model}\n"
+            f"--log-dir {args.logs_auto} --model {args.model} --temperature 0\n"
             f"inspect eval {this_file}@mcp_functionality_task "
-            f"--log-dir {args.logs_func} --model {args.model}\n"
+            f"--log-dir {args.logs_func} --model {args.model} --temperature 0\n"
             f"inspect eval {this_file}@mcp_access_pattern_task "
-            f"--log-dir {args.logs_access} --model {args.model}\n"
+            f"--log-dir {args.logs_access} --model {args.model} --temperature 0\n"
         )
 
     # 4) Export merged results (only if eval files exist)

@@ -62,7 +62,7 @@ This is a **MCP Server Monitoring Dashboard** that provides comprehensive analys
 - Monitor MCP server creation and usage trends over time
 - Classify servers by sectors, finance use cases, autonomy levels, and consequentiality
 
-## Data Collection Strategy (3 Approaches)
+## Data Collection Strategy (4 Approaches)
 
 ### 1. Smithery MCP Server Database
 ```bash
@@ -84,6 +84,12 @@ python scripts/data-collection-servers/github_data_run.py
 python scripts/data-collection-servers/officiallist_data_run.py
 ```
 
+### 4. Awesome MCP Servers List
+```bash
+# Scrape curated awesome-mcp-servers list from GitHub
+python scripts/data-collection-servers/awesomelist_data_run.py
+```
+
 ## Core Architecture
 
 **Data Flow:**
@@ -101,6 +107,7 @@ python scripts/data-collection-servers/officiallist_data_run.py
 - `scripts/data-collection-servers/officiallist_data_run.py` - Official list scraping
 - `scripts/data-collection-servers/officiallist_html_fetcher.py` - HTML content fetching
 - `scripts/data-collection-servers/officiallist_url_extractor.py` - URL extraction from HTML
+- `scripts/data-collection-servers/awesomelist_data_run.py` - Awesome MCP Servers curated list scraping with emoji metadata parsing
 
 **Data Processing & Analysis:**
 - `data_unified_processor.py` - Unified data processing (27,899 servers)
@@ -200,6 +207,10 @@ The system extracts and classifies:
 - `data/external-servers/officiallist_history.json` - Historical tracking data
 - `data/external-servers/officiallist_monthly_history.json` - Monthly snapshots
 - `data/external-servers/officiallist_urls.json` - Extracted URLs
+
+### Awesome List Data Files
+- `data/external-servers/awesomelist_data.json` - Curated awesome-mcp-servers list with emoji metadata (languages, scope, platforms)
+- `data/external-servers/awesomelist_data_summary.json` - Summary statistics by category, language, and deployment type
 
 ### Dashboard Data Files
 - `data/initial/data_unified.json` - Unified dashboard data (27MB, 27,899 servers)
@@ -402,7 +413,7 @@ python scripts/data-analysis-topics/embed_apply_optimized_parameters.py logs/emb
 source ~/si_setup/.venv/bin/activate
 
 # LLM-based README filtering using Inspect framework (requires ANTHROPIC_API_KEY)
-inspect eval scripts/data-cleaning-readmes/data_readme_filter_inspect.py --model anthropic/claude-sonnet-4-20250514
+inspect eval scripts/data-cleaning-readmes/data_readme_filter_inspect.py --model anthropic/claude-sonnet-4-5-20250929 --temperature 0
 
 # Process results back to JSON
 python scripts/data-cleaning-readmes/data_readme_filter_dfprocessing.py
@@ -422,7 +433,7 @@ python scripts/data-cleaning-readmes/data_readme_filter_dfprocessing.py --eval-f
 # - logs/readme_filter_*.eval (Inspect evaluation results)
 ```
 
-### Consequentiality Analysis Pipeline (3-Stage Process)
+### Consequentiality Analysis Pipeline (4-Stage Process with NAICS Classification)
 ```bash
 source ~/si_setup/.venv/bin/activate
 
@@ -434,14 +445,19 @@ python scripts/data-classification-servers/clservers_1_dataprep.py --all        
 python scripts/data-classification-servers/clservers_1_dataprep.py --finance          # Only finance-related servers
 python scripts/data-classification-servers/clservers_1_dataprep.py --samples 1000 --finance  # Large finance-focused sample
 
-# 2. CLServers Step 2 - Finance Tool Identification (uses Inspect framework)
-inspect eval scripts/data-classification-servers/clservers_2_inspect.py --model anthropic/claude-sonnet-4-20250514
+# 2. CLServers Step 2 - Dual Classification (evaluates ALL servers)
+# Finance Identification: Determines if each server is finance-related (binary: yes/no)
+inspect eval scripts/data-classification-servers/clservers_2_inspect.py --model anthropic/claude-sonnet-4-5-20250929 --temperature 0
 
-# 3. CLServers Step 3 - DataFrame Processing
-python scripts/data-classification-servers/clservers_3_dfprocessing.py                # Process .eval files to JSON
+# NAICS Classification: Assigns 3-digit NAICS industry code to each server
+inspect eval scripts/data-classification-servers/clservers_2_inspect.py@naics_classification_task --model anthropic/claude-sonnet-4-5-20250929 --temperature 0
 
-# 4. CLServers Step 4 - Data Matching
-python scripts/data-classification-servers/clservers_4_datamatch.py                   # Add metadata and create final CSV
+# 3. CLServers Step 3 - DataFrame Processing (Both Tasks)
+python scripts/data-classification-servers/clservers_3_dfprocessing.py --task finance-identification  # Process finance yes/no classification
+python scripts/data-classification-servers/clservers_3_dfprocessing.py --task naics                   # Process NAICS industry codes
+
+# 4. CLServers Step 4 - Data Matching & Merging
+python scripts/data-classification-servers/clservers_4_datamatch.py                   # Merges finance + NAICS + metadata
 
 # CLTools Pipeline - O*NET Task Classification
 python scripts/data-classification-tools/cltools_main.py --run                      # Run full pipeline (costly)
@@ -465,11 +481,13 @@ python scripts/onet-task-clusters/task_clusters_run.py --k2 400              # R
 python scripts/onet-task-clusters/task_clusters_embed_match.py               # Match MCP tools to O*NET tasks
 
 # Complete Pipeline Workflow:
-# CLServers Pipeline: Finance Server Classification
-#   - Step 1: Creates data/internal-cl/clservers_1_dataprep_servers_sample.json and data/internal-cl/clservers_input.jsonl
-#   - Step 2: Identifies finance-related servers using LLM evaluation via Inspect
-#   - Step 3: Processes .eval files to JSON (data/internal-cl/clservers_3_results.json)
-#   - Step 4: Adds metadata and creates final CSV (data/final/clservers_classified.csv)
+# CLServers Pipeline: Finance Identification + NAICS Classification (ALL servers evaluated)
+#   - Step 1: Creates data/internal-cl/clservers_input.jsonl with ALL server data
+#   - Step 2a: Finance identification - binary yes/no for each server (finance-related or not)
+#   - Step 2b: NAICS classification - assigns 3-digit NAICS industry code to each server
+#   - Step 3a: Processes finance .eval files to JSON (data/internal-cl/clservers_3_results.json)
+#   - Step 3b: Processes NAICS .eval files to JSON (data/internal-cl/clservers_naics_results.json)
+#   - Step 4: Merges finance + NAICS + metadata → final CSV (data/final/clservers_classified.csv)
 
 # CLTools Pipeline: O*NET Task Mapping
 #   - Main: Maps MCP tools to O*NET occupational tasks
@@ -477,7 +495,7 @@ python scripts/onet-task-clusters/task_clusters_embed_match.py               # M
 #   - Output: data/final/cltools_classified.csv with full task and metadata mapping
 
 # Outputs:
-# - CLServers: data/final/clservers_classified.csv (finance-relevant servers with metadata)
+# - CLServers: data/final/clservers_classified.csv (ALL servers with finance yes/no + NAICS code + metadata)
 # - CLTools: data/final/cltools_classified.csv (O*NET task mappings with metadata)
 
 # Requirements:

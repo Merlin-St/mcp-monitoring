@@ -271,36 +271,43 @@ class MCPServerURLExtractor:
         """Parse servers from README content with comprehensive pattern matching"""
         lines = content.split('\n')
         servers = []
-        
+        in_community_section = False
+
         for line in lines:
+            # Check if we've reached the Community Servers section
+            if '🌎 Community Servers' in line or '### Community Servers' in line:
+                in_community_section = True
+                self.logger.debug(f"Reached Community Servers section")
+                continue
+
             # Skip lines that don't start with bullet points
             if not line.strip().startswith('-'):
                 continue
-                
+
             # Skip navigation/header lines
             if any(skip in line.lower() for skip in ['github discussions', 'contributing', 'license', 'documentation']):
                 continue
-            
+
             # Extract all links from the line
             link_pattern = r'\[([^\]]+)\]\(([^)]+)\)'
             link_matches = re.findall(link_pattern, line)
-            
+
             for link_match in link_matches:
                 name, url = link_match
-                
+
                 # Skip if it's clearly not a server (contains markdown formatting artifacts)
                 if name.startswith('#') or url.startswith('#'):
                     continue
-                
+
                 # Extract description - everything after the first link
                 desc_match = re.search(r'\[' + re.escape(name) + r'\]\([^)]+\)\*?\*?[^-]*(?:-\s*)?([^\[\n]*)', line)
                 description = desc_match.group(1).strip() if desc_match else ""
-                
+
                 # Clean up description
                 description = re.sub(r'<[^>]*>', '', description)  # Remove HTML tags
                 description = re.sub(r'\*\*', '', description)      # Remove bold markdown
                 description = description.strip()
-                
+
                 # If no description, try to get it from context around the link
                 if not description and '-' in line:
                     parts = line.split('-', 1)
@@ -309,28 +316,32 @@ class MCPServerURLExtractor:
                         description = re.sub(r'<[^>]*>', '', description)
                         description = re.sub(r'\*\*', '', description)
                         description = description.strip()
-                
+
                 # Use "No description available" if still empty
                 if not description:
                     description = "No description available"
-                
+
                 # Handle relative URLs
                 if url.startswith('/'):
                     url = f"https://github.com{url}"
                 elif not url.startswith('http'):
                     url = urljoin(self.base_url, url)
-                
+
                 # Determine if it's a GitHub URL
                 is_github = 'github.com' in url
-                
+
+                # Mark as official if before Community Servers section
+                is_official = not in_community_section
+
                 server_info = {
                     'name': name.strip(),
                     'url': url.strip(),
                     'description': description,
                     'is_github': is_github,
+                    'official': is_official,
                     'extracted_date': datetime.now().isoformat()
                 }
-                
+
                 servers.append(server_info)
         
         # Remove duplicates while preserving order
@@ -347,21 +358,25 @@ class MCPServerURLExtractor:
     def extract_current_urls(self):
         """Extract URLs from current README"""
         content = self.fetch_readme_content()
-        
+
         if not content:
             self.logger.error("Failed to fetch README content")
             return
-        
+
         self.servers = self.parse_servers_from_content(content)
-        
+
         self.logger.info(f"Total servers found: {len(self.servers)}")
-        
+
         # Count by type
         github_count = sum(1 for s in self.servers if s['is_github'])
         external_count = len(self.servers) - github_count
-        
+        official_count = sum(1 for s in self.servers if s.get('official', False))
+        community_count = len(self.servers) - official_count
+
         self.logger.info(f"  GitHub URLs: {github_count}")
         self.logger.info(f"  External URLs: {external_count}")
+        self.logger.info(f"  Official servers: {official_count}")
+        self.logger.info(f"  Community servers: {community_count}")
     
     def save_urls(self, filename='data/external-servers/officiallist_urls.json'):
         """Save extracted URLs to JSON file"""
@@ -370,12 +385,14 @@ class MCPServerURLExtractor:
             'total_servers': len(self.servers),
             'github_servers': sum(1 for s in self.servers if s['is_github']),
             'external_servers': sum(1 for s in self.servers if not s['is_github']),
+            'official_servers': sum(1 for s in self.servers if s.get('official', False)),
+            'community_servers': sum(1 for s in self.servers if not s.get('official', True)),
             'servers': self.servers
         }
-        
+
         with open(filename, 'w', encoding='utf-8') as f:
             json.dump(output_data, f, indent=2, ensure_ascii=False)
-        
+
         self.logger.info(f"URLs saved to {filename}")
     
     def save_historical_data(self, filename='data/external-servers/officiallist_history.json'):
@@ -405,21 +422,25 @@ class MCPServerURLExtractor:
         self.logger.info("URL EXTRACTION COMPLETE")
         self.logger.info("="*60)
         self.logger.info(f"Total servers: {len(self.servers)}")
-        
+
         # Count by type
         github_count = sum(1 for s in self.servers if s['is_github'])
         external_count = len(self.servers) - github_count
-        
+        official_count = sum(1 for s in self.servers if s.get('official', False))
+        community_count = len(self.servers) - official_count
+
         self.logger.info(f"  GitHub URLs: {github_count}")
         self.logger.info(f"  External URLs: {external_count}")
-        
+        self.logger.info(f"  Official servers: {official_count}")
+        self.logger.info(f"  Community servers: {community_count}")
+
         # Show sample external URLs
         external_servers = [s for s in self.servers if not s['is_github']]
         if external_servers:
             self.logger.info("\nSample external servers:")
             for server in external_servers[:5]:
                 self.logger.info(f"  - {server['name']}: {server['url']}")
-        
+
         # Historical summary
         if self.historical_data:
             self.logger.info("\nHistorical data:")
