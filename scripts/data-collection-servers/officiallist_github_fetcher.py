@@ -12,17 +12,22 @@ import base64
 from datetime import datetime
 
 class OfficiallistGitHubFetcherLean:
-    def __init__(self, github_token):
+    def __init__(self, github_token, urls_file='data/external-servers/officiallist_urls.json', output_file='data/external-servers/officiallist_data.json'):
         self.github_token = github_token
+        self.urls_file = urls_file
+        self.output_file = output_file
         self.session = None
         self.github_servers = []
         self.processed_count = 0
-        
+
+        # Determine log file based on output_file
+        log_file = 'logs/awesomelist_data_run.log' if 'awesomelist' in output_file else 'logs/officiallist_data_run.log'
+
         # Setup logging - use shared log file
         self.logger = logging.getLogger(__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            file_handler = logging.FileHandler('logs/officiallist_data_run.log')
+            file_handler = logging.FileHandler(log_file)
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             file_handler.setFormatter(formatter)
@@ -212,13 +217,13 @@ class OfficiallistGitHubFetcherLean:
         return result
     
     async def process_all_github_servers(self, test_mode=False):
-        """Process all GitHub servers from officiallist_urls.json"""
+        """Process all GitHub servers from URLs file"""
         # Load URL data
         try:
-            with open('data/external-servers/officiallist_urls.json', 'r', encoding='utf-8') as f:
+            with open(self.urls_file, 'r', encoding='utf-8') as f:
                 url_data = json.load(f)
         except FileNotFoundError:
-            self.logger.error("data/external-servers/officiallist_urls.json not found")
+            self.logger.error(f"{self.urls_file} not found")
             return []
         
         # Filter GitHub servers
@@ -261,9 +266,10 @@ class OfficiallistGitHubFetcherLean:
             'processed_count': self.processed_count,
             'servers': servers
         }
-        
-        with open('data/external-servers/officiallist_data_onlygithub.json', 'w', encoding='utf-8') as f:
+
+        github_file = self.output_file.replace('.json', '_onlygithub.json')
+        with open(github_file, 'w', encoding='utf-8') as f:
             json.dump(output_data, f, indent=2, ensure_ascii=False)
-        
-        self.logger.info("Results saved to data/external-servers/officiallist_data_onlygithub.json")
+
+        self.logger.info(f"Results saved to {github_file}")
 

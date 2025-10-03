@@ -16,20 +16,35 @@ from datetime import datetime
 try:
     from .officiallist_url_extractor import MCPServerURLExtractor
     from .officiallist_html_fetcher import MCPServerHTMLFetcher
+    from .awesomelist_url_extractor import AwesomelistURLExtractor
 except ImportError:
     from officiallist_url_extractor import MCPServerURLExtractor
     from officiallist_html_fetcher import MCPServerHTMLFetcher
+    from awesomelist_url_extractor import AwesomelistURLExtractor
 
 
 class OfficialistDataRunner:
-    def __init__(self):
+    def __init__(self, awesomelist_mode=False):
         self.github_token = os.environ.get('GH_TOKEN')
-        
+        self.awesomelist_mode = awesomelist_mode
+
+        # Set file paths based on mode
+        if awesomelist_mode:
+            self.log_file = 'logs/awesomelist_data_run.log'
+            self.urls_file = 'data/external-servers/awesomelist_urls.json'
+            self.output_file = 'data/external-servers/awesomelist_data.json'
+            self.mode_name = 'awesomelist'
+        else:
+            self.log_file = 'logs/officiallist_data_run.log'
+            self.urls_file = 'data/external-servers/officiallist_urls.json'
+            self.output_file = 'data/external-servers/officiallist_data.json'
+            self.mode_name = 'officiallist'
+
         # Setup logging
         self.logger = logging.getLogger(__name__)
         if not self.logger.handlers:
             handler = logging.StreamHandler()
-            file_handler = logging.FileHandler('logs/officiallist_data_run.log')
+            file_handler = logging.FileHandler(self.log_file)
             formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
             handler.setFormatter(formatter)
             file_handler.setFormatter(formatter)
@@ -38,42 +53,48 @@ class OfficialistDataRunner:
             self.logger.setLevel(logging.INFO)
     
     def run_url_extraction(self, fetch_history=True, history_months=None):
-        """Step 1: Extract URLs from official README"""
+        """Step 1: Extract URLs from README"""
         self.logger.info("=== STEP 1: URL Extraction ===")
-        
-        extractor = MCPServerURLExtractor()
-        
-        # Extract current URLs
-        extractor.extract_current_urls()
-        
-        # Optionally fetch historical data
-        if fetch_history:
-            if history_months:
-                extractor.fetch_readme_monthly_history(months_back=history_months)
-            else:
-                extractor.fetch_readme_history(days_back=30)
-        
-        # Save results
-        extractor.save_urls('data/external-servers/officiallist_urls.json')
-        if extractor.historical_data:
-            extractor.save_historical_data('data/external-servers/officiallist_history.json')
-        
-        extractor.print_summary()
-        
+
+        if self.awesomelist_mode:
+            # Use awesomelist extractor (no history support)
+            extractor = AwesomelistURLExtractor()
+            extractor.extract_current_urls()
+            extractor.save_urls(self.urls_file)
+            extractor.print_summary()
+        else:
+            # Use officiallist extractor with history support
+            extractor = MCPServerURLExtractor()
+            extractor.extract_current_urls()
+
+            # Optionally fetch historical data
+            if fetch_history:
+                if history_months:
+                    extractor.fetch_readme_monthly_history(months_back=history_months)
+                else:
+                    extractor.fetch_readme_history(days_back=30)
+
+            # Save results
+            extractor.save_urls(self.urls_file)
+            if hasattr(extractor, 'historical_data') and extractor.historical_data:
+                extractor.save_historical_data('data/external-servers/officiallist_history.json')
+
+            extractor.print_summary()
+
         self.logger.info(f"✓ URL extraction complete: {len(extractor.servers)} servers found")
         return len(extractor.servers)
     
     def run_html_fetching(self, test_mode=False):
         """Step 2: Fetch HTML content from external servers"""
         self.logger.info("=== STEP 2: HTML Content Fetching ===")
-        
+
         # Load URLs from step 1
         try:
-            with open('data/external-servers/officiallist_urls.json', 'r', encoding='utf-8') as f:
+            with open(self.urls_file, 'r', encoding='utf-8') as f:
                 url_data = json.load(f)
             servers = url_data.get('servers', [])
         except FileNotFoundError:
-            self.logger.error("data/external-servers/officiallist_urls.json not found. Run URL extraction first.")
+            self.logger.error(f"{self.urls_file} not found. Run URL extraction first.")
             return 0
         
         # Filter for external (non-GitHub) servers
@@ -93,10 +114,12 @@ class OfficialistDataRunner:
         try:
             fetcher.servers = servers  # Load all servers
             fetcher.fetch_external_html(max_external=len(external_servers) if not test_mode else 5)
-            
+
             # Save enhanced results
-            output_filename = 'data/external-servers/officiallist_data_onlyhtml.json' if not test_mode else 'data/external-servers/officiallist_data_onlyhtml_test.json'
-            fetcher.save_results(output_filename)
+            html_file = self.output_file.replace('.json', '_onlyhtml.json')
+            if test_mode:
+                html_file = html_file.replace('.json', '_test.json')
+            fetcher.save_results(html_file)
             
             self.logger.info(f"✓ HTML fetching complete: {len(external_servers)} external servers processed")
             return len(external_servers)
@@ -108,25 +131,25 @@ class OfficialistDataRunner:
     async def run_github_enhancement(self, test_mode=False):
         """Step 3: Process GitHub servers with lean fetcher"""
         self.logger.info("=== STEP 3: GitHub Metadata Enhancement ===")
-        
+
         if not self.github_token:
             self.logger.warning("GH_TOKEN not found - skipping GitHub enhancement")
             return 0
-        
+
         # Initialize lean GitHub fetcher
         from officiallist_github_fetcher import OfficiallistGitHubFetcherLean
-        github_fetcher = OfficiallistGitHubFetcherLean(self.github_token)
-        
+        github_fetcher = OfficiallistGitHubFetcherLean(self.github_token, urls_file=self.urls_file, output_file=self.output_file)
+
         try:
             # Process GitHub servers
             servers = await github_fetcher.process_all_github_servers(test_mode=test_mode)
-            
+
             # Save results
             github_fetcher.save_results(servers)
-            
+
             self.logger.info(f"✓ GitHub enhancement complete: {len(servers)} repositories processed")
             return len(servers)
-            
+
         except Exception as e:
             self.logger.error(f"Error during GitHub enhancement: {e}")
             return 0
@@ -154,17 +177,18 @@ class OfficialistDataRunner:
         
         # Load URL data (base data)
         try:
-            with open('data/external-servers/officiallist_urls.json', 'r', encoding='utf-8') as f:
+            with open(self.urls_file, 'r', encoding='utf-8') as f:
                 data_sources['urls'] = json.load(f)
                 self.logger.info(f"Loaded URL data: {data_sources['urls']['total_servers']} servers")
         except FileNotFoundError:
-            self.logger.error("officiallist_urls.json not found")
+            self.logger.error(f"{self.urls_file} not found")
             return None
         
         # Load HTML data (check both test and production files)
-        html_files = ['data/external-servers/officiallist_data_onlyhtml.json', 'data/external-servers/officiallist_data_onlyhtml_test.json']
+        html_file_base = self.output_file.replace('.json', '_onlyhtml.json')
+        html_files = [html_file_base, html_file_base.replace('.json', '_test.json')]
         html_loaded = False
-        
+
         for html_file in html_files:
             try:
                 with open(html_file, 'r', encoding='utf-8') as f:
@@ -174,18 +198,19 @@ class OfficialistDataRunner:
                     break
             except FileNotFoundError:
                 continue
-        
+
         if not html_loaded:
             self.logger.warning("No HTML data files found - continuing without HTML data")
             data_sources['html'] = {'servers': []}
         
-        # Load GitHub data  
+        # Load GitHub data
+        github_file = self.output_file.replace('.json', '_onlygithub.json')
         try:
-            with open('data/external-servers/officiallist_data_onlygithub.json', 'r', encoding='utf-8') as f:
+            with open(github_file, 'r', encoding='utf-8') as f:
                 data_sources['github'] = json.load(f)
                 self.logger.info(f"Loaded GitHub data: {data_sources['github']['processed_count']} servers")
         except FileNotFoundError:
-            self.logger.warning("data/external-servers/officiallist_data_onlygithub.json not found - continuing without GitHub data")
+            self.logger.warning(f"{github_file} not found - continuing without GitHub data")
             data_sources['github'] = {'servers': []}
         
         return data_sources
@@ -222,6 +247,18 @@ class OfficialistDataRunner:
             'official': base_server.get('official', False),
             'extracted_date': base_server.get('extracted_date')
         }
+
+        # Add awesomelist-specific emoji metadata fields if present
+        if base_server.get('is_official') is not None:
+            merged['is_official'] = base_server.get('is_official')
+        if base_server.get('scope'):
+            merged['scope'] = base_server.get('scope')
+        if base_server.get('platforms'):
+            merged['platforms'] = base_server.get('platforms')
+        if base_server.get('languages'):
+            merged['languages'] = base_server.get('languages')
+        if base_server.get('category'):
+            merged['category'] = base_server.get('category')
         
         # Add HTML data if available
         if html_data:
@@ -272,7 +309,7 @@ class OfficialistDataRunner:
     
     def merge_all_data(self):
         """Merge all data sources into final dataset"""
-        self.logger.info("Starting data merger for data/external-servers/officiallist_data.json")
+        self.logger.info(f"Starting data merger for {self.output_file}")
         
         # Load all data sources
         data_sources = self.load_data_sources()
@@ -326,12 +363,12 @@ class OfficialistDataRunner:
         }
         
         # Save merged data
-        with open('data/external-servers/officiallist_data.json', 'w', encoding='utf-8') as f:
+        with open(self.output_file, 'w', encoding='utf-8') as f:
             json.dump(final_data, f, indent=2, ensure_ascii=False)
-        
+
         # Create and save summary
         self.create_summary(final_data, merged_servers)
-        
+
         # Clean up intermediate files
         self.cleanup_intermediate_files()
         
@@ -350,17 +387,17 @@ class OfficialistDataRunner:
         self.logger.info(f"  URLs: {data_sources['urls'].get('total_servers', 0)}")
         self.logger.info(f"  HTML: {len(lookups['html'])}")
         self.logger.info(f"  GitHub: {len(lookups['github'])}")
-        self.logger.info("Final dataset saved to: data/external-servers/officiallist_data.json")
+        self.logger.info(f"Final dataset saved to: {self.output_file}")
         
         return True
     
     def cleanup_intermediate_files(self):
         """Remove intermediate files after successful merger"""
         intermediate_files = [
-            'data/external-servers/officiallist_urls.json',
-            'data/external-servers/officiallist_data_onlyhtml.json', 
-            'data/external-servers/officiallist_data_onlyhtml_test.json',
-            'data/external-servers/officiallist_data_onlygithub.json'
+            self.urls_file,
+            self.output_file.replace('.json', '_onlyhtml.json'),
+            self.output_file.replace('.json', '_onlyhtml_test.json'),
+            self.output_file.replace('.json', '_onlygithub.json')
         ]
         
         cleaned_count = 0
@@ -460,15 +497,16 @@ class OfficialistDataRunner:
         }
         
         # Save summary
-        with open('data/external-servers/officiallist_data_summary.json', 'w', encoding='utf-8') as f:
+        summary_file = self.output_file.replace('.json', '_summary.json')
+        with open(summary_file, 'w', encoding='utf-8') as f:
             json.dump(summary_data, f, indent=2, ensure_ascii=False)
-        
-        self.logger.info("Summary statistics saved to: data/external-servers/officiallist_data_summary.json")
+
+        self.logger.info(f"Summary statistics saved to: {summary_file}")
     
     
     async def run_complete_pipeline(self, test_mode=False, fetch_history=True, history_months=None, skip_html=False, skip_github=False):
         """Run the complete data collection pipeline"""
-        self.logger.info("Starting complete officiallist data collection pipeline")
+        self.logger.info(f"Starting complete {self.mode_name} data collection pipeline")
         self.logger.info(f"Test mode: {test_mode}")
         self.logger.info(f"Fetch history: {fetch_history}")
         self.logger.info(f"Skip HTML: {skip_html}")
@@ -514,8 +552,8 @@ class OfficialistDataRunner:
             self.logger.info(f"HTML fetched: {html_count}")
             self.logger.info(f"GitHub enhanced: {github_count}")
             self.logger.info(f"Data merger: {'✓ Success' if merger_success else '✗ Failed'}")
-            
-            self.logger.info("\n✓ PIPELINE SUCCESSFUL - Data saved to: data/external-servers/officiallist_data.json")
+
+            self.logger.info(f"\n✓ PIPELINE SUCCESSFUL - Data saved to: {self.output_file}")
             return True
                 
         except Exception as e:
@@ -526,13 +564,15 @@ class OfficialistDataRunner:
 
 
 async def main():
-    parser = argparse.ArgumentParser(description='Complete officiallist MCP server data collection pipeline')
-    parser.add_argument('--test', action='store_true', 
+    parser = argparse.ArgumentParser(description='Complete MCP server data collection pipeline')
+    parser.add_argument('--awesomelist', action='store_true',
+                       help='Use awesome-mcp-servers list instead of officiallist')
+    parser.add_argument('--test', action='store_true',
                        help='Test mode: process limited number of servers')
     parser.add_argument('--no-history', action='store_true',
-                       help='Skip historical data collection')
+                       help='Skip historical data collection (officiallist only)')
     parser.add_argument('--history-months', type=int,
-                       help='Number of months of history to collect (default: 30 days)')
+                       help='Number of months of history to collect (default: 30 days, officiallist only)')
     parser.add_argument('--skip-html', action='store_true',
                        help='Skip HTML content fetching from external servers')
     parser.add_argument('--skip-github', action='store_true',
@@ -543,15 +583,20 @@ async def main():
     
     # Setup logging for main function
     log_level = logging.DEBUG if args.test else logging.INFO
+    log_file = 'logs/awesomelist_data_collection.log' if args.awesomelist else 'logs/officiallist_data_collection.log'
     logging.basicConfig(
         level=log_level,
         format='%(asctime)s - %(levelname)s - %(message)s',
         handlers=[
             logging.StreamHandler(),
-            logging.FileHandler('logs/officiallist_data_collection.log')
+            logging.FileHandler(log_file)
         ]
     )
     logger = logging.getLogger(__name__)
+
+    # Log mode
+    mode_name = 'awesomelist' if args.awesomelist else 'officiallist'
+    logger.info(f"Running in {mode_name.upper()} mode")
     
     # Log mode information
     if args.test:
@@ -575,8 +620,8 @@ async def main():
     
     try:
         # Create and run pipeline
-        runner = OfficialistDataRunner()
-        
+        runner = OfficialistDataRunner(awesomelist_mode=args.awesomelist)
+
         success = await runner.run_complete_pipeline(
             test_mode=args.test,
             fetch_history=not args.no_history,

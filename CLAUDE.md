@@ -86,8 +86,8 @@ python scripts/data-collection-servers/officiallist_data_run.py
 
 ### 4. Awesome MCP Servers List
 ```bash
-# Scrape curated awesome-mcp-servers list from GitHub
-python scripts/data-collection-servers/awesomelist_data_run.py
+# Scrape curated awesome-mcp-servers list with emoji metadata
+python scripts/data-collection-servers/officiallist_data_run.py --awesomelist
 ```
 
 ## Core Architecture
@@ -104,10 +104,11 @@ python scripts/data-collection-servers/awesomelist_data_run.py
 - `scripts/data-collection-servers/smithery_bulk_mcp_downloader.py` - Core Smithery download logic
 - `scripts/data-collection-servers/github_data_run.py` - GitHub repository scanning
 - `scripts/data-collection-servers/github_mcp_repo_searcher.py` - GitHub search functionality
-- `scripts/data-collection-servers/officiallist_data_run.py` - Official list scraping
+- `scripts/data-collection-servers/officiallist_data_run.py` - Official/Awesome list scraping (use `--awesomelist` flag)
 - `scripts/data-collection-servers/officiallist_html_fetcher.py` - HTML content fetching
-- `scripts/data-collection-servers/officiallist_url_extractor.py` - URL extraction from HTML
-- `scripts/data-collection-servers/awesomelist_data_run.py` - Awesome MCP Servers curated list scraping with emoji metadata parsing
+- `scripts/data-collection-servers/officiallist_url_extractor.py` - Official list URL extraction
+- `scripts/data-collection-servers/awesomelist_url_extractor.py` - Awesome list URL extraction with emoji parsing
+- `scripts/data-collection-servers/officiallist_github_fetcher.py` - GitHub metadata fetching (shared by both lists)
 
 **Data Processing & Analysis:**
 - `data_unified_processor.py` - Unified data processing (27,899 servers)
@@ -128,7 +129,7 @@ python scripts/data-collection-servers/awesomelist_data_run.py
 - `clservers_validate_details.py` - Detailed analysis of validation disagreements
 
 **Consequentiality Scoring - CLTools Pipeline:**
-- `scripts/data-classification-tools/cltools_main.py` - Main O*NET task classification pipeline
+- `scripts/data-classification-tools/cltools_main.py` - Main O*NET task classification and functionality classification pipeline
 - `scripts/data-classification-tools/cltools_datamatch.py` - Enriches CLTools output with metadata from CLServers
 - `scripts/onet-task-clusters/task_clusters_data.py` - O*NET task data loading and processing
 - `scripts/onet-task-clusters/task_clusters_embeddings.py` - Embedding generation for task clustering
@@ -209,14 +210,18 @@ The system extracts and classifies:
 - `data/external-servers/officiallist_urls.json` - Extracted URLs
 
 ### Awesome List Data Files
-- `data/external-servers/awesomelist_data.json` - Curated awesome-mcp-servers list with emoji metadata (languages, scope, platforms)
+- `data/external-servers/awesomelist_data.json` - Curated awesome-mcp-servers list with emoji metadata (is_official ⭐, languages, scope, platforms)
 - `data/external-servers/awesomelist_data_summary.json` - Summary statistics by category, language, and deployment type
 
 ### Dashboard Data Files
-- `data/initial/data_unified.json` - Unified dashboard data (27MB, 27,899 servers)
+- `data/initial/data_unified.json` - Unified dashboard data with `canonical_official` field (27MB, 27,899 servers)
 - `data/initial/data_unified_summary.json` - Basic dashboard summary
-- `data/initial/data_unified_filtered.json` - Filtered subset for analysis
+- `data/initial/data_unified_filtered.json` - Filtered subset for analysis (includes awesomelist servers)
 - `data/initial/data_unified_filtered_summary.json` - Filtered summary
+
+**Note on `canonical_official` field:**
+- Set to `True` if server is in officiallist OR (in awesomelist AND has ⭐ is_official emoji)
+- Priority: officiallist status takes precedence over awesomelist if server appears in both
 
 ### Embedding & Analysis Data Files
 - `output-visuals/topics-embedding/embed_results.json` - Complete embedding analysis results
@@ -348,19 +353,17 @@ The README filtering pipeline removes installation tips and setup instructions w
 ```bash
 source ~/si_setup/.venv/bin/activate
 
-# Collect from all 3 sources
+# Collect from all 4 sources
 python scripts/data-collection-servers/smithery_data_run.py
 python scripts/data-collection-servers/github_data_run.py
 python scripts/data-collection-servers/officiallist_data_run.py
+python scripts/data-collection-servers/officiallist_data_run.py --awesomelist  # Awesomelist with emoji metadata
 
-# Enhance officiallist with GitHub metadata
-python scripts/data-collection-servers/officiallist_github_fetcher.py
+# Process unified data (27,899 servers + awesomelist)
+python scripts/data-unification/data_unified_processor.py
 
-# Process unified data (27,899 servers)
-python data_unified_processor.py
-
-# Create filtered subset for analysis
-python data_unified_create_filtered_subset.py
+# Create filtered subset for analysis (awesomelist treated like officiallist - no star filtering)
+python scripts/data-unification/data_unified_create_filtered_subset.py
 ```
 
 ### ML Analysis Pipeline
@@ -459,11 +462,11 @@ python scripts/data-classification-servers/clservers_3_dfprocessing.py --task na
 # 4. CLServers Step 4 - Data Matching & Merging
 python scripts/data-classification-servers/clservers_4_datamatch.py                   # Merges finance + NAICS + metadata
 
-# CLTools Pipeline - O*NET Task Classification
+# CLTools Pipeline - O*NET Task Classification + Functionality Classification
 python scripts/data-classification-tools/cltools_main.py --run                      # Run full pipeline (costly)
 python scripts/data-classification-tools/cltools_main.py \
     --onet data/internal-task-clusters/task_clusters_names.csv \
-    --data data/initial/data_unified_filtered.json \
+    --servers data/initial/data_unified_filtered.json \
     --out data/internal-cl/cltools_3_results.csv \
     --model openai/gpt-4o-mini \
     --finance \
@@ -489,14 +492,14 @@ python scripts/onet-task-clusters/task_clusters_embed_match.py               # M
 #   - Step 3b: Processes NAICS .eval files to JSON (data/internal-cl/clservers_naics_results.json)
 #   - Step 4: Merges finance + NAICS + metadata → final CSV (data/final/clservers_classified.csv)
 
-# CLTools Pipeline: O*NET Task Mapping
-#   - Main: Maps MCP tools to O*NET occupational tasks
+# CLTools Pipeline: O*NET Task Mapping + Functionality Classification
+#   - Main: Maps MCP tools to O*NET occupational tasks and classifies tool functionality (perception/reasoning/action)
 #   - DataMatch: Enriches results with creation dates and usage data
-#   - Output: data/final/cltools_classified.csv with full task and metadata mapping
+#   - Output: data/final/cltools_classified.csv with task mapping, functionality classification, and metadata
 
 # Outputs:
 # - CLServers: data/final/clservers_classified.csv (ALL servers with finance yes/no + NAICS code + metadata)
-# - CLTools: data/final/cltools_classified.csv (O*NET task mappings with metadata)
+# - CLTools: data/final/cltools_classified.csv (O*NET task mappings + functionality classification + metadata)
 
 # Requirements:
 # - ANTHROPIC_API_KEY environment variable set

@@ -480,13 +480,7 @@ CLASSIFICATION INSTRUCTIONS:
 OUTPUT FORMAT (JSON only):
 {{
     "server": "server_name",
-    "naics_code": "523",
-}}
-
-OR for cross-sector tools:
-{{
-    "server": "server_name",
-    "naics_code": "cross-sector",
+    "naics_code": "3-digit_code or cross-sector",
 }}
 
 EXAMPLES:

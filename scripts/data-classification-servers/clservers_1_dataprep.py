@@ -57,7 +57,7 @@ def clean_server_data(server: Dict[str, Any]) -> Dict[str, Any]:
     
     # Fields to include
     include_fields = {
-        'id', 'name', 'canonical_name', 'canonical_description', 
+        'id', 'name', 'owner', 'canonical_description',
         'readme_filtered', 'readme_filteredinitial', 'readme_content', 'readme_summary', 'readme_is_mcp_server',
         'tools', 'topics', 'data_sources', 'primary_source', 'embedding_text',
         'stargazers_count', 'forks_count', 'owner_login', 'fork', 'archived'
@@ -117,7 +117,7 @@ def sample_servers(servers: List[Dict[str, Any]], sample_size: int) -> List[Dict
     # Stratified sampling by data source and tool presence
     github_servers = [s for s in servers if s.get('primary_source') == 'github']
     smithery_servers = [s for s in servers if s.get('primary_source') == 'smithery'] 
-    official_servers = [s for s in servers if s.get('primary_source') == 'official']
+    official_servers = [s for s in servers if s.get('primary_source') in ['official', 'awesomelist']]
     
     # Calculate proportional sample sizes
     total = len(servers)
@@ -145,7 +145,7 @@ def sample_servers(servers: List[Dict[str, Any]], sample_size: int) -> List[Dict
     logger.info(f"Sampled {len(sampled)} servers: "
                 f"{len([s for s in sampled if s.get('primary_source') == 'github'])} GitHub, "
                 f"{len([s for s in sampled if s.get('primary_source') == 'smithery'])} Smithery, "
-                f"{len([s for s in sampled if s.get('primary_source') == 'official'])} Official")
+                f"{len([s for s in sampled if s.get('primary_source') in ['official', 'awesomelist']])} Official/Awesomelist")
     
     return sampled
 

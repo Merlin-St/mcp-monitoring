@@ -13,7 +13,7 @@ help:
 	@echo "MCP Monitoring Dashboard - Available Commands:"
 	@echo ""
 	@echo "  Data Collection (External Sources):"
-	@echo "    data-collect-servers    Collect from all 3 server sources"
+	@echo "    data-collect-servers    Collect from all 4 server sources"
 	@echo "    data-collect-usage      Collect usage statistics"
 	@echo "    data-collect-all        Run complete data collection pipeline"
 	@echo ""
@@ -50,11 +50,11 @@ help:
 # ===============================
 
 data-collect-servers:
-	@echo "🔄 Collecting MCP server data from all 3 sources..."
+	@echo "🔄 Collecting MCP server data from all 4 sources..."
 	python scripts/data-collection-servers/smithery_data_run.py --resume
 	python scripts/data-collection-servers/github_data_run.py --resume
 	python scripts/data-collection-servers/officiallist_data_run.py
-	python scripts/data-collection-servers/officiallist_github_fetcher.py
+	python scripts/data-collection-servers/officiallist_data_run.py --awesomelist
 	@echo "✅ Server data collection complete"
 
 data-collect-usage:
@@ -74,13 +74,13 @@ data-collect-all: data-collect-servers data-collect-usage
 data-initial:
 	@echo "🔄 Creating unified datasets..."
 	python scripts/data-unification/data_unified_processor.py
-	python scripts/data-unification/data_unified_create_filtered_subset.py
 	python scripts/data-unification/data_unified_add_usage.py
+	python scripts/data-unification/data_unified_create_filtered_subset.py
 	@echo "✅ Unified datasets created: data/initial/"
 
 data-clean-readmes:
 	@echo "🔄 Filtering README content using LLM..."
-	inspect eval scripts/data-cleaning-readmes/data_readme_filter_inspect.py --model anthropic/claude-sonnet-4-5-20250929 --temperature 0
+	inspect eval scripts/data-cleaning-readmes/data_readme_filter_inspect.py --model anthropic/claude-sonnet-4-5-20250929 --temperature 0 --max-connections 50
 	python scripts/data-cleaning-readmes/data_readme_filter_dfprocessing.py
 	@echo "✅ README filtering complete"
 
@@ -127,7 +127,7 @@ data-cl-servers:
 	@echo "🔄 Running CLServers pipeline (server classification)..."
 	python scripts/data-classification-servers/clservers_1_dataprep.py
 	@echo "  Running finance identification (evaluates all servers)..."
-	inspect eval scripts/data-classification-servers/clservers_2_inspect.py --model anthropic/claude-sonnet-4-5-20250929 --temperature 0
+	inspect eval scripts/data-classification-servers/clservers_2_inspect.py --model anthropic/claude-sonnet-4-5-20250929 --temperature 0 --max-connections 50
 	@echo "  Running NAICS industry classification..."
 	inspect eval scripts/data-classification-servers/clservers_2_inspect.py@naics_classification_task --model anthropic/claude-sonnet-4-5-20250929 --temperature 0
 	@echo "  Processing finance identification results..."
@@ -140,7 +140,7 @@ data-cl-servers:
 
 data-cl-tools:
 	@echo "🔄 Running CLTools pipeline (O*NET task mapping)..."
-	python scripts/data-classification-tools/cltools_main.py --run --finance --limit 1000
+	python scripts/data-classification-tools/cltools_main.py --run
 	python scripts/data-classification-tools/cltools_datamatch.py --stage4 data/internal-cl/cltools_3_results.csv --stage2 data/final/clservers_classified.csv --usage data/initial/data_unified_filtered.json --output data/final/cltools_classified.csv
 	@echo "✅ CLTools pipeline complete: data/final/cltools_classified.csv"
 

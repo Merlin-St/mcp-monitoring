@@ -175,14 +175,15 @@ def reduce_dimensions(embeddings, n_neighbors=5, min_dist=0.1, n_components=3, m
 def prepare_texts_parallel(servers_data, num_workers=8):
     """Prepare texts using parallel processing"""
     def process_server(server):
-        name = server.get('canonical_name', '')
-        description = server.get('description', '')
+        # Use display_name if available, otherwise use name
+        name = server.get('display_name') or server.get('name', '')
+        description = server.get('canonical_description', '')
         embedding_text = server.get('embedding_text', description)
-        
+
         if embedding_text and len(embedding_text) > 20:
             return {
                 'text': embedding_text,
-                'canonical_name': name,
+                'name': name,
                 'description': description,
                 'url': server.get('url', ''),
                 'stargazers_count': server.get('stargazers_count', 0),
@@ -343,14 +344,14 @@ def create_interactive_plot(df, topic_info=None, validation_metrics=None):
             formatted_description.append(' '.join(words[i:i+5]))
         formatted_desc = '<br>'.join(formatted_description) + "..."
         
-        hover_info = f"<b>{row['canonical_name']}</b><br>"
+        hover_info = f"<b>{row['name']}</b><br>"
         hover_info += f"Topic: {topic_label}<br>"
         hover_info += f"Stars: {row.get('stargazers_count', 0)}<br>"
         hover_info += f"Description: {formatted_desc}"
         hover_text.append(hover_info)
-    
+
     df['hover_text'] = hover_text
-    
+
     # Create title with validation metrics if available
     title = 'BERTopic Analysis of MCP Server Descriptions'
     if validation_metrics:
@@ -358,13 +359,13 @@ def create_interactive_plot(df, topic_info=None, validation_metrics=None):
         title += f'Test Outliers: {validation_metrics.get("test_outlier_pct", "N/A"):.1f}% | '
         title += f'Train Coherence: {validation_metrics.get("train_coherence", "N/A"):.3f} | '
         title += f'Test Coherence: {validation_metrics.get("test_coherence", "N/A"):.3f}</sub>'
-    
+
     fig = px.scatter(
         df,
         x='x',
         y='y',
         color='topic',
-        custom_data=['canonical_name', 'text', 'stargazers_count'],
+        custom_data=['name', 'text', 'stargazers_count'],
         title=title,
         template='plotly_dark'
     )
@@ -399,8 +400,8 @@ def create_interactive_plot(df, topic_info=None, validation_metrics=None):
             # Extract first two terms
             keywords = cluster_name.split(', ')[:2]
             short_name = ', '.join(keywords)
-            
-            server_name = most_popular['canonical_name']
+
+            server_name = most_popular['name']
             len(topic_servers)
             stars = most_popular['stargazers_count']
             

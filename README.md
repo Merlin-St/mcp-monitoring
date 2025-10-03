@@ -82,13 +82,26 @@ mcp-monitoring/
   - `url`: `https://github.com/modelcontextprotocol/src/everything`
   - `description`: `Reference / test server with prompts, resources, and tools`
 
+#### 4. **Awesome MCP List** (`data/external-servers/awesomelist_data.json`)
+- **Shape**: Variable servers × enriched columns with emoji metadata
+- **Structure**: `{fetch_date, total_servers, servers: [...]}`
+- **Server Columns**: `name`, `url`, `description`, `is_github`, `is_official`, `languages`, `scope`, `platforms`, `category`
+- **Emoji Metadata**: ⭐ is_official, 🐍/📇/🏎️ languages, ☁️/🏠 scope, 🍎/🪟/🐧 platforms
+- **Sample Data**:
+  - `name`: `1mcp/agent`
+  - `is_official`: `false`
+  - `languages`: `["TypeScript/JavaScript"]`
+  - `scope`: `["cloud", "local"]`
+  - `platforms`: `["macOS", "Windows", "Linux"]`
+
 ### Data processing, filtering & cleaning Pipeline (`make data-initial-clean`)
 
 ```
 Load Data→ Deduplicate → Enhance (→data_unified.json) → Filter, add usage & cleaned readmes → Update to data_unified_filtered.json
-     ↓          ↓           ↓                           ↓         ↓          ↓ 
-3 JSON files  Merge     Keyword sector                  >=1 star  pypi/npm   llm cleaning
-             Conflicts  classification                                       & tool extraction
+     ↓          ↓           ↓                           ↓         ↓          ↓
+4 JSON files  Merge     Keyword sector                  >=1 star  pypi/npm   llm cleaning
+             Conflicts  classification     canonical_official   (awesomelist  & tool extraction
+                        + canonical_official              servers always included)
 
 
 ## 📦 Usage Statistics Collection
@@ -112,9 +125,9 @@ Strict 1:1 package-to-repository matching of monthly download statistics from No
   - So far: Readme clean version, is mcp server?, 1 sentence summary, tool extraction.
   - To add: Which are narrow-purpose vs. general-purpose tools (first say what is the 'action space' then narrow vs general purpose). Which are official vs. unofficial tools as judged by the author of the github repo.
 - Servers classification: Autonomy level
-  - So far: Is_finance, Finance asset type, Automation level, task capabilities, sensitive data inputs 
+  - So far: Is_finance, Finance asset type, task capabilities, sensitive data inputs
 - Tools classification:
-  - So far: Automation level, Functionality perception/reasoning/action, access write/read, O-Net cluster assignment
+  - So far: Functionality perception/reasoning/action, O-Net cluster assignment
 
 
 ## 📁 Key Files

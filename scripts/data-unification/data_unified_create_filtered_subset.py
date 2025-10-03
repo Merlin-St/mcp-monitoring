@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
 Create a filtered subset of data_unified.json based on quality criteria:
-- If GitHub is the only source: only include repos with stargazers_count >= 1
-- If Smithery is the only source: only include repos with use_count >= 1
+- If GitHub is the only source: include repos with stargazers_count >= 1 OR total_downloads > 0
+- If Smithery is the only source: include all servers
 - Include all repos with multiple sources (they're likely higher quality)
 - Apply README content filtering to remove installation tips while preserving functional descriptions
+
+NOTE: This script should be run AFTER data_unified_add_usage.py to ensure usage data is available for filtering.
 """
 
 import json
@@ -285,46 +287,58 @@ def apply_readme_filtering(data: List[Dict[str, Any]], apply_filtering: bool = T
 
 def create_filtered_subset(enable_readme_filtering: bool = True):
     """Create filtered subset based on quality criteria"""
-    
+
     logger.info("Loading unified dashboard data...")
     with open('data/initial/data_unified.json', 'r') as f:
         data = json.load(f)
-    
+
     logger.info(f"Original dataset: {len(data)} servers")
-    
+
     filtered_data = []
     stats = {
         'github_only_included': 0,
         'github_only_excluded': 0,
+        'github_only_included_by_usage': 0,
         'smithery_only_included': 0,
         'smithery_only_excluded': 0,
         'multi_source_included': 0,
         'other_cases': 0
     }
-    
+
     for server in data:
         sources = server.get('data_sources', [])
-        
-        # Case 1: GitHub only - require stargazers >= 1
+
+        # Case 1: GitHub only - require stargazers >= 1 OR usage > 0
         if sources == ['github']:
             stargazers = server.get('stargazers_count', 0)
+            total_downloads = server.get('usage_total_downloads', 0)
+
+            # Include if has stars OR has usage
             if stargazers >= 1:
                 filtered_data.append(server)
                 stats['github_only_included'] += 1
+            elif total_downloads > 0:
+                filtered_data.append(server)
+                stats['github_only_included_by_usage'] += 1
             else:
                 stats['github_only_excluded'] += 1
-                
+
         # Case 2: Smithery only - include all servers from Smithery source
         elif sources == ['smithery']:
             filtered_data.append(server)
             stats['smithery_only_included'] += 1
-                
-        # Case 3: Multiple sources - include all (assume higher quality)
+
+        # Case 3: Awesomelist only - include all servers (treat like officiallist)
+        elif sources == ['awesomelist']:
+            filtered_data.append(server)
+            stats['awesomelist_only_included'] = stats.get('awesomelist_only_included', 0) + 1
+
+        # Case 4: Multiple sources - include all (assume higher quality)
         elif len(sources) > 1:
             filtered_data.append(server)
             stats['multi_source_included'] += 1
-            
-        # Case 4: Other cases (official only, etc.)
+
+        # Case 5: Other cases (official only, etc.)
         else:
             filtered_data.append(server)
             stats['other_cases'] += 1
@@ -349,21 +363,19 @@ def create_filtered_subset(enable_readme_filtering: bool = True):
     logger.info(f"Filtered dataset saved to {output_file}")
     
     # Create summary of filtered data
-    finance_count = len([s for s in filtered_data if s.get('is_finance_related', False)])
     source_counts = {}
     primary_source_counts = {}
-    
+
     for server in filtered_data:
         for source in server.get('data_sources', []):
             source_counts[source] = source_counts.get(source, 0) + 1
-        
+
         primary = server.get('primary_source')
         if primary:
             primary_source_counts[primary] = primary_source_counts.get(primary, 0) + 1
-    
+
     summary = {
         'total_servers': len(filtered_data),
-        'finance_related_servers': finance_count,
         'retention_rate_percent': round(retention_rate, 1),
         'filtering_statistics': stats,
         'source_coverage': source_counts,

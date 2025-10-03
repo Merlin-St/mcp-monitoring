@@ -11,7 +11,7 @@ Features:
 - Direct GitHub URL matching from npm and PyPI metadata
 - Author/maintainer email matching as fallback
 - Monthly breakdown from Nov 2024 to present
-- Modifies data_unified_filtered.json in place
+- Modifies data_unified.json in place (run BEFORE filtering)
 """
 
 import argparse
@@ -23,7 +23,7 @@ import re
 
 
 # File paths
-DATASET_FILE = "data/initial/data_unified_filtered.json"
+DATASET_FILE = "data/initial/data_unified.json"
 
 # Data source files
 pypi_data_file = "data/external-usage/usage_bigquery_webresults_pypi.json"
@@ -67,6 +67,26 @@ def normalize_github_url(url: str) -> str:
         repo = re.sub(r'\.(git|issues|wiki).*$', '', repo)
         return f"{owner}/{repo}"
     return ""
+
+
+def normalize_package_name(package_name: str) -> str:
+    """
+    Normalize package name for matching (lowercase, handle scoped packages).
+
+    Examples:
+        @author/package -> package
+        MyPackage -> mypackage
+    """
+    if not package_name:
+        return ""
+
+    # Remove scope from npm packages (e.g., @author/package → package)
+    if package_name.startswith('@'):
+        parts = package_name.split('/')
+        if len(parts) > 1:
+            package_name = parts[1]
+
+    return package_name.lower()
 
 
 def extract_github_urls_from_npm(package_data: Dict) -> Set[str]:
@@ -301,9 +321,9 @@ def match_packages_to_repos(dataset: List[Dict], github_to_npm: Dict, github_to_
                             package_metadata: Dict, email_to_packages: Dict,
                             author_to_packages: Dict, logger) -> Tuple[Dict, Dict]:
     """
-    Match packages to repositories using multi-strategy matching:
-    1. GitHub URL matching (primary)
-    2. Author/email matching (fallback)
+    Match packages to repositories using simplified case-insensitive matching:
+    1. Primary: repository_url matching (normalized github.com/owner/repo format)
+    2. Secondary: owner+name combination (for servers without repository_url)
 
     Returns:
         - repo_to_packages: {repo_id: {'npm': [package_names], 'pypi': [package_names]}}
@@ -320,64 +340,75 @@ def match_packages_to_repos(dataset: List[Dict], github_to_npm: Dict, github_to_
         'total_pypi_packages': 0,
         'url_match_npm': 0,
         'url_match_pypi': 0,
-        'author_match_npm': 0,
-        'author_match_pypi': 0,
-        'email_match_npm': 0,
-        'email_match_pypi': 0
+        'owner_name_match_npm': 0,
+        'owner_name_match_pypi': 0
     }
+
+    # Track matched servers to ensure 1 package → 1 server constraint
+    matched_npm_packages = set()
+    matched_pypi_packages = set()
 
     for repo in dataset:
         repo_id = repo.get('id', '')
         if not repo_id:
             continue
 
-        # Get GitHub URL from repo (various formats)
-        github_url = repo.get('github_url', '')
-        html_url = repo.get('html_url', '')
-        full_name = repo.get('full_name', '')
-
-        # Normalize to owner/repo format
-        repo_github = normalize_github_url(github_url or html_url or full_name)
-
         npm_packages = []
         pypi_packages = []
         match_method = 'none'
 
-        # Strategy 1: GitHub URL matching (primary)
-        if repo_github:
-            npm_packages = github_to_npm.get(repo_github, [])
-            pypi_packages = github_to_pypi.get(repo_github, [])
+        # Strategy 1: repository_url matching (primary)
+        repo_url = repo.get('repository_url', '')
+        if repo_url:
+            # Normalize repository_url to owner/repo format (case-insensitive)
+            normalized_url = normalize_github_url(repo_url)
 
-            if npm_packages or pypi_packages:
-                match_method = 'github_url'
+            if normalized_url:
+                npm_packages = github_to_npm.get(normalized_url, [])
+                pypi_packages = github_to_pypi.get(normalized_url, [])
+
+                # Filter out already matched packages (enforce 1 package → 1 server)
+                npm_packages = [p for p in npm_packages if p not in matched_npm_packages]
+                pypi_packages = [p for p in pypi_packages if p not in matched_pypi_packages]
+
+                if npm_packages or pypi_packages:
+                    match_method = 'repository_url'
+                    if npm_packages:
+                        stats['url_match_npm'] += 1
+                        matched_npm_packages.update(npm_packages)
+                    if pypi_packages:
+                        stats['url_match_pypi'] += 1
+                        matched_pypi_packages.update(pypi_packages)
+
+        # Strategy 2: owner+name matching (secondary, only for servers without repository_url)
+        if not npm_packages and not pypi_packages and not repo_url:
+            owner = repo.get('owner', '').strip().lower()
+            name = repo.get('name', '').strip().lower()
+
+            if owner and name:
+                # Try matching by owner:name combination
+                owner_packages = author_to_packages.get(owner, {})
+                npm_from_owner = owner_packages.get('npm', [])
+                pypi_from_owner = owner_packages.get('pypi', [])
+
+                # Filter out already matched packages
+                npm_from_owner = [p for p in npm_from_owner if p not in matched_npm_packages]
+                pypi_from_owner = [p for p in pypi_from_owner if p not in matched_pypi_packages]
+
+                # Also check if package name matches server name
+                npm_packages = [p for p in npm_from_owner if normalize_package_name(p) == name]
+                pypi_packages = [p for p in pypi_from_owner if normalize_package_name(p) == name]
+
                 if npm_packages:
-                    stats['url_match_npm'] += 1
+                    match_method = 'owner_name'
+                    stats['owner_name_match_npm'] += 1
+                    matched_npm_packages.update(npm_packages)
+
                 if pypi_packages:
-                    stats['url_match_pypi'] += 1
-
-        # Strategy 2: Author/email matching (fallback for unmatched repos)
-        if not npm_packages and not pypi_packages:
-            # Extract repo owner info
-            owner = repo.get('owner', {})
-            owner_login = owner.get('login', '').strip().lower()
-
-            # Try matching by owner login name
-            if owner_login:
-                # Check if owner login matches author name
-                owner_packages = author_to_packages.get(owner_login, {})
-                npm_from_author = owner_packages.get('npm', [])
-                pypi_from_author = owner_packages.get('pypi', [])
-
-                if npm_from_author:
-                    npm_packages.extend(npm_from_author)
-                    match_method = 'author_name'
-                    stats['author_match_npm'] += 1
-
-                if pypi_from_author:
-                    pypi_packages.extend(pypi_from_author)
                     if match_method == 'none':
-                        match_method = 'author_name'
-                    stats['author_match_pypi'] += 1
+                        match_method = 'owner_name'
+                    stats['owner_name_match_pypi'] += 1
+                    matched_pypi_packages.update(pypi_packages)
 
         # Store matches if any found
         if npm_packages or pypi_packages:
@@ -410,10 +441,10 @@ def match_packages_to_repos(dataset: List[Dict], github_to_npm: Dict, github_to_
     logger.info(f"  Total PyPI packages matched: {stats['total_pypi_packages']}")
     logger.info(f"")
     logger.info(f"  Match breakdown:")
-    logger.info(f"    - GitHub URL (npm): {stats['url_match_npm']}")
-    logger.info(f"    - GitHub URL (PyPI): {stats['url_match_pypi']}")
-    logger.info(f"    - Author name (npm): {stats['author_match_npm']}")
-    logger.info(f"    - Author name (PyPI): {stats['author_match_pypi']}")
+    logger.info(f"    - repository_url (npm): {stats['url_match_npm']}")
+    logger.info(f"    - repository_url (PyPI): {stats['url_match_pypi']}")
+    logger.info(f"    - owner+name (npm): {stats['owner_name_match_npm']}")
+    logger.info(f"    - owner+name (PyPI): {stats['owner_name_match_pypi']}")
 
     return repo_to_packages, stats
 

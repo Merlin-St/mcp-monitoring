@@ -7,7 +7,7 @@ End-to-end pipeline:
 - Extract tools -> build Inspect samples
 - Define Inspect solvers + tasks:
     1) O*NET hierarchy (L1 -> L2 -> Task ID)
-    2) Automation Level (0–5)
+    2) Functionality classification (perception/reasoning/action)
 - (Optional) run eval via `inspect eval this_file.py@task_name` for each task
 - Read logs with samples_df/messages_df and export one wide CSV
 
@@ -17,7 +17,7 @@ Usage:
   python cltools_main.py \
     --onet data/internal-task-clusters/task_clusters_names.csv \
     --logs ./logs_onet \
-    --logs-auto ./logs_auto \
+    --logs-func ./logs_func \
     --out cltools_3_results.csv \
     --model openai/gpt-4o-mini \
     --finance \
@@ -49,24 +49,6 @@ logging.basicConfig(
 log = logging.getLogger("mcp_onet")
 
 # ---------- Prompts ----------
-AUTOMATION_LEVEL_PROMPT = """Your task is to classify this AI agent tool's (not the full mcp server - only the specific tool) automation level based on its execution capabilities:
-
-0: Not a functional tool (e.g., just documentation or links)
-1: MONITORING - Read-only access, information retrieval only
-2: ANALYSIS - Processes and analyzes data, provides recommendations
-3: META - Coordinates other tools/servers for execution
-4: RESTRICTED EXECUTION - Modifies pre-specified external environments (e.g., executes transactions on specific systems)
-5: UNRESTRICTED EXECUTION - Full execution capabilities (e.g., arbitrary code execution, unspecified modification capability across system/internet)
-
-Examples:
-1: get_account_balance
-2: analyze_portfolio
-3: run_daily_tasks
-4: execute_trade
-5: run_shell_command
-ONLY REPLY WITH 0-5 or 'None' if you are unsure.
-"""
-
 FUNCTIONALITY_PROMPT = """Classify this MCP server tool by its primary function:
 
 1. PERCEPTION (gathering information)
@@ -93,28 +75,6 @@ Examples:
 "run_python_code" → 3.3
 
 REPLY WITH NUMBER ONLY (e.g., 2.1) or 'None' if unclear.
-"""
-
-ACCESS_PATTERN_PROMPT = """Classify MCP tool by access pattern:
-
-PERMISSIONS:
-1: Read Only
-2: Constrained Write (limited modifications)
-3: Write (full modifications)
-
-ENVIRONMENT:
-A: Trusted (limited)
-B: Untrusted (open)
-
-MATRIX (Examples):
-1A: Read/Trusted (RAG, database queries)
-1B: Read/Untrusted (web scraping, deep research)
-2A: Constrained/Trusted (specific API/GUI)
-2B: Constrained/Untrusted (browser use)
-3A: Write/Trusted (repository commits)
-3B: Write/Untrusted (computer use with shell commands)
-
-REPLY: CODE ONLY (e.g., 2A) or 'None'
 """
 
 
@@ -374,33 +334,7 @@ def classify_tool(csv_path: str):
     return solve
 
 
-# ---------- Solver 2: Automation Level ----------
-@solver
-def classify_automation_level():
-    valid = set(list("012345"))
-
-    async def solve(state, generate):
-        prompt = AUTOMATION_LEVEL_PROMPT
-        # ask up to 3 times for a single digit 0-5
-        for _ in range(3):
-            state.messages.append(ChatMessageUser(content=prompt))
-            state = await generate(state)
-            ans = (state.output.completion or "").strip()
-            # keep only first digit to be safe
-            ans_digit = "".join(ch for ch in ans if ch.isdigit())[:1]
-            if ans_digit in valid:
-                state.metadata["automation_level"] = ans_digit
-                return state
-            # tighten the instruction
-            prompt = "ONLY REPLY WITH A SINGLE DIGIT NUMBER 0-5."
-        # give up, mark as None-like
-        state.metadata["automation_level"] = ""
-        return state
-
-    return solve
-
-
-# ---------- Solver 3: Functionality ----------
+# ---------- Solver 2: Functionality ----------
 @solver
 def classify_functionality():
     # Valid functionality codes from the prompt
@@ -430,38 +364,6 @@ def classify_functionality():
     return solve
 
 
-# ---------- Solver 4: Access Pattern ----------
-@solver
-def classify_access_pattern():
-    # Valid access pattern codes from the prompt
-    valid = {"1A", "1B", "2A", "2B", "3A", "3B"}
-
-    async def solve(state, generate):
-        prompt = ACCESS_PATTERN_PROMPT
-        # ask up to 3 times for a valid access pattern code
-        for _ in range(3):
-            state.messages.append(ChatMessageUser(content=prompt))
-            state = await generate(state)
-            ans = (state.output.completion or "").strip().upper()
-            # Extract pattern like 1A, 2B, 3A etc.
-            import re
-            match = re.search(r'[1-3][AB]', ans)
-            if match:
-                code = match.group()
-                if code in valid:
-                    state.metadata["access_pattern"] = code
-                    return state
-            # tighten the instruction
-            prompt = "REPLY: CODE ONLY (e.g., 2A) or 'None'"
-        # give up, mark as None-like
-        state.metadata["access_pattern"] = ""
-        return state
-
-    return solve
-
-
-
-
 # ---------- Tasks (module-level so inspect can find them) ----------
 @task
 def mcp_onet_classify_task():
@@ -479,20 +381,6 @@ def mcp_onet_classify_task():
 
 
 @task
-def mcp_automation_level_task():
-    samples_path = "data/internal-cl/cltools_samples.jsonl"
-    if not Path(samples_path).exists():
-        raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
-    return Task(
-        dataset=json_dataset(samples_path),
-        solver=chain(
-            system_message("Reply strictly as instructed. No extra words."),
-            classify_automation_level(),
-        ),
-    )
-
-
-@task
 def mcp_functionality_task():
     samples_path = "data/internal-cl/cltools_samples.jsonl"
     if not Path(samples_path).exists():
@@ -504,22 +392,6 @@ def mcp_functionality_task():
             classify_functionality(),
         ),
     )
-
-
-@task
-def mcp_access_pattern_task():
-    samples_path = "data/internal-cl/cltools_samples.jsonl"
-    if not Path(samples_path).exists():
-        raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
-    return Task(
-        dataset=json_dataset(samples_path),
-        solver=chain(
-            system_message("You are a careful classifier. Reply with ONLY the code as instructed."),
-            classify_access_pattern(),
-        ),
-    )
-
-
 
 
 # ---------- Post-processing to CSV ----------
@@ -539,15 +411,13 @@ def _read_latest_samples_df(logs_dir: str):
 
 def export_csv(
     onet_logs_dir: str,
-    auto_logs_dir: Optional[str],
     func_logs_dir: Optional[str],
-    access_logs_dir: Optional[str],
     tools_json_path: str,
     out_csv_path: str,
 ) -> None:
     """
     Build a wide CSV with tool fields + chosen L1/L2/Task IDs/names
-    + automation_level + functionality + access_pattern.
+    + functionality classification.
     """
     # Load base tool snapshot
     with open(tools_json_path, "r", encoding="utf-8") as f:
@@ -560,15 +430,6 @@ def export_csv(
         raise ValueError(f"No .eval files found in {onet_logs_dir}")
     log.info(f"Processing most recent O*NET eval: {onet_eval_file} ({len(onet_df)} samples)")
 
-    # Read Automation results (optional)
-    auto_df, auto_eval_file = (None, None)
-    if auto_logs_dir and Path(auto_logs_dir).exists():
-        auto_df, auto_eval_file = _read_latest_samples_df(auto_logs_dir)
-        if auto_df is not None:
-            log.info(f"Processing most recent Automation eval: {auto_eval_file} ({len(auto_df)} samples)")
-        else:
-            log.warning("No automation .eval files found; automation_level will be blank.")
-
     # Read Functionality results (optional)
     func_df, func_eval_file = (None, None)
     if func_logs_dir and Path(func_logs_dir).exists():
@@ -577,15 +438,6 @@ def export_csv(
             log.info(f"Processing most recent Functionality eval: {func_eval_file} ({len(func_df)} samples)")
         else:
             log.warning("No functionality .eval files found; functionality will be blank.")
-
-    # Read Access Pattern results (optional)
-    access_df, access_eval_file = (None, None)
-    if access_logs_dir and Path(access_logs_dir).exists():
-        access_df, access_eval_file = _read_latest_samples_df(access_logs_dir)
-        if access_df is not None:
-            log.info(f"Processing most recent Access Pattern eval: {access_eval_file} ({len(access_df)} samples)")
-        else:
-            log.warning("No access pattern .eval files found; access_pattern will be blank.")
 
 
     # Build quick lookup maps from metadata
@@ -603,27 +455,9 @@ def export_csv(
     # pandas import here to satisfy type
     import pandas as pd  # noqa: F401
     onet_meta = meta_lookup(onet_df, ["l1_id", "l1_name", "l2_id", "l2_name", "task_id", "task_name"])
-    auto_meta = meta_lookup(auto_df, ["automation_level"])
     func_meta = meta_lookup(func_df, ["functionality"])
-    access_meta = meta_lookup(access_df, ["access_pattern"])
 
-    # Helper functions to parse classification codes
-    def parse_automation_level(code: str) -> str:
-        """Parse automation level code (0-5) into descriptive text."""
-        if not code or code == "":
-            return ""
-        
-        automation_map = {
-            "0": "0 (Not a tool)",
-            "1": "1 (Monitoring)",
-            "2": "2 (Analysis)",
-            "3": "3 (Meta-coordination)",
-            "4": "4 (Restricted execution)",
-            "5": "5 (Unrestricted execution)"
-        }
-        
-        return automation_map.get(code, code)
-    
+    # Helper function to parse classification codes
     def parse_functionality(code: str) -> Tuple[str, str]:
         """Parse functionality code like '2.1' into main and sub categories."""
         if not code or code == "":
@@ -655,51 +489,19 @@ def export_csv(
         main = main_map.get(code.split(".")[0], "") if "." in code else ""
         # Get full sub category
         sub = sub_map.get(code, "")
-        
+
         return main, sub
-    
-    def parse_access_pattern(code: str) -> Tuple[str, str]:
-        """Parse access pattern code like '2A' into permissions and environment."""
-        if not code or code == "":
-            return "", ""
-        
-        # Mapping for permissions (first character)
-        perm_map = {
-            "1": "read",
-            "2": "constrained_write",
-            "3": "write"
-        }
-        
-        # Mapping for environment (second character)
-        env_map = {
-            "A": "trusted",
-            "B": "untrusted"
-        }
-        
-        # Parse the code
-        permissions = perm_map.get(code[0], "") if len(code) > 0 else ""
-        environment = env_map.get(code[1], "") if len(code) > 1 else ""
-        
-        return permissions, environment
 
     # Build rows
     rows = []
     for tid, tinfo in tools_map.items():
         onet = onet_meta.get(tid, {})
-        auto = auto_meta.get(tid, {})
         func = func_meta.get(tid, {})
-        access = access_meta.get(tid, {})
-        
-        # Parse all classification codes
-        auto_code = auto.get("automation_level", "")
-        auto_parsed = parse_automation_level(auto_code)
-        
+
+        # Parse functionality classification code
         func_code = func.get("functionality", "")
         func_main, func_sub = parse_functionality(func_code)
-        
-        access_code = access.get("access_pattern", "")
-        access_perms, access_env = parse_access_pattern(access_code)
-        
+
         rows.append({
             # original fields
             "tool_id": tid,
@@ -718,14 +520,9 @@ def export_csv(
             "level2_name": onet.get("l2_name"),
             "task_id": onet.get("task_id"),
             "task_name": onet.get("task_name"),
-            # Classification fields
-            "automation_level": auto_parsed,
             # Functionality - parsed into main and sub
             "tool_functionality_main": func_main,
             "tool_functionality_sub": func_sub,
-            # Access pattern - parsed into permissions and environment
-            "tool_access_permissions": access_perms,
-            "tool_access_environment": access_env,
         })
 
     # Write CSV
@@ -741,9 +538,7 @@ def main():
     ap.add_argument("--servers", default="data/initial/data_unified_filtered.json", help="Path to filtered MCP servers JSON")
     ap.add_argument("--onet", default="data/internal-task-clusters/task_clusters_names.csv", help="Path to O*NET tasks CSV")
     ap.add_argument("--logs", default=None, help="Log dir for O*NET task (auto-generated if not provided)")
-    ap.add_argument("--logs-auto", default=None, help="Log dir for Automation Level task")
     ap.add_argument("--logs-func", default=None, help="Log dir for Functionality task")
-    ap.add_argument("--logs-access", default=None, help="Log dir for Access Pattern task")
     ap.add_argument("--out", default="data/internal-cl/cltools_3_results.csv", help="Output CSV path")
     ap.add_argument("--model", default="anthropic/claude-sonnet-4-20250514", help="Model string for inspect eval")
     ap.add_argument("--samples", default="data/internal-cl/cltools_samples.jsonl", help="Samples JSONL path")
@@ -754,21 +549,15 @@ def main():
     ap.add_argument("--run", action="store_true", help="Also launch `inspect eval` to produce logs for all tasks")
     args = ap.parse_args()
 
-    # Generate dated log directories if not provided - all under .log parent directory
+    # Generate dated log directories if not provided
     from datetime import datetime
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     if args.logs is None:
         args.logs = f"logs/onet_{timestamp}"
         log.info(f"Using auto-generated O*NET log directory: {args.logs}")
-    if args.logs_auto is None:
-        args.logs_auto = f"logs/auto_{timestamp}"
-        log.info(f"Using auto-generated Automation log directory: {args.logs_auto}")
     if args.logs_func is None:
         args.logs_func = f"logs/func_{timestamp}"
         log.info(f"Using auto-generated Functionality log directory: {args.logs_func}")
-    if args.logs_access is None:
-        args.logs_access = f"logs/access_{timestamp}"
-        log.info(f"Using auto-generated Access Pattern log directory: {args.logs_access}")
 
     # 1) Data prep
     servers = load_filtered_dataset(args.servers)
@@ -779,13 +568,11 @@ def main():
 
     # 2) Tasks are already defined at module level
 
-    # 3) Optionally run inspect eval for ALL four tasks
+    # 3) Optionally run inspect eval for both tasks
     if args.run:
         for which, logs_dir, task_name in [
             ("O*NET", args.logs, "mcp_onet_classify_task"),
-            ("Automation", args.logs_auto, "mcp_automation_level_task"),
             ("Functionality", args.logs_func, "mcp_functionality_task"),
-            ("Access Pattern", args.logs_access, "mcp_access_pattern_task"),
         ]:
             Path(logs_dir).mkdir(parents=True, exist_ok=True)
             this_file = Path(__file__).resolve()
@@ -809,17 +596,13 @@ def main():
         print(
             f"\ninspect eval {this_file}@mcp_onet_classify_task "
             f"--log-dir {args.logs} --model {args.model} --temperature 0\n"
-            f"inspect eval {this_file}@mcp_automation_level_task "
-            f"--log-dir {args.logs_auto} --model {args.model} --temperature 0\n"
             f"inspect eval {this_file}@mcp_functionality_task "
             f"--log-dir {args.logs_func} --model {args.model} --temperature 0\n"
-            f"inspect eval {this_file}@mcp_access_pattern_task "
-            f"--log-dir {args.logs_access} --model {args.model} --temperature 0\n"
         )
 
     # 4) Export merged results (only if eval files exist)
     try:
-        export_csv(args.logs, args.logs_auto, args.logs_func, args.logs_access, args.tools_json, args.out)
+        export_csv(args.logs, args.logs_func, args.tools_json, args.out)
     except ValueError as e:
         if "No .eval files found" in str(e):
             log.info("No evaluation results found yet. Run evaluations first to generate CSV output.")
