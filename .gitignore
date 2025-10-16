@@ -49,6 +49,10 @@ temp/
 *.npz
 *.jsonl
 
+# Playwright browser testing
+.playwright/
+.playwright-mcp/
+
 # OS
 .DS_Store
 Thumbs.db

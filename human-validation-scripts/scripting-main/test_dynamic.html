@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Survey Test</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="primate.js"></script>
+    <script>
+        // Create gorilla alias for primate
+        var gorilla = primate;
+        // Also make it available as a module export for require()
+        if (typeof module !== 'undefined' && module.exports) {
+            module.exports = primate;
+        }
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .page-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .server-info {
+            background-color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        .question-block {
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 5px;
+        }
+        .question-text {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .required {
+            color: red;
+        }
+        label {
+            display: block;
+            padding: 8px;
+            margin: 5px 0;
+            cursor: pointer;
+        }
+        label:hover {
+            background-color: #e9ecef;
+            border-radius: 3px;
+        }
+        input[type="radio"] {
+            margin-right: 10px;
+        }
+        .navigation {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .btn-disabled {
+            opacity: 0.5;
+        }
+        .content {
+            line-height: 1.6;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        h2 {
+            color: #555;
+            margin-top: 20px;
+        }
+        h3 {
+            color: #666;
+            margin-top: 15px;
+        }
+        ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        #loading {
+            text-align: center;
+            padding: 50px;
+            font-size: 18px;
+        }
+        #error {
+            color: red;
+            padding: 20px;
+            background-color: #ffeeee;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="loading">Loading survey...</div>
+    <div id="error" style="display: none;"></div>
+    <div id="gorilla"></div>
+    <div class="navigation" style="display: none;" id="navigation">
+        <button id="prev-btn" >Previous</button>
+        <button id="next-btn" >Next</button>
+    </div>
+
+    <script type="text/babel">
+        // Get file parameter from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const tsFile = urlParams.get('file') || 'main.ts';
+
+        console.log('Loading TypeScript file:', tsFile);
+
+        // Load and execute TypeScript file
+        fetch(tsFile)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Failed to load ${tsFile}: ${response.status} ${response.statusText}`);
+                }
+                return response.text();
+            })
+            .then(tsCode => {
+                console.log('TypeScript file loaded, length:', tsCode.length);
+
+                // Hide loading, show navigation
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('navigation').style.display = 'flex';
+
+                // Execute the TypeScript code directly
+                try {
+                    // Use eval to execute in global scope (TypeScript is just JavaScript here)
+                    window.eval(tsCode);
+                    console.log('TypeScript code executed successfully');
+                } catch (error) {
+                    console.error('Error executing TypeScript:', error);
+                    document.getElementById('error').style.display = 'block';
+                    document.getElementById('error').textContent = 'Error executing survey code: ' + error.message;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading TypeScript file:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                document.getElementById('error').textContent = 'Error loading survey file: ' + error.message + '\n\nMake sure the file "' + tsFile + '" exists and the HTTP server is running on port 8081.';
+            });
+    </script>
+</body>
+</html>

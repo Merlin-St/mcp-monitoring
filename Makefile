@@ -6,7 +6,7 @@
 # Prerequisites:
 # - Virtual environment: uv sync / source ~/mcp-monitoring/.venv/bin/activate
 
-.PHONY: help data-collect-servers data-collect-usage data-collect-all data-initial data-clean-readmes data-initial-clean data-embed-analysis data-embed-analysis-finance data-embed-optimize data-embed-analysis-all data-cl-servers data-cl-tools data-cl-all data-task-clusters clean lint lint-fix workflow-data-creation workflow-complete
+.PHONY: help data-collect-servers data-collect-usage data-collect-all data-initial data-clean-readmes data-initial-clean data-embed-analysis data-embed-analysis-finance data-embed-optimize data-embed-analysis-all data-cl-servers data-cl-tools data-cl-servers-enrich data-cl-all data-task-clusters clean lint lint-fix workflow-data-creation workflow-complete
 
 # Default target
 help:
@@ -31,6 +31,7 @@ help:
 	@echo "  Classification (Consequentiality Scoring):"
 	@echo "    data-cl-servers        CLServers pipeline (server classification)"
 	@echo "    data-cl-tools          CLTools pipeline (O*NET task mapping)"
+	@echo "    data-cl-servers-enrich Enrich CLServers with tool aggregations"
 	@echo "    data-cl-all            Complete classification pipeline"
 	@echo "    data-task-clusters     O*NET task clustering"
 	@echo ""
@@ -144,7 +145,12 @@ data-cl-tools:
 	python scripts/data-classification-tools/cltools_datamatch.py --stage4 data/internal-cl/cltools_3_results.csv --stage2 data/final/clservers_classified.csv --usage data/initial/data_unified_filtered.json --output data/final/cltools_classified.csv
 	@echo "✅ CLTools pipeline complete: data/final/cltools_classified.csv"
 
-data-cl-all: data-task-clusters data-cl-servers data-cl-tools
+data-cl-servers-enrich:
+	@echo "🔄 Enriching CLServers with aggregated tool classifications..."
+	python scripts/data-classification-tools/cltools_datamatch_toservers.py --cltools data/final/cltools_classified.csv --clservers data/final/clservers_classified.csv --output data/final/clservers_classified.csv
+	@echo "✅ CLServers enrichment complete: data/final/clservers_classified.csv"
+
+data-cl-all: data-task-clusters data-cl-servers data-cl-tools data-cl-servers-enrich
 
 
 

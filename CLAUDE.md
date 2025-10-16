@@ -142,6 +142,10 @@ python scripts/data-collection-servers/officiallist_data_run.py --awesomelist
 - `scripts/data-cleaning-readmes/data_readme_filter_inspect.py` - LLM-based refinement using Inspect framework
 - `scripts/data-cleaning-readmes/data_readme_filter_dfprocessing.py` - Process Inspect results back to JSON format
 
+**Human Validation & Agreement Metrics:**
+- `human-validation-scripts/human-validation-scoring.py` - Calculate inter-rater agreement metrics (Cohen's Kappa, Fleiss' Kappa)
+- `human-validation-scripts/README.md` - Documentation for human validation scoring
+
 **Utilities:**
 - `scripts/data-collection-servers/smithery_bulk_mcp_config.py` - Configuration management
 - `scripts/data-collection-servers/officiallist_github_fetcher.py` - GitHub metadata collection for officiallist servers
@@ -250,6 +254,11 @@ The system extracts and classifies:
 - `task_clusters_*.json` - Various clustering summary and result files
 - `data/external-cl/cl_onet_taskstatements.csv` - O*NET task statements database
 - `data/external-cl/cl_onet_toolsused.csv` - O*NET tools usage database
+
+**Human Validation Files:**
+- `data/external-cl-human-valid/data_exp_*.csv` - Human validation data from Gorilla experiments
+- `output-validation/cl-validation/human-validation-scores.json` - Agreement metrics and inter-rater reliability
+- `logs/human_validation_scoring.log` - Execution log for validation scoring
 
 ### Test Data Files
 - Various test files for development and validation
@@ -506,6 +515,34 @@ python scripts/onet-task-clusters/task_clusters_embed_match.py               # M
 # - Inspect framework installed (pip install inspect_ai)
 # - data/initial/data_unified_filtered.json must exist (run scripts/data-unification/data_unified_create_filtered_subset.py first)
 # - matplotlib, seaborn, pandas for CLServers visualizations
+```
+
+### Human Validation Scoring
+```bash
+source ~/mcp-monitoring/.venv/bin/activate
+
+# Calculate inter-rater agreement metrics
+python human-validation-scripts/human-validation-scoring.py
+
+# Compares human ratings from Gorilla experiments with LLM classifications
+# Calculates Cohen's Kappa (human vs LLM), Fleiss' Kappa (inter-rater reliability)
+# Generates confusion matrices and per-question/per-participant statistics
+
+# Input:
+# - data/external-cl-human-valid/data_exp_*.csv (Gorilla experiment data)
+# - data/final/clservers_classified.csv (LLM classifications)
+
+# Output:
+# - output-validation/cl-validation/human-validation-scores.json (comprehensive statistics)
+# - logs/human_validation_scoring.log (execution log)
+
+# Kappa interpretation:
+# 0.81-1.00: Almost perfect agreement
+# 0.61-0.80: Substantial agreement
+# 0.41-0.60: Moderate agreement
+# 0.21-0.40: Fair agreement
+# 0.00-0.20: Slight agreement
+# < 0: Poor agreement
 ```
 
 ### Testing & Validation

@@ -152,9 +152,19 @@ def enrich_with_metadata(
         on='server_id',
         how='left'
     )
-    
+
     # Add creation_date column (rename created_at for clarity)
     enriched_df = enriched_df.rename(columns={'created_at': 'creation_date'})
+
+    # Filter out tools from non-MCP servers (those without CLServers metadata)
+    tools_before_filter = len(enriched_df)
+    enriched_df = enriched_df[enriched_df['creation_date'].notna()].copy()
+    tools_after_filter = len(enriched_df)
+    filtered_count = tools_before_filter - tools_after_filter
+
+    if filtered_count > 0:
+        logger.info(f"Filtered out {filtered_count} tools from non-MCP servers (missing CLServers metadata)")
+        logger.info(f"Remaining tools: {tools_after_filter}")
     
     # Log merge statistics
     total_rows = len(enriched_df)

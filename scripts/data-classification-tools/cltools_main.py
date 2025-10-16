@@ -367,26 +367,30 @@ def classify_functionality():
 # ---------- Tasks (module-level so inspect can find them) ----------
 @task
 def mcp_onet_classify_task():
-    samples_path = "data/internal-cl/cltools_samples.jsonl"
-    csv_path = "data/internal-task-clusters/task_clusters_names.csv"
-    if not Path(samples_path).exists():
+    # Use absolute path relative to project root
+    project_root = Path(__file__).parent.parent.parent
+    samples_path = project_root / "data/internal-cl/cltools_samples.jsonl"
+    csv_path = project_root / "data/internal-task-clusters/task_clusters_names.csv"
+    if not samples_path.exists():
         raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
     return Task(
-        dataset=json_dataset(samples_path),
+        dataset=json_dataset(str(samples_path)),
         solver=chain(
             system_message("You are a careful classifier. Reply with ONLY the id each time."),
-            classify_tool(csv_path),
+            classify_tool(str(csv_path)),
         ),
     )
 
 
 @task
 def mcp_functionality_task():
-    samples_path = "data/internal-cl/cltools_samples.jsonl"
-    if not Path(samples_path).exists():
+    # Use absolute path relative to project root
+    project_root = Path(__file__).parent.parent.parent
+    samples_path = project_root / "data/internal-cl/cltools_samples.jsonl"
+    if not samples_path.exists():
         raise FileNotFoundError(f"Samples file {samples_path} not found. Run with --run first.")
     return Task(
-        dataset=json_dataset(samples_path),
+        dataset=json_dataset(str(samples_path)),
         solver=chain(
             system_message("You are a careful classifier. Reply with ONLY the code as instructed."),
             classify_functionality(),
@@ -547,6 +551,7 @@ def main():
     ap.add_argument("--limit", type=int, default=None, help="Limit number of samples processed by inspect eval")
     ap.add_argument("--max-connections", type=int, default=None, help="Maximum number of concurrent connections for inspect eval")
     ap.add_argument("--run", action="store_true", help="Also launch `inspect eval` to produce logs for all tasks")
+    ap.add_argument("--process-only", action="store_true", help="Skip data prep and eval, only process existing eval files to CSV")
     args = ap.parse_args()
 
     # Generate dated log directories if not provided
@@ -559,17 +564,19 @@ def main():
         args.logs_func = f"logs/func_{timestamp}"
         log.info(f"Using auto-generated Functionality log directory: {args.logs_func}")
 
-    # 1) Data prep
-    servers = load_filtered_dataset(args.servers)
-    tools = extract_tools_from_servers(servers, finance_only=args.finance)
-    samples = create_inspect_samples_from_tools(tools)
-    save_tools_json(tools, args.tools_json)
-    save_samples_jsonl(samples, args.samples)
+    # Skip data prep and eval if --process-only is set
+    if not args.process_only:
+        # 1) Data prep
+        servers = load_filtered_dataset(args.servers)
+        tools = extract_tools_from_servers(servers, finance_only=args.finance)
+        samples = create_inspect_samples_from_tools(tools)
+        save_tools_json(tools, args.tools_json)
+        save_samples_jsonl(samples, args.samples)
 
-    # 2) Tasks are already defined at module level
+        # 2) Tasks are already defined at module level
 
-    # 3) Optionally run inspect eval for both tasks
-    if args.run:
+        # 3) Optionally run inspect eval for both tasks
+    if args.run and not args.process_only:
         for which, logs_dir, task_name in [
             ("O*NET", args.logs, "mcp_onet_classify_task"),
             ("Functionality", args.logs_func, "mcp_functionality_task"),
@@ -590,7 +597,7 @@ def main():
                 cmd.extend(["--max-connections", str(args.max_connections)])
             log.info("Running %s task: %s", which, " ".join(map(str, cmd)))
             subprocess.run(cmd, check=True)
-    else:
+    elif not args.process_only:
         this_file = Path(__file__).resolve()
         log.info("Not running eval automatically. To run manually, use:")
         print(
@@ -599,6 +606,9 @@ def main():
             f"inspect eval {this_file}@mcp_functionality_task "
             f"--log-dir {args.logs_func} --model {args.model} --temperature 0\n"
         )
+
+    if args.process_only:
+        log.info("Process-only mode: skipping data prep and eval, processing existing eval files")
 
     # 4) Export merged results (only if eval files exist)
     try:
