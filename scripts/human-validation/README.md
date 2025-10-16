@@ -23,7 +23,7 @@ Main script for calculating agreement metrics between human validators and LLM c
 **Usage:**
 ```bash
 source ~/mcp-monitoring/.venv/bin/activate
-python human-validation-scripts/human-validation-scoring.py
+python scripts/human-validation/human-validation-scoring.py
 ```
 
 **Input Files:**

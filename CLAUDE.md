@@ -143,8 +143,8 @@ python scripts/data-collection-servers/officiallist_data_run.py --awesomelist
 - `scripts/data-cleaning-readmes/data_readme_filter_dfprocessing.py` - Process Inspect results back to JSON format
 
 **Human Validation & Agreement Metrics:**
-- `human-validation-scripts/human-validation-scoring.py` - Calculate inter-rater agreement metrics (Cohen's Kappa, Fleiss' Kappa)
-- `human-validation-scripts/README.md` - Documentation for human validation scoring
+- `scripts/human-validation/human-validation-scoring.py` - Calculate inter-rater agreement metrics (Cohen's Kappa, Fleiss' Kappa)
+- `scripts/human-validation/README.md` - Documentation for human validation scoring
 
 **Utilities:**
 - `scripts/data-collection-servers/smithery_bulk_mcp_config.py` - Configuration management
@@ -522,7 +522,7 @@ python scripts/onet-task-clusters/task_clusters_embed_match.py               # M
 source ~/mcp-monitoring/.venv/bin/activate
 
 # Calculate inter-rater agreement metrics
-python human-validation-scripts/human-validation-scoring.py
+python scripts/human-validation/human-validation-scoring.py
 
 # Compares human ratings from Gorilla experiments with LLM classifications
 # Calculates Cohen's Kappa (human vs LLM), Fleiss' Kappa (inter-rater reliability)
