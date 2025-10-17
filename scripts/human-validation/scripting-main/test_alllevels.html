@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MCP Tools Classification - All O*NET Levels Test</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .page-container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2, h3 {
+            color: #333;
+        }
+        .question-block {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 4px;
+        }
+        .conditional-question {
+            border-left: 3px solid #4CAF50;
+        }
+        .radio-group {
+            margin: 10px 0;
+        }
+        .radio-option {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border: 2px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .radio-option:hover {
+            border-color: #4CAF50;
+            background: #f0f8f0;
+        }
+        .radio-option input[type="radio"] {
+            margin-right: 10px;
+        }
+        .required {
+            color: red;
+        }
+        .button-container {
+            margin-top: 30px;
+            display: flex;
+            justify-content: space-between;
+        }
+        button {
+            padding: 12px 24px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-primary {
+            background: #4CAF50;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #45a049;
+        }
+        .btn-secondary {
+            background: #ddd;
+            color: #333;
+        }
+        .tool-info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .progress-bar {
+            background: #e0e0e0;
+            height: 8px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            background: #4CAF50;
+            height: 100%;
+            transition: width 0.3s;
+        }
+        pre {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+        }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+</head>
+<body>
+    <div id="app"></div>
+
+    <script src="main_tools_alllevels.ts" type="text/javascript"></script>
+    <script>
+        // Render current page
+        function renderPage() {
+            var page = studyPages[currentPage];
+            var html = '';
+
+            // Progress bar
+            html += '<div class="progress-bar"><div class="progress-fill" style="width: ' +
+                    (currentPage / studyPages.length * 100) + '%"></div></div>';
+
+            html += '<div class="page-container">';
+            html += '<h1>' + page.title + '</h1>';
+
+            if (page.type === 'instructions') {
+                // Render instructions
+                html += '<div>' + marked.parse(page.content) + '</div>';
+            } else if (page.type === 'tool_combined') {
+                // Tool information
+                html += '<div class="tool-info">';
+                html += '<h2>' + page.toolName + '</h2>';
+                html += '<p><strong>Server:</strong> ' + page.serverName + '</p>';
+                html += '<p><strong>Tool Description:</strong> ' + page.toolDescription + '</p>';
+                html += '<p><strong>Server Description:</strong> ' + page.serverDescription + '</p>';
+                html += '</div>';
+
+                // Q1.1: O*NET Level 1
+                html += '<div class="question-block">';
+                html += '<h3>Q1.1: O*NET Broad Category</h3>';
+                html += '<p>Which broad occupational category best describes what this tool does? <span class="required">*</span></p>';
+                html += '<div class="radio-group" id="onet_l1_choices"></div>';
+                html += '</div>';
+
+                // Q1.2 and Q1.3 (conditional)
+                if (page.allOnetLevels) {
+                    html += '<div class="question-block conditional-question" id="q12_block" style="display: none;">';
+                    html += '<h3>Q1.2: O*NET Sub-Category</h3>';
+                    html += '<p>Which specific sub-category best fits this tool? <span class="required">*</span></p>';
+                    html += '<div class="radio-group" id="onet_l2_choices"></div>';
+                    html += '</div>';
+
+                    html += '<div class="question-block conditional-question" id="q13_block" style="display: none;">';
+                    html += '<h3>Q1.3: O*NET Specific Task</h3>';
+                    html += '<p>Which specific task best describes what this tool does? <span class="required">*</span></p>';
+                    html += '<div class="radio-group" id="onet_l3_choices"></div>';
+                    html += '</div>';
+                }
+
+                // Q2.1: Functionality Main
+                html += '<div class="question-block">';
+                html += '<h3>' + page.q21Text + '</h3>';
+                html += '<div class="radio-group">';
+                page.q21Choices.forEach(function(choice) {
+                    html += '<div class="radio-option">';
+                    html += '<input type="radio" name="func_main" value="' + choice.value + '" id="func_' + choice.value + '">';
+                    html += '<label for="func_' + choice.value + '">' + choice.text + '</label>';
+                    html += '</div>';
+                });
+                html += '</div>';
+                html += '</div>';
+
+                // Q2.2: Functionality Sub (conditional)
+                html += '<div class="question-block conditional-question" id="q22_block" style="display: none;">';
+                html += '<h3>Q2.2: Functionality Sub-Category</h3>';
+                html += '<p>Which specific sub-category best describes this tool? <span class="required">*</span></p>';
+                html += '<div class="radio-group" id="func_sub_choices"></div>';
+                html += '</div>';
+            }
+
+            // Navigation buttons
+            html += '<div class="button-container">';
+            if (currentPage > 0) {
+                html += '<button class="btn-secondary" onclick="previousPage()">Previous</button>';
+            } else {
+                html += '<div></div>';
+            }
+            html += '<button class="btn-primary" onclick="nextPage()">Next</button>';
+            html += '</div>';
+
+            html += '</div>';
+
+            $('#app').html(html);
+
+            // Initialize O*NET L1 choices if it's a tool page
+            if (page.type === 'tool_combined') {
+                var l1Html = '';
+                for (var l1Key in onetData.l1Clusters) {
+                    l1Html += '<div class="radio-option">';
+                    l1Html += '<input type="radio" name="onet_l1" value="' + l1Key + '" class="onet-l1-radio">';
+                    l1Html += '<label>' + onetData.l1Clusters[l1Key] + '</label>';
+                    l1Html += '</div>';
+                }
+                $('#onet_l1_choices').html(l1Html);
+
+                // Add change handlers for conditional questions
+                if (page.allOnetLevels) {
+                    $('.onet-l1-radio').on('change', function() {
+                        var selectedL1 = $(this).val();
+                        $('#q12_block').show();
+                        // Populate L2 choices based on L1 selection
+                        // (simplified for demo - would need full implementation)
+                        var l2Html = '<div class="radio-option"><input type="radio" name="onet_l2" value="example_l2"><label>Example L2 Category (would be populated dynamically)</label></div>';
+                        $('#onet_l2_choices').html(l2Html);
+                    });
+                }
+
+                // Functionality main change handler
+                $('input[name="func_main"]').on('change', function() {
+                    $('#q22_block').show();
+                    var funcSub Html = '<div class="radio-option"><input type="radio" name="func_sub" value="example_sub"><label>Example Sub-Category (would be populated dynamically)</label></div>';
+                    $('#func_sub_choices').html(funcSubHtml);
+                });
+            }
+        }
+
+        function nextPage() {
+            if (currentPage < studyPages.length - 1) {
+                currentPage++;
+                renderPage();
+                window.scrollTo(0, 0);
+            }
+        }
+
+        function previousPage() {
+            if (currentPage > 0) {
+                currentPage--;
+                renderPage();
+                window.scrollTo(0, 0);
+            }
+        }
+
+        // Initialize markdown parser (simple version)
+        var marked = {
+            parse: function(text) {
+                return text
+                    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
+                    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
+                    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/^\* (.*$)/gim, '<li>$1</li>')
+                    .replace(/\n/g, '<br>');
+            }
+        };
+
+        // Initialize on page load
+        $(document).ready(function() {
+            renderPage();
+        });
+    </script>
+</body>
+</html>

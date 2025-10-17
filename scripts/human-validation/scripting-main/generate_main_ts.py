@@ -536,12 +536,18 @@ For each server, you will:
 """
 
 
-def generate_tool_instruction_page_content():
+def generate_tool_instruction_page_content(all_onet_levels=False):
     """Generate the simplified instruction page content for tool classification.
 
     Tools study only includes Q1 (O*NET L1) and Q2 (Functionality) questions.
     No Q0, Q3-Q5 questions.
     """
+    onet_desc = "2 questions" if not all_onet_levels else "2-4 questions"
+    onet_detail = "* **O*NET Occupational Category** (Q1.1) - What job task does this tool support?" if not all_onet_levels else """* **O*NET Occupational Category** (Q1.1-Q1.3) - What job task does this tool support?
+  - Q1.1: Broad category (e.g., 'Computer/Mathematical')
+  - Q1.2: Sub-category (e.g., 'Software Development') - conditional
+  - Q1.3: Specific task - conditional"""
+
     return f"""    {{
         type: 'instructions',
         title: 'Study Instructions',
@@ -551,9 +557,9 @@ Thank you for participating! You will be evaluating individual MCP (Model Contex
 
 ## Your Task
 
-* For each tool, you will answer 2 questions:
+* For each tool, you will answer {onet_desc}:
 
-* **O*NET Occupational Category** (Q1.1) - What job task does this tool support? (Note: Many tools will be in the category 'Design, implement, and maintain diverse information technology systems')
+{onet_detail}
 
 * **Functionality Classification** (Q2.1-Q2.2) - How does this tool work?
 
@@ -1180,7 +1186,7 @@ Click **Finish** to complete.`
     return output
 
 
-def generate_main_tools_ts(tools, onet_hierarchy, func_hierarchy, all_questions, output_path, num_tools=10):
+def generate_main_tools_ts(tools, onet_hierarchy, func_hierarchy, all_questions, output_path, num_tools=10, all_onet_levels=False):
     """Generate main_tools.ts file content for tool classification (simplified study).
 
     Args:
@@ -1193,6 +1199,7 @@ def generate_main_tools_ts(tools, onet_hierarchy, func_hierarchy, all_questions,
 
     Note: Tools study only includes Q1.1 (O*NET L1) + Q2.1/Q2.2 (Functionality).
           No Q0 (analysis notes), no Q3-Q5 (standard questions).
+          With all_onet_levels=True, adds Q1.2 (L2) and Q1.3 (Task) questions.
     """
 
     # Sample random tools
@@ -1220,7 +1227,7 @@ var studyPages = [
 """
 
     # Add instruction page (tool-specific)
-    output += generate_tool_instruction_page_content()
+    output += generate_tool_instruction_page_content(all_onet_levels)
 
     # Add tutorial example (tools tutorial)
     output += generate_tool_tutorial_example(all_questions)
@@ -1251,7 +1258,8 @@ var studyPages = [
         serverName: '{server_name}',
         serverDescription: '{server_desc}',
         q21Text: '{q21_text}',
-        q21Choices: {q21_choices}
+        q21Choices: {q21_choices},
+        allOnetLevels: {str(all_onet_levels).lower()}
     }},
 """
 
@@ -1269,6 +1277,12 @@ Click **Finish** to complete.`
 
 """
 
+    # Add allOnetLevels configuration variable
+    output += f"""// Configuration
+var allOnetLevels = {str(all_onet_levels).lower()};
+
+"""
+
     return output
 
 
@@ -1279,16 +1293,17 @@ def generate_typescript_runtime():
     return """// State
 var currentPage = 0;
 var responses = {};
-var serverResponses = {};  // Track responses per server: {serverIndex: {question: answer}}
+var serverResponses = {};  // Track responses per server/tool: {index: {question: answer}}
 
 // Main entry point
 gorilla.ready(function() {
     console.log("Study ready");
-    // Initialize serverResponses
+    // Initialize serverResponses for both servers and tools
     for (var i = 0; i < studyPages.length; i++) {
         var page = studyPages[i];
-        if (page.serverIndex && !serverResponses[page.serverIndex]) {
-            serverResponses[page.serverIndex] = {};
+        var idx = page.serverIndex || page.toolIndex;
+        if (idx && !serverResponses[idx]) {
+            serverResponses[idx] = {};
         }
     }
     showPage(0);
@@ -1301,13 +1316,14 @@ function showPage(pageIndex) {
 
     // Auto-skip func_sub pages when func_main is 'perception'
     if (page.type === 'func_sub') {
-        var serverIdx = page.serverIndex;
-        var funcMain = serverResponses[serverIdx] && serverResponses[serverIdx]['func_main'];
+        var idx = page.serverIndex || page.toolIndex;
+        var funcMain = serverResponses[idx] && serverResponses[idx]['func_main'];
 
         if (funcMain === 'perception') {
             // Auto-fill with 'sensors' and skip to next page
-            serverResponses[serverIdx]['func_sub'] = 'sensors';
-            var responseKey = page.serverName + '_func_sub';
+            serverResponses[idx]['func_sub'] = 'sensors';
+            var nameKey = page.serverName || page.toolName;
+            var responseKey = nameKey + '_func_sub';
             responses[responseKey] = 'sensors';
             console.log('Auto-skipped func_sub for perception, set to sensors');
 
@@ -2019,6 +2035,27 @@ function showToolCombinedPage(page, pageIndex) {
         </div>
     `;
 
+    // Q1.2 and Q1.3: O*NET Level 2 and Task (conditionally visible)
+    var q12Html = '';
+    var q13Html = '';
+    if (page.allOnetLevels) {
+        q12Html = `
+            <div class="question-block conditional-question" id="q12_block" style="display: none; margin-left: 20px; padding-left: 20px; border-left: 3px solid #ccc;">
+                <h3>Q1.2: O*NET Sub-Category</h3>
+                <p class="question-text">Which specific occupational sub-category best fits this tool? <span class="required">*</span></p>
+                <div id="onet_l2_choices_${toolIdx}"></div>
+            </div>
+        `;
+
+        q13Html = `
+            <div class="question-block conditional-question" id="q13_block" style="display: none; margin-left: 40px; padding-left: 20px; border-left: 3px solid #ccc;">
+                <h3>Q1.3: O*NET Task</h3>
+                <p class="question-text">Which specific occupational task most closely matches this tool's functionality? <span class="required">*</span></p>
+                <div id="onet_task_choices_${toolIdx}"></div>
+            </div>
+        `;
+    }
+
     // Q2.1: Functionality Main Category (always visible)
     var q21Html = page.q21Choices.map(choice => `
         <label>
@@ -2050,12 +2087,50 @@ function showToolCombinedPage(page, pageIndex) {
             <h1>${page.title}</h1>
             ${toolInfoHtml}
             ${q1Html}
+            ${q12Html}
+            ${q13Html}
             ${q2Html}
             ${q22Html}
         </div>
     `);
 
     // Add event listeners for conditional display
+
+    // O*NET L1 -> L2 conditional display
+    if (page.allOnetLevels) {
+        $('input[name="onet_l1_' + toolIdx + '"]').on('change', function() {
+            var selectedL1 = $('input[name="onet_l1_' + toolIdx + '"]:checked').val();
+            if (selectedL1) {
+                // Show L2 block and populate choices
+                $('#q12_block').show();
+                var l2Choices = getL2ClustersForL1(selectedL1);
+                var l2Html = l2Choices.map(choice => `
+                    <label>
+                        <input type="radio" name="onet_l2_${toolIdx}" value="${choice.value}" class="onet-l2-radio">
+                        ${choice.text}
+                    </label>
+                `).join('');
+                $('#onet_l2_choices_' + toolIdx).html(l2Html);
+
+                // Add listener for L2 -> Task
+                $(`.onet-l2-radio`).on('change', function() {
+                    var selectedL2 = $('input[name="onet_l2_' + toolIdx + '"]:checked').val();
+                    if (selectedL2) {
+                        // Show Task block and populate choices
+                        $('#q13_block').show();
+                        var taskChoices = getTasksForL2(selectedL2);
+                        var taskHtml = taskChoices.map(choice => `
+                            <label>
+                                <input type="radio" name="onet_task_${toolIdx}" value="${choice.value}">
+                                ${choice.text}
+                            </label>
+                        `).join('');
+                        $('#onet_task_choices_' + toolIdx).html(taskHtml);
+                    }
+                });
+            }
+        });
+    }
 
     // Q2.1 -> Q2.2 conditional display
     $(`.q21-radio`).on('change', function() {
@@ -2184,6 +2259,33 @@ function validatePage() {
         } else {
             serverResponses[toolIdx]['onet_l1'] = onetL1;
             responses[page.toolName + '_onet_l1'] = onetL1;
+        }
+
+        // Q1.2 and Q1.3 (if allOnetLevels is true)
+        if (page.allOnetLevels) {
+            // Q1.2: O*NET L2 (only required if L1 is selected and L2 block is visible)
+            if (onetL1 && $('#q12_block').is(':visible')) {
+                var onetL2 = $('input[name="onet_l2_' + toolIdx + '"]:checked').val();
+                if (!onetL2) {
+                    missingFields.push('Q1.2: O*NET Sub-Category');
+                    isValid = false;
+                } else {
+                    serverResponses[toolIdx]['onet_l2'] = onetL2;
+                    responses[page.toolName + '_onet_l2'] = onetL2;
+
+                    // Q1.3: O*NET Task (only required if L2 is selected and task block is visible)
+                    if ($('#q13_block').is(':visible')) {
+                        var onetTask = $('input[name="onet_task_' + toolIdx + '"]:checked').val();
+                        if (!onetTask) {
+                            missingFields.push('Q1.3: O*NET Task');
+                            isValid = false;
+                        } else {
+                            serverResponses[toolIdx]['onet_task'] = onetTask;
+                            responses[page.toolName + '_onet_task'] = onetTask;
+                        }
+                    }
+                }
+            }
         }
 
         // Q2.1: Functionality Main
@@ -2507,7 +2609,7 @@ def main():
 
         print(f"\nGenerating {args.output} with {args.servers} tools...")
         content = generate_main_tools_ts(tools, onet_hierarchy, func_hierarchy, all_questions, output_path,
-                                        num_tools=args.servers)
+                                        num_tools=args.servers, all_onet_levels=args.all_onet_levels)
 
         # Add TypeScript runtime code
         content += generate_typescript_runtime()

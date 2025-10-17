@@ -226,6 +226,9 @@ def load_llm_classifications(csv_path: Path) -> pd.DataFrame:
 
     df = df[relevant_cols]
 
+    # Normalize server names to lowercase for consistent matching
+    df["server_name"] = df["server_name"].str.lower()
+
     logger.info(f"Loaded {len(df)} server classifications with {len(relevant_cols)-1} relevant fields")
 
     return df
@@ -249,6 +252,9 @@ def transform_human_data(human_df: pd.DataFrame) -> pd.DataFrame:
     # Select relevant columns
     cols = ["Participant Public ID", "servername", "question", "Value"]
     pivot_df = human_df[cols].copy()
+
+    # Normalize server names to lowercase for consistent matching
+    pivot_df["servername"] = pivot_df["servername"].str.lower()
 
     # Pivot to wide format
     wide_df = pivot_df.pivot_table(
@@ -490,10 +496,27 @@ def analyze_question(
             merged = merged[merged["func_main_mapped"] == merged[f"{func_main_llm_field}_mapped"]]
             filtered_count = len(merged)
 
+            # Additional filtering: Remove LLM "sensors" predictions for non-perception cases
+            # This is needed because the LLM incorrectly predicts "sensors" for reasoning/action cases
+            sensors_before = len(merged[merged[llm_field] == "sensors"])
+            merged = merged[
+                ~(
+                    (merged[f"{func_main_llm_field}_mapped"] != 1)  # Not perception (perception=1)
+                    & (merged[llm_field] == "sensors")  # LLM predicts sensors
+                )
+            ]
+            sensors_after = len(merged[merged[llm_field] == "sensors"])
+            sensors_removed = sensors_before - sensors_after
+
             logger.info(
                 f"Conditional filtering for func_sub: {initial_count} total responses, "
                 f"{filtered_count} where func_main agrees ({filtered_count/initial_count:.1%})"
             )
+            if sensors_removed > 0:
+                logger.info(
+                    f"Removed {sensors_removed} invalid LLM 'sensors' predictions for non-perception cases "
+                    f"(final count: {len(merged)})"
+                )
 
             if len(merged) == 0:
                 logger.warning("No responses with func_main agreement for func_sub analysis")
@@ -529,12 +552,26 @@ def analyze_question(
 
     # Calculate Fleiss' Kappa (inter-rater reliability among humans + LLM)
     # Build ratings matrix: servers x (participants + LLM)
+    # Note: Different servers may have been rated by different numbers of participants
     servers = merged["servername"].unique()
+
+    # Get all participants who rated any server
+    all_participants = participants.tolist()
+    n_expected_raters = len(all_participants) + 1  # participants + LLM
+
     ratings_matrix = []
 
     for server in servers:
         server_data = merged[merged["servername"] == server]
-        ratings = server_data[human_col].values.tolist()
+
+        # Build rating row: one rating per participant (or NaN if they didn't rate this server)
+        ratings = []
+        for participant in all_participants:
+            participant_rating = server_data[server_data["participant_id"] == participant][human_col]
+            if len(participant_rating) > 0:
+                ratings.append(participant_rating.iloc[0])
+            else:
+                ratings.append(np.nan)
 
         # Add LLM rating
         llm_rating = server_data[llm_field_to_use].iloc[0]
@@ -542,7 +579,12 @@ def analyze_question(
 
         ratings_matrix.append(ratings)
 
-    ratings_matrix = np.array(ratings_matrix)
+    # Convert to numpy array - use object dtype for categorical data, float for numeric
+    if question_info["type"] in ["binary", "ordinal"] or question_info.get("mapping"):
+        ratings_matrix = np.array(ratings_matrix, dtype=float)
+    else:
+        ratings_matrix = np.array(ratings_matrix, dtype=object)
+
     fleiss_kappa = calculate_fleiss_kappa(ratings_matrix)
 
     # Calculate overall agreement percentage
@@ -633,17 +675,19 @@ def visualize_confusion_matrices(question_stats: dict, output_dir: Path):
         # Add agreement statistics as text
         stats_text = (
             f"Mean Kappa: {stats.get('mean_kappa', 0):.3f}\n"
+            f"Fleiss' Kappa: {stats.get('fleiss_kappa', 0):.3f}\n"
             f"Agreement: {stats.get('agreement_pct', 0):.1%}\n"
             f"N={stats.get('n_responses', 0)}"
         )
         ax.text(
-            1.02,
+            1.15,
             0.5,
             stats_text,
             transform=ax.transAxes,
-            fontsize=10,
+            fontsize=11,
             verticalalignment="center",
-            bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.5),
+            bbox=dict(boxstyle="round", facecolor="wheat", alpha=0.7),
+            fontweight="bold",
         )
 
         # Rotate labels for better readability
@@ -722,6 +766,14 @@ def calculate_participant_statistics(human_df: pd.DataFrame, llm_df: pd.DataFram
                     # Filter to only rows where func_main agrees
                     merged = merged[merged["func_main_mapped"] == merged[f"{func_main_llm_field}_mapped"]]
 
+                    # Additional filtering: Remove LLM "sensors" predictions for non-perception cases
+                    merged = merged[
+                        ~(
+                            (merged[f"{func_main_llm_field}_mapped"] != 1)  # Not perception (perception=1)
+                            & (merged[llm_field] == "sensors")  # LLM predicts sensors
+                        )
+                    ]
+
                     if len(merged) == 0:
                         continue
 
@@ -761,6 +813,53 @@ def calculate_participant_statistics(human_df: pd.DataFrame, llm_df: pd.DataFram
     return participant_stats
 
 
+def check_server_name_matching(human_df: pd.DataFrame, llm_df: pd.DataFrame) -> None:
+    """
+    Check and report server name matching between human validation and LLM data.
+    Warns about unmatched servers that might be case mismatches.
+
+    Args:
+        human_df: Wide-format human validation data with 'servername' column
+        llm_df: LLM classifications with 'server_name' column
+    """
+    # Get unique server names from both datasets
+    human_servers = set(human_df["servername"].dropna().unique())
+    llm_servers = set(llm_df["server_name"].unique())
+
+    # Create case-insensitive lookup for LLM servers
+    llm_servers_lower = {name.lower(): name for name in llm_servers}
+
+    # Find exact matches and mismatches
+    exact_matches = human_servers & llm_servers
+    unmatched = human_servers - llm_servers
+
+    # Check for case-insensitive matches among unmatched
+    case_mismatches = {}
+    true_unmatched = []
+
+    for human_name in unmatched:
+        llm_name = llm_servers_lower.get(human_name.lower())
+        if llm_name:
+            case_mismatches[human_name] = llm_name
+        else:
+            true_unmatched.append(human_name)
+
+    # Log results
+    logger.info(f"Server name matching: {len(human_servers)} human servers, {len(llm_servers)} LLM servers")
+    logger.info(f"  ✓ Exact matches: {len(exact_matches)}/{len(human_servers)}")
+
+    if case_mismatches:
+        logger.warning(f"  ⚠ Case mismatches found: {len(case_mismatches)}")
+        for human_name, llm_name in case_mismatches.items():
+            logger.warning(f"    - '{human_name}' (human) != '{llm_name}' (LLM) - case difference")
+            logger.warning(f"      These servers will NOT be matched. Consider fixing case in human validation data.")
+
+    if true_unmatched:
+        logger.warning(f"  ✗ Unmatched servers: {len(true_unmatched)}")
+        for name in true_unmatched:
+            logger.warning(f"    - '{name}' not found in LLM classifications")
+
+
 def main():
     """Main execution function."""
     # Parse command-line arguments
@@ -771,17 +870,32 @@ def main():
         default="clservers_classified.csv",
         help="LLM classification file name (default: clservers_classified.csv)",
     )
+    parser.add_argument(
+        "--exclude-participants",
+        type=str,
+        nargs="+",
+        default=[],
+        help="List of participant IDs to exclude from analysis",
+    )
     args = parser.parse_args()
 
     logger.info(f"Starting human validation scoring analysis with {args.llm_file}")
+    if args.exclude_participants:
+        logger.info(f"Excluding participants: {', '.join(args.exclude_participants)}")
 
     # Define paths
-    project_root = Path(__file__).parent.parent
+    project_root = Path(__file__).parent.parent.parent  # Go up to project root from scripts/human-validation/
     human_data_dir = project_root / "data" / "external-cl-human-valid"
     llm_data_path = project_root / "data" / "final" / args.llm_file
 
-    # Generate output filename based on input file
-    if "alternative" in args.llm_file:
+    # Generate output filename based on input file and exclusions
+    if args.exclude_participants:
+        # Create suffix for excluded participants
+        exclude_suffix = "-excluded"
+        output_filename = f"human-validation-scores{exclude_suffix}.json"
+        if "alternative" in args.llm_file:
+            output_filename = f"human-validation-scores-alternative{exclude_suffix}.json"
+    elif "alternative" in args.llm_file:
         output_filename = "human-validation-scores-alternative.json"
     else:
         output_filename = "human-validation-scores.json"
@@ -801,9 +915,22 @@ def main():
     human_df = load_human_validation_data(human_data_dir)
     llm_df = load_llm_classifications(llm_data_path)
 
+    # Filter out excluded participants
+    if args.exclude_participants:
+        initial_count = len(human_df)
+        human_df = human_df[~human_df["Participant Public ID"].isin(args.exclude_participants)]
+        filtered_count = len(human_df)
+        logger.info(
+            f"Filtered {initial_count - filtered_count} responses from {len(args.exclude_participants)} excluded participants"
+        )
+        logger.info(f"Remaining: {filtered_count} responses from {human_df['Participant Public ID'].nunique()} participants")
+
     # Transform human data
     human_wide = transform_human_data(human_df)
     human_mapped = map_human_to_llm_scale(human_wide, onet_mapping=onet_mapping)
+
+    # Check server name matching and report issues
+    check_server_name_matching(human_wide, llm_df)
 
     # Calculate statistics for each question
     question_stats = {}

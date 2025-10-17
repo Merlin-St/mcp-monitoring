@@ -168,7 +168,7 @@ def compare_results(original: dict, alternative: dict) -> None:
 
 def main():
     """Main execution function."""
-    project_root = Path(__file__).parent.parent
+    project_root = Path(__file__).parent.parent.parent  # Go up to project root from scripts/human-validation/
     orig_path = project_root / "output-validation" / "cl-validation" / "human-validation-scores.json"
     alt_path = project_root / "output-validation" / "cl-validation" / "human-validation-scores-alternative.json"
 
