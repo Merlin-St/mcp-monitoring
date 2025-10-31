@@ -23,10 +23,10 @@ def compare_all_scenarios() -> None:
 
     # Load all four scenarios
     scenarios = {
-        "Original (All)": validation_dir / "human-validation-scores.json",
-        "Original (Excluded)": validation_dir / "human-validation-scores-excluded.json",
-        "Alternative (All)": validation_dir / "human-validation-scores-alternative.json",
-        "Alternative (Excluded)": validation_dir / "human-validation-scores-alternative-excluded.json",
+        "Original (All)": validation_dir / "human-validation-servers-scores.json",
+        "Original (Excluded)": validation_dir / "human-validation-servers-scores-excluded.json",
+        "Alternative (All)": validation_dir / "human-validation-servers-scores-alternative.json",
+        "Alternative (Excluded)": validation_dir / "human-validation-servers-scores-alternative-excluded.json",
     }
 
     results = {}

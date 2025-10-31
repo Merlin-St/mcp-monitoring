@@ -234,9 +234,9 @@ def main():
     project_root = Path(__file__).parent.parent.parent
 
     if args.excluded:
-        filename = "human-validation-scores-excluded.json"
+        filename = "human-validation-servers-scores-excluded.json"
     else:
-        filename = "human-validation-scores.json"
+        filename = "human-validation-servers-scores.json"
 
     orig_path = project_root / "output-validation" / "cl-validation" / filename
 

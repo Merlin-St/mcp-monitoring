@@ -216,6 +216,14 @@ def enrich_servers_with_tools(
     # Aggregate tool classifications
     aggregated_tools = aggregate_tool_classifications(cltools_df)
 
+    # Drop existing O*NET columns if they exist (to allow overwriting)
+    onet_columns = ['highest_automation_func', 'main_automation_subfunc',
+                    'main_onet_task_level1', 'main_onet_task_level2', 'main_onet_task_level3']
+    existing_onet_cols = [col for col in onet_columns if col in clservers_df.columns]
+    if existing_onet_cols:
+        logger.info(f"Dropping existing O*NET columns to overwrite: {existing_onet_cols}")
+        clservers_df = clservers_df.drop(columns=existing_onet_cols)
+
     # Merge with CLServers data
     logger.info("Merging aggregated tool classifications with CLServers data...")
     enriched_df = clservers_df.merge(

@@ -63,9 +63,7 @@ def enrich_with_metadata(
     
     # Set default output path
     if output_path is None:
-        cltools_stem = Path(cltools_path).stem
-        cltools_suffix = Path(cltools_path).suffix
-        output_path = f"{cltools_stem}_enriched{cltools_suffix}"
+        output_path = "data/final/cltools_classified.csv"
     
     logger.info(f"Output file: {output_path}")
     
@@ -83,14 +81,14 @@ def enrich_with_metadata(
         raise ValueError("Stage4 file missing required 'server_id' column")
     
     # Read CLServers data (only needed columns for memory efficiency)
-    logger.info("Loading CLServers metadata (creation date and use count)...")
+    logger.info("Loading CLServers metadata (creation date, use count, canonical_official, name, owner, repository_url)...")
     try:
-        clservers_df = pd.read_csv(clservers_path, usecols=['server_id', 'created_at', 'use_count'])
+        clservers_df = pd.read_csv(clservers_path, usecols=['server_id', 'created_at', 'use_count', 'canonical_official', 'name', 'owner', 'repository_url'])
         logger.info(f"Loaded {len(clservers_df)} rows from CLServers file")
     except Exception as e:
         logger.error(f"Error reading CLServers file: {e}")
         raise
-    
+
     # Validate CLServers has required columns
     if 'created_at' not in clservers_df.columns:
         raise ValueError("Stage2 file missing required 'created_at' column")
@@ -141,8 +139,8 @@ def enrich_with_metadata(
     # Perform the merges
     logger.info("Merging with CLServers data on server_id...")
     enriched_df = cltools_df.merge(
-        clservers_df[['server_id', 'created_at', 'use_count']], 
-        on='server_id', 
+        clservers_df[['server_id', 'created_at', 'use_count', 'canonical_official', 'name', 'owner', 'repository_url']],
+        on='server_id',
         how='left'
     )
     

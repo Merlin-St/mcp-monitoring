@@ -1,25 +1,27 @@
 #!/usr/bin/env python3
 """
-Human Validation Scoring Script
+Human Validation Tools Scoring Script
 
-Analyzes human validation data from Gorilla experiments and calculates inter-rater
-agreement metrics comparing human ratings with LLM classifications.
+Analyzes human validation data for MCP tools from Gorilla experiments and calculates
+inter-rater agreement metrics comparing human ratings with LLM tool classifications.
 
 Features:
 - Cohen's Kappa for pairwise agreement (human vs LLM)
 - Fleiss' Kappa for inter-rater reliability across all human raters
 - Confusion matrices showing disagreement patterns
 - Percentage agreement statistics
-- Weighted Kappa for ordinal scales (payment autonomy levels)
-- Support for multiple LLM classification variants (e.g., different models)
+- Focused on tool-level classifications (func_main, func_sub, onet_l1)
 
 Input:
-- data/external-cl-human-valid/data_exp_*.csv - Human validation data from Gorilla
-- data/final/clservers_classified*.csv - CLServers LLM classifications
-- data/final/cltools_classified*.csv - CLTools LLM classifications
+- data/external-cl-human-valid/data_exp_243045-vall_tasks.csv - Tools validation data
+- data/final/cltools_classified.csv - CLTools LLM classifications
 
 Output:
-- human-validation-scores.json - Comprehensive agreement statistics for all variants
+- human-validation-tools-scores.json - Comprehensive agreement statistics
+
+Participant Exclusions:
+- 3b9d6f2e8a4c: AISI internal testing (manually excluded by default)
+- Auto-excluded: Participants with negative kappa on any question (worse-than-random performance)
 """
 
 import argparse
@@ -40,53 +42,31 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s - %(levelname)s - %(message)s",
     handlers=[
-        logging.FileHandler("logs/human_validation_scoring.log"),
+        logging.FileHandler("logs/human_validation_tools.log"),
         logging.StreamHandler(sys.stdout),
     ],
 )
 logger = logging.getLogger(__name__)
 
-# Question mapping: human validation question IDs to LLM field names
-# Supports both clservers and cltools files with different column names
+# Question mapping: human validation question IDs to LLM field names for tools
 QUESTION_MAPPING = {
     "func_main": {
-        "llm_field": "highest_automation_func",  # clservers field
-        "llm_field_alt": "tool_functionality_main",  # cltools field
+        "llm_field": "tool_functionality_main",  # cltools field
         "description": "Main functionality level (perception/reasoning/action)",
         "type": "categorical",
         "mapping": {"perception": 1, "reasoning": 2, "action": 3},
     },
     "func_sub": {
-        "llm_field": "main_automation_subfunc",  # clservers field
-        "llm_field_alt": "tool_functionality_sub",  # cltools field
+        "llm_field": "tool_functionality_sub",  # cltools field
         "description": "Sub-category functionality classification",
         "type": "categorical",
         "mapping": None,  # Dynamic mapping based on actual values
     },
     "onet_l1": {
-        "llm_field": "main_onet_task_level1",  # clservers field
-        "llm_field_alt": "level1_name",  # cltools field
+        "llm_field": "level1_name",  # cltools field
         "description": "O*NET Level 1 occupational category",
         "type": "categorical",
         "mapping": None,  # Dynamic mapping based on actual values
-    },
-    "q3": {
-        "llm_field": "generality_industry",
-        "description": "Industry generality (cross-industry vs industry-specific)",
-        "type": "binary",
-        "mapping": {0: 0, 1: 1},
-    },
-    "q4": {
-        "llm_field": "generality_environment",
-        "description": "Environment generality (open/untrusted vs trusted)",
-        "type": "binary",
-        "mapping": {0: 0, 1: 1},
-    },
-    "q5": {
-        "llm_field": "payments_autonomy",
-        "description": "Payment autonomy level (0=not payment, 1-4=increasing autonomy)",
-        "type": "ordinal",
-        "mapping": {0: 0, 1: 1, 2: 2, 3: 3, 4: 4},
     },
 }
 
@@ -127,32 +107,23 @@ def load_onet_l1_mapping(project_root: Path) -> dict:
         return {}
 
 
-def load_human_validation_data(data_dir: Path) -> pd.DataFrame:
+def load_human_validation_data(data_file: Path) -> pd.DataFrame:
     """
-    Load all human validation CSV files from the directory.
+    Load human validation CSV file for tools.
 
     Args:
-        data_dir: Path to directory containing data_exp_*.csv files
+        data_file: Path to tools validation CSV file (data_exp_243045-vall_tasks.csv)
 
     Returns:
-        Combined DataFrame with all human validation responses
+        DataFrame with all human validation responses
     """
-    logger.info(f"Loading human validation data from {data_dir}")
+    logger.info(f"Loading human validation data from {data_file}")
 
-    csv_files = list(data_dir.glob("data_exp_*.csv"))
-    if not csv_files:
-        raise FileNotFoundError(f"No data_exp_*.csv files found in {data_dir}")
+    if not data_file.exists():
+        raise FileNotFoundError(f"Validation data file not found: {data_file}")
 
-    logger.info(f"Found {len(csv_files)} validation data files")
-
-    # Load and combine all CSV files
-    dfs = []
-    for csv_file in csv_files:
-        logger.info(f"Loading {csv_file.name}")
-        df = pd.read_csv(csv_file)
-        dfs.append(df)
-
-    combined_df = pd.concat(dfs, ignore_index=True)
+    logger.info(f"Loading {data_file.name}")
+    combined_df = pd.read_csv(data_file)
 
     # Filter to only include actual task responses (exclude header rows)
     combined_df = combined_df[combined_df["question"] != "question"]
@@ -194,42 +165,35 @@ def get_llm_field_name(df: pd.DataFrame, question_id: str) -> str:
 
 def load_llm_classifications(csv_path: Path) -> pd.DataFrame:
     """
-    Load LLM classifications from classification CSV file.
-    Supports both clservers and cltools files with different column names.
+    Load LLM tool classifications from cltools CSV file.
 
     Args:
-        csv_path: Path to classification CSV file
+        csv_path: Path to cltools classification CSV file
 
     Returns:
-        DataFrame with LLM classifications
+        DataFrame with LLM tool classifications
     """
-    logger.info(f"Loading LLM classifications from {csv_path.name}")
+    logger.info(f"Loading LLM tool classifications from {csv_path.name}")
 
     df = pd.read_csv(csv_path, low_memory=False)
 
     # Build list of relevant columns based on what exists in the file
-    relevant_cols = ["server_name"]
+    relevant_cols = ["tool_name"]
 
     for question_id, question_info in QUESTION_MAPPING.items():
-        # Check primary field
-        primary_field = question_info.get("llm_field")
-        if primary_field and primary_field in df.columns:
-            relevant_cols.append(primary_field)
-
-        # Check alternative field
-        alt_field = question_info.get("llm_field_alt")
-        if alt_field and alt_field in df.columns:
-            relevant_cols.append(alt_field)
+        field = question_info.get("llm_field")
+        if field and field in df.columns:
+            relevant_cols.append(field)
 
     # Remove duplicates while preserving order
     relevant_cols = list(dict.fromkeys(relevant_cols))
 
     df = df[relevant_cols]
 
-    # Normalize server names to lowercase for consistent matching
-    df["server_name"] = df["server_name"].str.lower()
+    # Normalize tool names to lowercase for consistent matching
+    df["tool_name"] = df["tool_name"].str.lower()
 
-    logger.info(f"Loaded {len(df)} server classifications with {len(relevant_cols)-1} relevant fields")
+    logger.info(f"Loaded {len(df)} tool classifications with {len(relevant_cols)-1} relevant fields")
 
     return df
 
@@ -466,7 +430,7 @@ def analyze_question(
         return {"error": "Human column not found"}
 
     # Merge on server name - need to include func_main fields for conditional filtering
-    merge_cols = ["server_name", llm_field]
+    merge_cols = ["tool_name", llm_field]
 
     # For func_sub, we need func_main fields to filter on agreement
     if question_id == "func_sub":
@@ -474,7 +438,7 @@ def analyze_question(
         if func_main_llm_field and func_main_llm_field in llm_df.columns:
             merge_cols.append(func_main_llm_field)
 
-    merged = human_df.merge(llm_df[merge_cols], left_on="servername", right_on="server_name", how="inner")
+    merged = human_df.merge(llm_df[merge_cols], left_on="servername", right_on="tool_name", how="inner")
 
     if len(merged) == 0:
         logger.warning(f"No matching servers found for question {question_id}")
@@ -550,14 +514,25 @@ def analyze_question(
 
         kappa_scores.append({"participant": participant, "kappa": float(kappa) if not np.isnan(kappa) else None})
 
-    # Calculate Fleiss' Kappa (inter-rater reliability among humans + LLM)
-    # Build ratings matrix: servers x (participants + LLM)
+    # Calculate Fleiss' Kappa (inter-rater reliability among HUMAN raters only)
+    # Build ratings matrix: servers x participants (excluding LLM)
     # Note: Different servers may have been rated by different numbers of participants
     servers = merged["servername"].unique()
 
     # Get all participants who rated any server
     all_participants = participants.tolist()
-    n_expected_raters = len(all_participants) + 1  # participants + LLM
+
+    # FILTER: Only include participants with at least 50 ratings for Fleiss Kappa
+    # This ensures meaningful inter-rater reliability calculation
+    MIN_RATINGS_FOR_FLEISS = 50
+    participant_counts = merged.groupby("participant_id").size()
+    substantial_participants = participant_counts[participant_counts >= MIN_RATINGS_FOR_FLEISS].index.tolist()
+
+    # Use filtered participants for Fleiss Kappa calculation
+    fleiss_participants = [p for p in all_participants if p in substantial_participants]
+    n_expected_raters = len(fleiss_participants)  # Only substantial human participants
+
+    logger.info(f"Fleiss Kappa: Including {len(fleiss_participants)} participants with ≥{MIN_RATINGS_FOR_FLEISS} ratings (excluded {len(all_participants) - len(fleiss_participants)} with <{MIN_RATINGS_FOR_FLEISS})")
 
     ratings_matrix = []
 
@@ -565,17 +540,16 @@ def analyze_question(
         server_data = merged[merged["servername"] == server]
 
         # Build rating row: one rating per participant (or NaN if they didn't rate this server)
+        # Use only substantial participants for Fleiss Kappa
         ratings = []
-        for participant in all_participants:
+        for participant in fleiss_participants:
             participant_rating = server_data[server_data["participant_id"] == participant][human_col]
             if len(participant_rating) > 0:
                 ratings.append(participant_rating.iloc[0])
             else:
                 ratings.append(np.nan)
 
-        # Add LLM rating
-        llm_rating = server_data[llm_field_to_use].iloc[0]
-        ratings.append(llm_rating)
+        # Do NOT add LLM rating - Fleiss' Kappa measures inter-rater reliability among humans only
 
         ratings_matrix.append(ratings)
 
@@ -673,9 +647,11 @@ def visualize_confusion_matrices(question_stats: dict, output_dir: Path):
         ax.set_title(title, fontsize=14, fontweight="bold", pad=20)
 
         # Add agreement statistics as text
+        fleiss = stats.get('fleiss_kappa')
+        fleiss_str = f"{fleiss:.3f}" if fleiss is not None else "N/A"
         stats_text = (
             f"Mean Kappa: {stats.get('mean_kappa', 0):.3f}\n"
-            f"Fleiss' Kappa: {stats.get('fleiss_kappa', 0):.3f}\n"
+            f"Fleiss' Kappa: {fleiss_str}\n"
             f"Agreement: {stats.get('agreement_pct', 0):.1%}\n"
             f"N={stats.get('n_responses', 0)}"
         )
@@ -698,7 +674,7 @@ def visualize_confusion_matrices(question_stats: dict, output_dir: Path):
         plt.tight_layout()
 
         # Save figure
-        output_file = cm_dir / f"{question_id}_confusion_matrix.png"
+        output_file = cm_dir / f"tools_{question_id}_confusion_matrix.png"
         plt.savefig(output_file, dpi=300, bbox_inches="tight")
         plt.close()
 
@@ -741,13 +717,13 @@ def calculate_participant_statistics(human_df: pd.DataFrame, llm_df: pd.DataFram
                 continue
 
             # Merge with LLM data - include func_main for conditional filtering
-            merge_cols = ["server_name", llm_field]
+            merge_cols = ["tool_name", llm_field]
             if question_id == "func_sub":
                 func_main_llm_field = get_llm_field_name(llm_df, "func_main")
                 if func_main_llm_field and func_main_llm_field in llm_df.columns:
                     merge_cols.append(func_main_llm_field)
 
-            merged = participant_data.merge(llm_df[merge_cols], left_on="servername", right_on="server_name", how="inner")
+            merged = participant_data.merge(llm_df[merge_cols], left_on="servername", right_on="tool_name", how="inner")
 
             if len(merged) == 0:
                 continue
@@ -813,49 +789,49 @@ def calculate_participant_statistics(human_df: pd.DataFrame, llm_df: pd.DataFram
     return participant_stats
 
 
-def check_server_name_matching(human_df: pd.DataFrame, llm_df: pd.DataFrame) -> None:
+def check_tool_name_matching(human_df: pd.DataFrame, llm_df: pd.DataFrame) -> None:
     """
-    Check and report server name matching between human validation and LLM data.
-    Warns about unmatched servers that might be case mismatches.
+    Check and report tool name matching between human validation and LLM data.
+    Warns about unmatched tools that might be case mismatches.
 
     Args:
-        human_df: Wide-format human validation data with 'servername' column
-        llm_df: LLM classifications with 'server_name' column
+        human_df: Wide-format human validation data with 'servername' column (contains tool names)
+        llm_df: LLM classifications with 'tool_name' column
     """
-    # Get unique server names from both datasets
-    human_servers = set(human_df["servername"].dropna().unique())
-    llm_servers = set(llm_df["server_name"].unique())
+    # Get unique tool names from both datasets
+    human_tools = set(human_df["servername"].dropna().unique())
+    llm_tools = set(llm_df["tool_name"].unique())
 
-    # Create case-insensitive lookup for LLM servers
-    llm_servers_lower = {name.lower(): name for name in llm_servers}
+    # Create case-insensitive lookup for LLM tools
+    llm_tools_lower = {name.lower(): name for name in llm_tools}
 
     # Find exact matches and mismatches
-    exact_matches = human_servers & llm_servers
-    unmatched = human_servers - llm_servers
+    exact_matches = human_tools & llm_tools
+    unmatched = human_tools - llm_tools
 
     # Check for case-insensitive matches among unmatched
     case_mismatches = {}
     true_unmatched = []
 
     for human_name in unmatched:
-        llm_name = llm_servers_lower.get(human_name.lower())
+        llm_name = llm_tools_lower.get(human_name.lower())
         if llm_name:
             case_mismatches[human_name] = llm_name
         else:
             true_unmatched.append(human_name)
 
     # Log results
-    logger.info(f"Server name matching: {len(human_servers)} human servers, {len(llm_servers)} LLM servers")
-    logger.info(f"  ✓ Exact matches: {len(exact_matches)}/{len(human_servers)}")
+    logger.info(f"Tool name matching: {len(human_tools)} human tools, {len(llm_tools)} LLM tools")
+    logger.info(f"  ✓ Exact matches: {len(exact_matches)}/{len(human_tools)}")
 
     if case_mismatches:
         logger.warning(f"  ⚠ Case mismatches found: {len(case_mismatches)}")
         for human_name, llm_name in case_mismatches.items():
             logger.warning(f"    - '{human_name}' (human) != '{llm_name}' (LLM) - case difference")
-            logger.warning(f"      These servers will NOT be matched. Consider fixing case in human validation data.")
+            logger.warning(f"      These tools will NOT be matched. Consider fixing case in human validation data.")
 
     if true_unmatched:
-        logger.warning(f"  ✗ Unmatched servers: {len(true_unmatched)}")
+        logger.warning(f"  ✗ Unmatched tools: {len(true_unmatched)}")
         for name in true_unmatched:
             logger.warning(f"    - '{name}' not found in LLM classifications")
 
@@ -863,44 +839,39 @@ def check_server_name_matching(human_df: pd.DataFrame, llm_df: pd.DataFrame) -> 
 def main():
     """Main execution function."""
     # Parse command-line arguments
-    parser = argparse.ArgumentParser(description="Human validation scoring analysis")
+    parser = argparse.ArgumentParser(description="Human validation tools scoring analysis")
     parser.add_argument(
         "--llm-file",
         type=str,
-        default="clservers_classified.csv",
-        help="LLM classification file name (default: clservers_classified.csv)",
+        default="cltools_classified.csv",
+        help="LLM classification file name (default: cltools_classified.csv)",
     )
     parser.add_argument(
         "--exclude-participants",
         type=str,
         nargs="+",
-        default=[],
-        help="List of participant IDs to exclude from analysis",
+        default=["3b9d6f2e8a4c"],  # AISI internal testing participant
+        help="List of participant IDs to exclude from analysis (default: 3b9d6f2e8a4c - AISI internal testing)",
+    )
+    parser.add_argument(
+        "--exclude-random",
+        type=lambda x: x.lower() != "false",
+        default=True,
+        metavar="True/False",
+        help="Exclude participants with worse-than-random (negative kappa) on any question (default: True)",
     )
     args = parser.parse_args()
 
-    logger.info(f"Starting human validation scoring analysis with {args.llm_file}")
+    logger.info(f"Starting human validation tools scoring analysis with {args.llm_file}")
     if args.exclude_participants:
-        logger.info(f"Excluding participants: {', '.join(args.exclude_participants)}")
+        logger.info(f"Manually excluding participants: {', '.join(args.exclude_participants)}")
+        if "3b9d6f2e8a4c" in args.exclude_participants:
+            logger.info("  - 3b9d6f2e8a4c: AISI internal testing participant")
 
     # Define paths
     project_root = Path(__file__).parent.parent.parent  # Go up to project root from scripts/human-validation/
-    human_data_dir = project_root / "data" / "external-cl-human-valid"
+    human_data_file = project_root / "data" / "external-cl-human-valid" / "data_exp_243045-vall_tasks.csv"
     llm_data_path = project_root / "data" / "final" / args.llm_file
-
-    # Generate output filename based on input file and exclusions
-    if args.exclude_participants:
-        # Create suffix for excluded participants
-        exclude_suffix = "-excluded"
-        output_filename = f"human-validation-scores{exclude_suffix}.json"
-        if "alternative" in args.llm_file:
-            output_filename = f"human-validation-scores-alternative{exclude_suffix}.json"
-    elif "alternative" in args.llm_file:
-        output_filename = "human-validation-scores-alternative.json"
-    else:
-        output_filename = "human-validation-scores.json"
-
-    output_path = project_root / "output-validation" / "cl-validation" / output_filename
 
     # Create output directories if they don't exist
     logs_dir = project_root / "logs"
@@ -912,7 +883,7 @@ def main():
     onet_mapping = load_onet_l1_mapping(project_root)
 
     # Load data
-    human_df = load_human_validation_data(human_data_dir)
+    human_df = load_human_validation_data(human_data_file)
     llm_df = load_llm_classifications(llm_data_path)
 
     # Filter out excluded participants
@@ -930,23 +901,68 @@ def main():
     human_mapped = map_human_to_llm_scale(human_wide, onet_mapping=onet_mapping)
 
     # Check server name matching and report issues
-    check_server_name_matching(human_wide, llm_df)
+    check_tool_name_matching(human_wide, llm_df)
 
     # Calculate statistics for each question
     question_stats = {}
     for question_id, question_info in QUESTION_MAPPING.items():
         question_stats[question_id] = analyze_question(human_mapped, llm_df, question_id, question_info)
 
-    # Calculate per-participant statistics
+    # Calculate per-participant statistics (initial pass)
     participant_stats = calculate_participant_statistics(human_mapped, llm_df)
+
+    # Identify and exclude participants with negative kappa on any question
+    random_excluded = []
+    if args.exclude_random:
+        for participant_id, p_stats in participant_stats.items():
+            for question_id, q_stats in p_stats["agreement_by_question"].items():
+                kappa = q_stats["kappa"]
+                if kappa is not None and kappa < 0:
+                    random_excluded.append(participant_id)
+                    logger.warning(
+                        f"Participant {participant_id} has negative kappa ({kappa:.3f}) on {question_id} - excluding"
+                    )
+                    break  # One negative kappa is enough to exclude
+
+        if random_excluded:
+            logger.info(f"Excluding {len(random_excluded)} participants with worse-than-random performance")
+            logger.info(f"Excluded participants: {', '.join(random_excluded)}")
+
+            # Filter out excluded participants
+            initial_count = len(human_df)
+            human_df = human_df[~human_df["Participant Public ID"].isin(random_excluded)]
+            filtered_count = len(human_df)
+            logger.info(f"Filtered {initial_count - filtered_count} responses from excluded participants")
+            logger.info(f"Remaining: {filtered_count} responses from {human_df['Participant Public ID'].nunique()} participants")
+
+            # Recalculate everything with filtered data
+            human_wide = transform_human_data(human_df)
+            human_mapped = map_human_to_llm_scale(human_wide, onet_mapping=onet_mapping)
+
+            # Recalculate question statistics
+            question_stats = {}
+            for question_id, question_info in QUESTION_MAPPING.items():
+                question_stats[question_id] = analyze_question(human_mapped, llm_df, question_id, question_info)
+
+            # Recalculate participant statistics
+            participant_stats = calculate_participant_statistics(human_mapped, llm_df)
+        else:
+            logger.info("No participants with worse-than-random performance found")
+    else:
+        logger.info("Skipping automatic exclusion of worse-than-random participants (--exclude-random False)")
 
     # Visualize confusion matrices for each question
     visualize_confusion_matrices(question_stats, output_dir)
 
     # Calculate summary statistics
     n_participants = human_wide["participant_id"].nunique()
-    n_servers = human_wide["servername"].nunique()
+    n_tools = human_wide["servername"].nunique()
     n_questions = len(QUESTION_MAPPING)
+
+    # Count participants with substantial responses (>= 50 ratings, included in Fleiss Kappa)
+    MIN_RATINGS_FOR_FLEISS = 50
+    participant_response_counts = human_wide.groupby("participant_id").size()
+    n_participants_included = len(participant_response_counts[participant_response_counts >= MIN_RATINGS_FOR_FLEISS])
 
     # Overall agreement with LLM (mean of all question-level agreements)
     overall_agreement = np.mean([q["agreement_pct"] for q in question_stats.values() if "agreement_pct" in q])
@@ -955,14 +971,40 @@ def main():
     fleiss_kappas = [q["fleiss_kappa"] for q in question_stats.values() if q.get("fleiss_kappa") is not None]
     overall_fleiss_kappa = np.mean(fleiss_kappas) if fleiss_kappas else None
 
+    # Generate output filename based on input file and exclusions
+    all_excluded = list(set(args.exclude_participants + random_excluded))
+    if all_excluded:
+        # Create suffix for excluded participants
+        exclude_suffix = "-excluded"
+        output_filename = f"human-validation-tools-scores{exclude_suffix}.json"
+    else:
+        output_filename = "human-validation-tools-scores.json"
+
+    output_path = output_dir / output_filename
+
+    # Build exclusion reasons
+    exclusion_reasons = {}
+    for pid in args.exclude_participants:
+        if pid == "3b9d6f2e8a4c":
+            exclusion_reasons[pid] = "AISI internal testing"
+        else:
+            exclusion_reasons[pid] = "Manual exclusion"
+    for pid in random_excluded:
+        exclusion_reasons[pid] = "Worse-than-random performance (negative kappa)"
+
     # Build output
     output = {
         "summary": {
             "n_participants": n_participants,
-            "n_servers": n_servers,
+            "n_participants_included": n_participants_included,
+            "n_tools": n_tools,
             "n_questions": n_questions,
             "overall_agreement_with_llm": float(overall_agreement),
             "overall_inter_rater_reliability": float(overall_fleiss_kappa) if overall_fleiss_kappa else None,
+            "excluded_participants": all_excluded,
+            "excluded_random": random_excluded,
+            "excluded_manual": args.exclude_participants,
+            "exclusion_reasons": exclusion_reasons,
         },
         "by_question": question_stats,
         "by_participant": participant_stats,
@@ -974,7 +1016,7 @@ def main():
         json.dump(output, f, indent=2)
 
     logger.info("Analysis complete!")
-    logger.info(f"Summary: {n_participants} participants rated {n_servers} servers across {n_questions} questions")
+    logger.info(f"Summary: {n_participants} total participants ({n_participants_included} with ≥{MIN_RATINGS_FOR_FLEISS} ratings) rated {n_tools} tools across {n_questions} questions")
     logger.info(f"Overall agreement with LLM: {overall_agreement:.2%}")
     if overall_fleiss_kappa:
         logger.info(f"Overall inter-rater reliability: {overall_fleiss_kappa:.3f}")

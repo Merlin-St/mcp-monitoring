@@ -259,15 +259,73 @@ def main():
     results_df['stargazers_count'] = results_df['server_id'].apply(
         lambda server_id: server_lookup.get(server_id, {}).get('stargazers_count', '')
     )
-    
+
+    # Add canonical_official, name, owner, repository_url
+    results_df['canonical_official'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('canonical_official', '')
+    )
+
+    results_df['name'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('name', '')
+    )
+
+    results_df['owner'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('owner', '')
+    )
+
+    results_df['repository_url'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('repository_url', '')
+    )
+
+    # Add download/usage data
+    results_df['usage_pypi_downloads'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('usage_pypi_downloads', '')
+    )
+
+    results_df['usage_npm_downloads'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('usage_npm_downloads', '')
+    )
+
+    results_df['usage_total_downloads'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('usage_total_downloads', '')
+    )
+
+    results_df['usage_monthly_breakdown'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('usage_monthly_breakdown', '')
+    )
+
+    results_df['usage_matched_packages'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('usage_matched_packages', '')
+    )
+
+    results_df['usage_match_method'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('usage_match_method', '')
+    )
+
+    results_df['usage_last_updated'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('usage_last_updated', '')
+    )
+
     # Count successful matches
     matched_created_at = len(results_df[results_df['created_at'] != ''])
     matched_use_count = len(results_df[results_df['use_count'] != ''])
     matched_stars = len(results_df[results_df['stargazers_count'] != ''])
-    
+    matched_canonical_official = len(results_df[results_df['canonical_official'] != ''])
+    matched_name = len(results_df[results_df['name'] != ''])
+    matched_owner = len(results_df[results_df['owner'] != ''])
+    matched_repository_url = len(results_df[results_df['repository_url'] != ''])
+    matched_usage_total_downloads = len(results_df[results_df['usage_total_downloads'] != ''])
+    matched_usage_last_updated = len(results_df[results_df['usage_last_updated'] != ''])
+
     logger.info(f"Matched creation dates: {matched_created_at}/{len(results_df)} ({matched_created_at/len(results_df)*100:.1f}%)")
     logger.info(f"Matched use counts: {matched_use_count}/{len(results_df)} ({matched_use_count/len(results_df)*100:.1f}%)")
     logger.info(f"Matched star counts: {matched_stars}/{len(results_df)} ({matched_stars/len(results_df)*100:.1f}%)")
+    logger.info(f"Matched canonical_official: {matched_canonical_official}/{len(results_df)} ({matched_canonical_official/len(results_df)*100:.1f}%)")
+    logger.info(f"Matched name: {matched_name}/{len(results_df)} ({matched_name/len(results_df)*100:.1f}%)")
+    logger.info(f"Matched owner: {matched_owner}/{len(results_df)} ({matched_owner/len(results_df)*100:.1f}%)")
+    logger.info(f"Matched repository_url: {matched_repository_url}/{len(results_df)} ({matched_repository_url/len(results_df)*100:.1f}%)")
+    logger.info(f"Matched usage_total_downloads: {matched_usage_total_downloads}/{len(results_df)} ({matched_usage_total_downloads/len(results_df)*100:.1f}%)")
+    logger.info(f"Matched usage_last_updated: {matched_usage_last_updated}/{len(results_df)} ({matched_usage_last_updated/len(results_df)*100:.1f}%)")
 
     # Match NAICS classifications
     naics_file = 'data/internal-cl/clservers_naics_results.json'
@@ -337,7 +395,10 @@ def main():
     results_df = expand_tools_columns(results_df)
     
     # Reorder columns to put metadata fields after basic server info
-    input_columns = ['server_name', 'server_id', 'description', 'created_at', 'use_count', 'stargazers_count',
+    input_columns = ['server_name', 'server_id', 'name', 'owner', 'repository_url', 'canonical_official',
+                     'description', 'created_at', 'use_count', 'stargazers_count',
+                     'usage_pypi_downloads', 'usage_npm_downloads', 'usage_total_downloads',
+                     'usage_monthly_breakdown', 'usage_matched_packages', 'usage_match_method', 'usage_last_updated',
                      'readme_filtered', 'readme_summary', 'topics', 'data_sources']
     naics_columns = ['naics_code', 'naics_title', 'naics_reasoning']
     analysis_columns = ['analysis_notes', 'is_finance_llm', 'asset_type', 'level', 'action_space_description', 'generality_industry', 'generality_environment']

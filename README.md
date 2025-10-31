@@ -106,19 +106,120 @@ Load Data→ Deduplicate → Enhance (→data_unified.json) → Filter, add usag
 
 ## 📦 Usage Statistics Collection
 
-Strict 1:1 package-to-repository matching of monthly download statistics from November 2024 to present from PyPI and npm 
-`data/external-usage/data_usage.json`
+### Overview
+Download statistics are collected from PyPI and npm package registries to measure actual usage of MCP servers. Each server in `data_unified_filtered.json` includes seven usage data fields that track monthly downloads from November 2024 to present.
 
-- **Package Coverage**: 70.6% of discovered MCP packages matched to repositories (3,450/4,886, 1000 in exact match, 2500 in 90%+ confidence fuzzy indexed scoring), which is 80% of downloads
-- **Repository Coverage**: 1,431 repositories with download statistics (8.4% of 16,940 total)
-- **PyPI Coverage**: 97.6% match rate (3,018/3,092 packages matched), 80.4% of all PyPI downloads captured
-- **npm Coverage**: 59.5% match rate (213/358 packages matched), 100% of matched packages have data
-- **Data Quality**: 90+ confidence threshold, strict 1:1 repository matching, monthly breakdown Nov 2024-Aug 2025
+### Data Collection Pipeline
 
-# Package discovery used search terms across PyPI and npm:
-# - 'mcp server', 'mcp-server', 'modelcontextprotocol', 'mcp'
-# - Found: 4,886 total packages (PyPI: 4,528, npm: 358)
-# - Matched: 3,450 packages via competitive 1:1 matching (70.6% coverage)
+```bash
+# 1. Collect npm download statistics (automated)
+python scripts/data-collection-usage/usage_collect_npm.py
+
+# 2. Collect PyPI download statistics (manual via BigQuery)
+# See: scripts/data-collection-usage/usage_collect_pypi.md for query
+
+# 3. Integrate usage data into unified dataset
+python scripts/data-unification/data_unified_add_usage.py
+
+# 4. Create filtered subset (run AFTER usage integration)
+python scripts/data-unification/data_unified_create_filtered_subset.py
+```
+
+### Usage Data Fields
+
+Each server in `data_unified_filtered.json` contains the following usage fields:
+
+| Field | Type | Description | Varies by Month? |
+|-------|------|-------------|------------------|
+| **usage_pypi_downloads** | Integer | **Cumulative** total PyPI downloads from Nov 2024 to present | ❌ Cumulative sum |
+| **usage_npm_downloads** | Integer | **Cumulative** total npm downloads from Nov 2024 to present | ❌ Cumulative sum |
+| **usage_total_downloads** | Integer | Sum of PyPI + npm downloads (cumulative) | ❌ Cumulative sum |
+| **usage_monthly_breakdown** | Array[Object] | Month-by-month breakdown: `[{month: "YYYY-MM", pypi: X, npm: Y}, ...]` | ✅ **Yes - varies by month** |
+| **usage_matched_packages** | Object | Lists of matched packages: `{npm: [names], pypi: [names]}` | ❌ Static list |
+| **usage_match_method** | String | Matching method: `"repository_url"`, `"owner_name"`, or `"none"` | ❌ Static method |
+| **usage_last_updated** | String | ISO date when usage data was collected (e.g., `"2025-10-03"`) | ❌ Single date |
+
+#### Example Usage Record
+```json
+{
+  "name": "playwright-mcp",
+  "usage_pypi_downloads": 0,
+  "usage_npm_downloads": 5791586,
+  "usage_total_downloads": 5791586,
+  "usage_match_method": "repository_url",
+  "usage_last_updated": "2025-10-03",
+  "usage_matched_packages": {
+    "npm": ["@executeautomation/playwright-mcp"],
+    "pypi": []
+  },
+  "usage_monthly_breakdown": [
+    {"month": "2024-11", "pypi": 0, "npm": 1234567},
+    {"month": "2024-12", "pypi": 0, "npm": 987654},
+    {"month": "2025-01", "pypi": 0, "npm": 876543}
+  ]
+}
+```
+
+**Note:** Only `usage_monthly_breakdown` varies by month; all other fields are cumulative totals or static metadata.
+
+### Data Sources
+
+#### PyPI Downloads
+- **Source:** Google Cloud BigQuery (`bigquery-public-data.pypi.file_downloads`)
+- **Collection:** Manual BigQuery query execution
+- **Documentation:** `scripts/data-collection-usage/usage_collect_pypi.md`
+- **Date Range:** November 2024 - September 2025
+- **Output:** `data/external-usage/usage_bigquery_webresults_pypi.json` (306MB JSONL)
+- **Search Criteria:** Packages with 'mcp' in name/metadata
+
+#### npm Downloads
+- **Source:** npm API (`https://api.npmjs.org/downloads/range/{start}:{end}/{package}`)
+- **Collection:** Automated via `usage_collect_npm.py`
+- **Date Range:** November 2024 - present (updates with each run)
+- **Output:** `data/external-usage/usage_npm.json` (7.8MB)
+- **Coverage:** 6,306 of 6,310 packages (99.9%)
+- **Total Tracked:** 185M+ downloads
+
+### Package Matching Logic
+
+**Integration Script:** `scripts/data-unification/data_unified_add_usage.py`
+
+The system uses a **two-stage matching strategy** to connect PyPI/npm packages to MCP servers:
+
+#### Stage 1: Repository URL Matching (Primary)
+- Extracts GitHub URLs from package metadata:
+  - **npm:** `repository`, `homepage`, `bugs` fields
+  - **PyPI:** `Project-URLs`, description fields
+- Normalizes URLs to `owner/repo` format (case-insensitive)
+- **Match Method:** `"repository_url"`
+- **Coverage:** ~67% of npm packages have GitHub URLs
+
+#### Stage 2: Owner + Name Matching (Fallback)
+- Used only if Stage 1 fails AND server lacks repository_url
+- Matches author/maintainer with server owner
+- Verifies package name matches server name (normalized)
+- **Match Method:** `"owner_name"`
+
+#### No Match Found
+- **Match Method:** `"none"`
+- All usage fields default to 0 or empty
+
+**Important:** Each package matches **at most one server** to prevent double-counting downloads.
+
+### Coverage Statistics
+
+- **Overall Coverage:** 100% of servers have usage fields (may be 0 if no packages matched)
+- **Servers with Downloads:** 2,386 of 18,782 (12.7%) in clservers_classified.csv
+- **Tools with Downloads:** 8,734 of 64,709 (13.5%) in cltools_classified.csv
+- **Top Downloaded Server:** "servers" with 7.1M total downloads
+- **Date Range:** November 2024 - present (when MCP ecosystem tracking began)
+
+### Key Files
+- `data/external-usage/usage_npm.json` - npm packages & download statistics (7.8MB)
+- `data/external-usage/usage_bigquery_webresults_pypi.json` - PyPI download records (306MB JSONL)
+- `scripts/data-collection-usage/usage_collect_npm.py` - npm collection script
+- `scripts/data-collection-usage/usage_collect_pypi.md` - PyPI collection documentation
+- `scripts/data-unification/data_unified_add_usage.py` - Package matching & integration
 ```
 ### Data labelling Pipeline (`make data-cl-all`)
 - Before: Filtering and cleaning (see above) with `make data-clean-readmes`.
