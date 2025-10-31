@@ -87,27 +87,6 @@ data-clean-readmes:
 
 data-initial-clean: data-initial data-clean-readmes
 
-# ===============================
-# Analysis & Visualization
-# ===============================
-
-data-embed-optimize:
-	@echo "🔄 Running hyperparameter optimization..."
-	python scripts/data-analysis-topics/embed_hyperparameter_optimizer.py --finance --test-size 500 --max-combinations 20
-	python scripts/data-analysis-topics/embed_apply_optimized_parameters.py logs/embed_hyperparameter_optimization_sector_52.log
-	@echo "✅ Optimization complete - parameters applied to embed_generate.py"
-
-data-embed-analysis:
-	@echo "🔄 Generating embeddings and topic analysis (full dataset)..."
-	python scripts/data-analysis-topics/embed_generate.py --clustering hdbscan
-	@echo "✅ Analysis complete: output-visuals/topics-embedding/"
-
-data-embed-analysis-finance:
-	@echo "🔄 Generating finance-specific analysis..."
-	python scripts/data-analysis-topics/embed_generate.py --filter sector_52 --clustering hdbscan
-	@echo "✅ Finance analysis complete"
-
-data-embed-analysis-all: data-embed-optimize data-embed-analysis data-embed-analysis-finance
 
 # ===============================
 # Classification Pipelines
