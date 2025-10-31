@@ -6,7 +6,7 @@
 # Prerequisites:
 # - Virtual environment: uv sync / source ~/mcp-monitoring/.venv/bin/activate
 
-.PHONY: help data-collect-servers data-collect-usage data-collect-all data-initial data-clean-readmes data-initial-clean data-embed-analysis data-embed-analysis-finance data-embed-optimize data-embed-analysis-all data-cl-servers data-cl-tools data-cl-servers-enrich data-cl-all data-task-clusters clean lint lint-fix workflow-data-creation workflow-complete
+.PHONY: help data-collect-servers data-collect-usage data-collect-all data-initial data-clean-readmes data-initial-clean data-cl-servers data-cl-tools data-cl-servers-enrich data-cl-all data-task-clusters clean lint lint-fix workflow-data-creation workflow-complete
 
 # Default target
 help:
@@ -21,12 +21,6 @@ help:
 	@echo "    data-initial           Create unified and filtered datasets"
 	@echo "    data-clean-readmes     Filter README content using LLM"
 	@echo "    data-initial-clean     Run data-initial + data-clean-readmes"
-	@echo ""
-	@echo "  Analysis & Visualization:"
-	@echo "    data-embed-analysis          Generate embeddings and topic analysis"
-	@echo "    data-embed-analysis-finance  Finance-specific analysis"
-	@echo "    data-embed-optimize          Hyperparameter optimization"
-	@echo "    data-embed-analysis-all      Run all embedding analysis steps"
 	@echo ""
 	@echo "  Classification (Consequentiality Scoring):"
 	@echo "    data-cl-servers        CLServers pipeline (server classification)"
@@ -165,5 +159,5 @@ lint-fix:
 workflow-data-creation: data-collect-all data-initial-clean
 	@echo "✅ Initial workflow complete - ready for analysis"
 
-workflow-complete: data-collect-all data-initial-clean data-embed-analysis-all data-cl-all
-	@echo "✅ Analysis workflow complete"
+workflow-complete: data-collect-all data-initial-clean data-cl-all
+	@echo "✅ Complete workflow finished"
