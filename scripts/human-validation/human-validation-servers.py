@@ -87,6 +87,12 @@ QUESTION_MAPPING = {
         "type": "ordinal",
         "mapping": {0: 0, 1: 1, 2: 2, 3: 3, 4: 4},
     },
+    "generality": {
+        "llm_field": "generality_combined",
+        "description": "Combined generality (Narrow-purpose/Cross-purpose/General-purpose/Other)",
+        "type": "categorical",
+        "mapping": None,  # Dynamic mapping based on derived values
+    },
 }
 
 # Additional human-only questions (not in LLM data)
@@ -96,6 +102,63 @@ HUMAN_ONLY_QUESTIONS = {
         "type": "text",
     },
 }
+
+# Minimum ratings threshold for Fleiss Kappa calculation
+MIN_RATINGS_FOR_FLEISS = 50
+
+
+def derive_generality_classification(df: pd.DataFrame) -> pd.DataFrame:
+    """
+    Derive generality classification from q3 (industry) and q4 (environment).
+
+    Categories:
+    - Narrow-purpose: Trusted (q4=0) AND industry-specific (q3=0)
+    - Cross-purpose: Trusted (q4=0) AND cross-industry (q3=1)
+    - General-purpose: Untrusted (q4=1) AND cross-industry (q3=1)
+    - Other: Untrusted (q4=1) AND industry-specific (q3=0) - edge case
+
+    Args:
+        df: DataFrame with q3_mapped and q4_mapped columns
+
+    Returns:
+        DataFrame with generality_mapped column added
+    """
+    df = df.copy()
+
+    # Check if required columns exist
+    if "q3_mapped" not in df.columns or "q4_mapped" not in df.columns:
+        logger.warning("Cannot derive generality: q3_mapped or q4_mapped columns missing")
+        return df
+
+    def classify_generality(row):
+        q3 = row.get("q3_mapped")
+        q4 = row.get("q4_mapped")
+
+        # Handle missing values
+        if pd.isna(q3) or pd.isna(q4):
+            return np.nan
+
+        # Convert to int for comparison
+        q3 = int(q3)
+        q4 = int(q4)
+
+        # Derive category
+        if q4 == 0 and q3 == 0:
+            return "narrow-purpose"
+        elif q4 == 0 and q3 == 1:
+            return "cross-purpose"
+        elif q4 == 1 and q3 == 1:
+            return "general-purpose"
+        elif q4 == 1 and q3 == 0:
+            return "other"
+        else:
+            return "unknown"
+
+    df["generality_mapped"] = df.apply(classify_generality, axis=1)
+
+    logger.info(f"Derived generality classification: {df['generality_mapped'].value_counts().to_dict()}")
+
+    return df
 
 
 def load_onet_l1_mapping(project_root: Path) -> dict:
@@ -227,6 +290,35 @@ def load_llm_classifications(csv_path: Path) -> pd.DataFrame:
 
     # Normalize server names to lowercase for consistent matching
     df["server_name"] = df["server_name"].str.lower()
+
+    # Derive generality classification if q3 and q4 fields exist
+    if "generality_industry" in df.columns and "generality_environment" in df.columns:
+        def classify_generality_llm(row):
+            q3 = row.get("generality_industry")
+            q4 = row.get("generality_environment")
+
+            # Handle missing values
+            if pd.isna(q3) or pd.isna(q4):
+                return np.nan
+
+            # Convert to int for comparison
+            q3 = int(q3)
+            q4 = int(q4)
+
+            # Derive category
+            if q4 == 0 and q3 == 0:
+                return "narrow-purpose"
+            elif q4 == 0 and q3 == 1:
+                return "cross-purpose"
+            elif q4 == 1 and q3 == 1:
+                return "general-purpose"
+            elif q4 == 1 and q3 == 0:
+                return "other"
+            else:
+                return "unknown"
+
+        df["generality_combined"] = df.apply(classify_generality_llm, axis=1)
+        logger.info(f"Derived LLM generality classification: {df['generality_combined'].value_counts().to_dict()}")
 
     logger.info(f"Loaded {len(df)} server classifications with {len(relevant_cols)-1} relevant fields")
 
@@ -559,15 +651,16 @@ def analyze_question(
 
     # FILTER: Only include participants with at least 50 ratings for Fleiss Kappa
     # This ensures meaningful inter-rater reliability calculation
-    MIN_RATINGS_FOR_FLEISS = 50
     participant_counts = merged.groupby("participant_id").size()
     substantial_participants = participant_counts[participant_counts >= MIN_RATINGS_FOR_FLEISS].index.tolist()
 
     # Use filtered participants for Fleiss Kappa calculation
     fleiss_participants = [p for p in all_participants if p in substantial_participants]
-    n_expected_raters = len(fleiss_participants)  # Only substantial human participants
 
-    logger.info(f"Fleiss Kappa: Including {len(fleiss_participants)} participants with ≥{MIN_RATINGS_FOR_FLEISS} ratings (excluded {len(all_participants) - len(fleiss_participants)} with <{MIN_RATINGS_FOR_FLEISS})")
+    # Update n_participants to reflect only substantial participants (used in Fleiss Kappa)
+    n_participants = len(fleiss_participants)
+
+    logger.info(f"Fleiss Kappa: Including {n_participants} participants with ≥{MIN_RATINGS_FOR_FLEISS} ratings (excluded {len(all_participants) - n_participants} with <{MIN_RATINGS_FOR_FLEISS})")
 
     ratings_matrix = []
 
@@ -933,6 +1026,9 @@ def main():
     human_wide = transform_human_data(human_df)
     human_mapped = map_human_to_llm_scale(human_wide, onet_mapping=onet_mapping)
 
+    # Derive generality classification from q3 (industry) and q4 (environment)
+    human_mapped = derive_generality_classification(human_mapped)
+
     # Check server name matching and report issues
     check_server_name_matching(human_wide, llm_df)
 
@@ -972,6 +1068,9 @@ def main():
             human_wide = transform_human_data(human_df)
             human_mapped = map_human_to_llm_scale(human_wide, onet_mapping=onet_mapping)
 
+            # Derive generality classification from q3 (industry) and q4 (environment)
+            human_mapped = derive_generality_classification(human_mapped)
+
             # Recalculate question statistics
             question_stats = {}
             for question_id, question_info in QUESTION_MAPPING.items():
@@ -992,10 +1091,12 @@ def main():
     n_servers = human_wide["servername"].nunique()
     n_questions = len(QUESTION_MAPPING)
 
-    # Count participants with substantial responses (>= 50 ratings, included in Fleiss Kappa)
-    MIN_RATINGS_FOR_FLEISS = 50
-    participant_response_counts = human_wide.groupby("participant_id").size()
-    n_participants_included = len(participant_response_counts[participant_response_counts >= MIN_RATINGS_FOR_FLEISS])
+    # Number of actually included IDs in analysis (use minimum from question-level Fleiss Kappa calculations)
+    # This represents participants who met the ≥50 rating threshold for at least one question
+    question_n_participants = [
+        q["n_participants"] for q in question_stats.values() if "n_participants" in q and "error" not in q
+    ]
+    n_participants_included = min(question_n_participants) if question_n_participants else 0
 
     # Overall agreement with LLM (mean of all question-level agreements)
     overall_agreement = np.mean([q["agreement_pct"] for q in question_stats.values() if "agreement_pct" in q])
