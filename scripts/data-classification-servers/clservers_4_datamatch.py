@@ -306,6 +306,15 @@ def main():
         lambda server_id: server_lookup.get(server_id, {}).get('usage_last_updated', '')
     )
 
+    # Check if pypi_by_country field exists in unified data
+    has_country_data = any('pypi_by_country' in server for server in server_lookup.values())
+    if not has_country_data:
+        raise ValueError("country level data not found")
+
+    results_df['pypi_by_country'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('pypi_by_country', '')
+    )
+
     # Count successful matches
     matched_created_at = len(results_df[results_df['created_at'] != ''])
     matched_use_count = len(results_df[results_df['use_count'] != ''])
@@ -316,6 +325,7 @@ def main():
     matched_repository_url = len(results_df[results_df['repository_url'] != ''])
     matched_usage_total_downloads = len(results_df[results_df['usage_total_downloads'] != ''])
     matched_usage_last_updated = len(results_df[results_df['usage_last_updated'] != ''])
+    matched_pypi_by_country = len(results_df[results_df['pypi_by_country'] != ''])
 
     logger.info(f"Matched creation dates: {matched_created_at}/{len(results_df)} ({matched_created_at/len(results_df)*100:.1f}%)")
     logger.info(f"Matched use counts: {matched_use_count}/{len(results_df)} ({matched_use_count/len(results_df)*100:.1f}%)")
@@ -326,6 +336,7 @@ def main():
     logger.info(f"Matched repository_url: {matched_repository_url}/{len(results_df)} ({matched_repository_url/len(results_df)*100:.1f}%)")
     logger.info(f"Matched usage_total_downloads: {matched_usage_total_downloads}/{len(results_df)} ({matched_usage_total_downloads/len(results_df)*100:.1f}%)")
     logger.info(f"Matched usage_last_updated: {matched_usage_last_updated}/{len(results_df)} ({matched_usage_last_updated/len(results_df)*100:.1f}%)")
+    logger.info(f"Matched pypi_by_country: {matched_pypi_by_country}/{len(results_df)} ({matched_pypi_by_country/len(results_df)*100:.1f}%)")
 
     # Match NAICS classifications
     naics_file = 'data/internal-cl/clservers_naics_results.json'
@@ -399,6 +410,7 @@ def main():
                      'description', 'created_at', 'use_count', 'stargazers_count',
                      'usage_pypi_downloads', 'usage_npm_downloads', 'usage_total_downloads',
                      'usage_monthly_breakdown', 'usage_matched_packages', 'usage_match_method', 'usage_last_updated',
+                     'pypi_by_country',
                      'readme_filtered', 'readme_summary', 'topics', 'data_sources']
     naics_columns = ['naics_code', 'naics_title', 'naics_reasoning']
     analysis_columns = ['analysis_notes', 'is_finance_llm', 'asset_type', 'level', 'action_space_description', 'generality_industry', 'generality_environment']

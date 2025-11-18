@@ -26,7 +26,7 @@ import re
 DATASET_FILE = "data/initial/data_unified.json"
 
 # Data source files
-pypi_data_file = "data/external-usage/usage_bigquery_webresults_pypi.json"
+pypi_data_file = "data/external-usage/usage_bigquery_webresults_pypi.json.gz"
 npm_data_file = "data/external-usage/usage_npm.json"
 
 # Reporting window
@@ -139,9 +139,14 @@ def extract_github_urls_from_pypi(package_record: Dict) -> Set[str]:
     return urls
 
 
-def build_github_to_packages_mapping(npm_data: Dict, pypi_data: List[Dict], logger) -> Tuple[Dict, Dict, Dict]:
+def build_github_to_packages_mapping(npm_data: Dict, pypi_by_name: Dict[str, Dict], logger) -> Tuple[Dict, Dict, Dict]:
     """
     Build mappings from GitHub URLs to package names.
+
+    Args:
+        npm_data: npm package data
+        pypi_by_name: PyPI data already fully aggregated (package -> monthly totals)
+        logger: Logger instance
 
     Returns:
         - github_to_npm: {github_url: [package_names]}
@@ -178,23 +183,14 @@ def build_github_to_packages_mapping(npm_data: Dict, pypi_data: List[Dict], logg
 
     logger.info(f"npm: {npm_url_matches} packages with GitHub URLs ({npm_url_matches/len(npm_packages)*100:.1f}%)")
 
-    # Process PyPI packages - aggregate by package name first
-    pypi_by_name = {}
-    for record in pypi_data:
-        package_name = record.get('name')
-        if package_name:
-            if package_name not in pypi_by_name:
-                pypi_by_name[package_name] = []
-            pypi_by_name[package_name].append(record)
+    # Process PyPI packages (already fully aggregated with monthly totals)
 
     logger.info(f"Processing {len(pypi_by_name)} unique PyPI packages for GitHub URL matching")
 
     pypi_url_matches = 0
-    for package_name, records in pypi_by_name.items():
-        # Use the most recent record for metadata
-        latest_record = max(records, key=lambda r: r.get('upload_time', ''))
-
-        github_urls = extract_github_urls_from_pypi(latest_record)
+    for package_name, pkg_data in pypi_by_name.items():
+        # Extract GitHub URLs from Project-URLs and description
+        github_urls = extract_github_urls_from_pypi(pkg_data)
 
         if github_urls:
             pypi_url_matches += 1
@@ -203,20 +199,24 @@ def build_github_to_packages_mapping(npm_data: Dict, pypi_data: List[Dict], logg
                     github_to_pypi[github_url] = []
                 github_to_pypi[github_url].append(package_name)
 
-        # Aggregate monthly downloads
-        monthly_downloads = {}
-        for record in records:
-            month = record.get('month', '')
-            downloads = int(record.get('monthly_downloads', 0))
-            if month:
-                monthly_downloads[month] = monthly_downloads.get(month, 0) + downloads
+        # Store metadata (already aggregated with monthly totals or country breakdown)
+        monthly_downloads = pkg_data.get('monthly', {})
 
-        # Store metadata including author info
+        # Calculate total downloads (handle both aggregated and country-level formats)
+        total_downloads = 0
+        for month_data in monthly_downloads.values():
+            if isinstance(month_data, dict):
+                # Country-level breakdown: {month: {country: downloads}}
+                total_downloads += sum(month_data.values())
+            else:
+                # Aggregated monthly total: {month: downloads}
+                total_downloads += month_data
+
         package_metadata[('pypi', package_name)] = {
-            'author_email': latest_record.get('author_email', ''),
-            'author': latest_record.get('author', ''),
+            'author_email': pkg_data.get('author_email', ''),
+            'author': pkg_data.get('author', ''),
             'monthly': monthly_downloads,
-            'total': sum(monthly_downloads.values())
+            'total': total_downloads
         }
 
     logger.info(f"PyPI: {pypi_url_matches} packages with GitHub URLs ({pypi_url_matches/len(pypi_by_name)*100:.1f}%)")
@@ -486,23 +486,38 @@ def integrate_download_stats(dataset: List[Dict], repo_to_packages: Dict, packag
             # Calculate totals and monthly breakdown
             for month in months:
                 pypi_month = 0
+                pypi_by_country = {}
                 npm_month = 0
 
                 # Sum PyPI downloads for this month
                 for pkg_name in pypi_packages:
                     pkg_meta = package_metadata.get(('pypi', pkg_name), {})
-                    pypi_month += pkg_meta.get('monthly', {}).get(month, 0)
+                    month_data = pkg_meta.get('monthly', {}).get(month, 0)
 
-                # Sum npm downloads for this month
+                    if isinstance(month_data, dict):
+                        # Country-level breakdown: aggregate across all packages
+                        for country, downloads in month_data.items():
+                            pypi_by_country[country] = pypi_by_country.get(country, 0) + downloads
+                            pypi_month += downloads
+                    else:
+                        # Aggregated total
+                        pypi_month += month_data
+
+                # Sum npm downloads for this month (npm has no country breakdown)
                 for pkg_name in npm_packages:
                     pkg_meta = package_metadata.get(('npm', pkg_name), {})
                     npm_month += pkg_meta.get('monthly', {}).get(month, 0)
 
-                monthly_breakdown.append({
+                # Build monthly breakdown entry
+                breakdown_entry = {
                     'month': month,
                     'pypi': pypi_month,
                     'npm': npm_month
-                })
+                }
+                if pypi_by_country:
+                    breakdown_entry['pypi_by_country'] = pypi_by_country
+
+                monthly_breakdown.append(breakdown_entry)
 
                 pypi_total += pypi_month
                 npm_total += npm_month
@@ -534,14 +549,92 @@ def integrate_download_stats(dataset: List[Dict], repo_to_packages: Dict, packag
 
     return dataset
 
-def load_pypi_data_as_jsonl(file_path: str) -> List[Dict]:
-    """Load PyPI data from JSONL file."""
-    data = []
-    with open(file_path, 'r') as f:
+def load_pypi_data_as_jsonl(file_path: str, logger=None, keep_countries: bool = True) -> Dict[str, Dict]:
+    """
+    Load and aggregate PyPI data from JSONL file (supports gzip compression).
+
+    Args:
+        file_path: Path to PyPI data file (supports .gz)
+        logger: Logger instance
+        keep_countries: If True, preserve country-level breakdown; if False, aggregate to monthly totals
+
+    Returns:
+        Dict mapping package_name -> {
+            'monthly': {month: downloads} OR {month: {country: downloads}} (if keep_countries=True),
+            'author': str,
+            'author_email': str,
+            'Project-URLs': list,
+            'summary': str,
+            'description': str,
+            'upload_time': str
+        }
+    """
+    import gzip
+
+    if logger:
+        mode_str = "with country breakdown" if keep_countries else "aggregated by month"
+        logger.info(f"Loading PyPI data {mode_str}...")
+
+    # Aggregate by package name AND month while loading
+    pypi_by_name = {}
+
+    # Auto-detect gzip compression by file extension
+    open_func = gzip.open if file_path.endswith('.gz') else open
+    mode = 'rt' if file_path.endswith('.gz') else 'r'
+
+    line_count = 0
+    with open_func(file_path, mode) as f:
         for line in f:
-            if line.strip():
-                data.append(json.loads(line))
-    return data
+            line_count += 1
+            if line_count % 100000 == 0 and logger:
+                logger.info(f"  Processed {line_count:,} records -> {len(pypi_by_name):,} unique packages")
+
+            if not line.strip():
+                continue
+
+            record = json.loads(line)
+            package_name = record.get('name')
+            month = record.get('month', '')
+            country = record.get('country_code', '')
+            downloads = int(record.get('monthly_downloads', 0))
+
+            if not package_name:
+                continue
+
+            # Initialize package entry if first time seeing it
+            if package_name not in pypi_by_name:
+                pypi_by_name[package_name] = {
+                    'monthly': {},
+                    'author': record.get('author', ''),
+                    'author_email': record.get('author_email', ''),
+                    'Project-URLs': record.get('Project-URLs', []),
+                    'summary': record.get('summary', ''),
+                    'description': record.get('description', ''),
+                    'upload_time': record.get('upload_time', '')
+                }
+
+            pkg_data = pypi_by_name[package_name]
+
+            # Aggregate downloads by month and optionally by country
+            if month:
+                if keep_countries:
+                    # Keep country-level breakdown: monthly[month][country] = downloads
+                    if month not in pkg_data['monthly']:
+                        pkg_data['monthly'][month] = {}
+                    if country:
+                        pkg_data['monthly'][month][country] = pkg_data['monthly'][month].get(country, 0) + downloads
+                else:
+                    # Aggregate to monthly totals: monthly[month] = total_downloads
+                    pkg_data['monthly'][month] = pkg_data['monthly'].get(month, 0) + downloads
+
+            # Keep most recent upload_time
+            if record.get('upload_time', '') > pkg_data['upload_time']:
+                pkg_data['upload_time'] = record.get('upload_time', '')
+
+    if logger:
+        logger.info(f"  Loaded {line_count:,} records aggregated to {len(pypi_by_name):,} unique packages")
+
+    return pypi_by_name
 
 
 def main():
@@ -550,6 +643,10 @@ def main():
                        help="Dataset file to integrate stats into (modified in place)")
     parser.add_argument("--output", default=None,
                        help="Output file (default: same as dataset)")
+    parser.add_argument("--countries", action="store_true", default=True,
+                       help="Preserve country-level breakdown for PyPI downloads (default: True)")
+    parser.add_argument("--no-countries", dest="countries", action="store_false",
+                       help="Aggregate PyPI downloads to monthly totals (no country breakdown)")
     args = parser.parse_args()
 
     # Setup logging
@@ -570,15 +667,14 @@ def main():
     with open(npm_data_file) as f:
         npm_data = json.load(f)
 
-    # Load PyPI data (JSONL format)
+    # Load PyPI data (JSONL format) - returns aggregated data by package name
     logger.info(f"Loading PyPI data from {pypi_data_file}")
-    pypi_data = load_pypi_data_as_jsonl(pypi_data_file)
-    logger.info(f"Loaded {len(pypi_data)} PyPI records")
+    pypi_by_name = load_pypi_data_as_jsonl(pypi_data_file, logger, keep_countries=args.countries)
 
     # Build GitHub URL to package mappings
     logger.info("Building GitHub URL to package mappings...")
     github_to_npm, github_to_pypi, package_metadata = build_github_to_packages_mapping(
-        npm_data, pypi_data, logger
+        npm_data, pypi_by_name, logger
     )
 
     # Build author/email indices for fallback matching
