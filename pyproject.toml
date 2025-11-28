@@ -64,6 +64,7 @@ dependencies = [
     "pypistats>=1.7.0", #for pypi download stats API
     "fuzzywuzzy>=0.18.0",
     "python-levenshtein>=0.27.1",
+    "python-docx>=1.1.0",
 ]
 
 [project.optional-dependencies]
