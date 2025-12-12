@@ -971,8 +971,8 @@ def main():
     parser.add_argument(
         "--llm-file",
         type=str,
-        default="clservers_classified.csv",
-        help="LLM classification file name (default: clservers_classified.csv)",
+        default="clservers_classified.csv.gz",
+        help="LLM classification file name (default: clservers_classified.csv.gz)",
     )
     parser.add_argument(
         "--exclude-participants",

@@ -12,6 +12,11 @@ Features:
 - Author/maintainer email matching as fallback
 - Monthly breakdown from Nov 2024 to present
 - Modifies data_unified.json in place (run BEFORE filtering)
+- Supports incremental updates for specific months via --months flag
+
+Usage:
+    python data_unified_add_usage.py                        # Full refresh
+    python data_unified_add_usage.py --months 2025-10 2025-11  # Update specific months only
 """
 
 import argparse
@@ -44,6 +49,55 @@ def setup_logging():
         ]
     )
     return logging.getLogger(__name__)
+
+
+def validate_months(months: List[str]) -> List[str]:
+    """
+    Validate and sort month strings in YYYY-MM format.
+
+    Args:
+        months: List of month strings
+
+    Returns:
+        Validated and sorted list of months
+
+    Raises:
+        ValueError: If any month has invalid format
+    """
+    pattern = re.compile(r'^\d{4}-(0[1-9]|1[0-2])$')
+    for month in months:
+        if not pattern.match(month):
+            raise ValueError(f"Invalid month format: {month}. Expected YYYY-MM.")
+    return sorted(months)
+
+
+def merge_monthly_breakdown(existing_breakdown: List[Dict],
+                            new_months_data: Dict[str, Dict],
+                            target_months: List[str]) -> List[Dict]:
+    """
+    Merge new monthly data into existing breakdown, only updating target months.
+
+    Args:
+        existing_breakdown: Current usage_monthly_breakdown list
+        new_months_data: Dict with month -> {'month': m, 'pypi': X, 'npm': Y, ...}
+        target_months: Months to update
+
+    Returns:
+        Updated breakdown with target months merged, others preserved
+    """
+    # Convert existing to dict by month
+    existing_by_month = {entry['month']: entry for entry in existing_breakdown}
+
+    # Update target months with new data
+    for month in target_months:
+        if month in new_months_data:
+            existing_by_month[month] = new_months_data[month]
+        elif month not in existing_by_month:
+            # Add new month with zeros if not in new data
+            existing_by_month[month] = {'month': month, 'pypi': 0, 'npm': 0}
+
+    # Sort by month and return as list
+    return [existing_by_month[m] for m in sorted(existing_by_month.keys())]
 
 
 def normalize_github_url(url: str) -> str:
@@ -450,11 +504,24 @@ def match_packages_to_repos(dataset: List[Dict], github_to_npm: Dict, github_to_
 
 
 def integrate_download_stats(dataset: List[Dict], repo_to_packages: Dict, package_metadata: Dict,
-                           start_date: dt.date, end_date: dt.date, logger) -> List[Dict]:
-    """Integrate download statistics into the unified dataset."""
+                           start_date: dt.date, end_date: dt.date, logger,
+                           target_months: List[str] = None) -> List[Dict]:
+    """
+    Integrate download statistics into the unified dataset.
+
+    Args:
+        dataset: List of repository records
+        repo_to_packages: Mapping of repo_id to matched packages
+        package_metadata: Package download metadata
+        start_date: Start of date range
+        end_date: End of date range
+        logger: Logger instance
+        target_months: Optional list of months to update (incremental mode).
+                      If None, performs full refresh.
+    """
     logger.info(f"Integrating download stats into dataset with {len(dataset)} repositories")
 
-    # Generate complete month list
+    # Generate complete month list (for full mode or reference)
     months = []
     current = start_date.replace(day=1)
     end_month = end_date.replace(day=1)
@@ -465,6 +532,9 @@ def integrate_download_stats(dataset: List[Dict], repo_to_packages: Dict, packag
             current = current.replace(year=current.year + 1, month=1)
         else:
             current = current.replace(month=current.month + 1)
+
+    if target_months:
+        logger.info(f"Incremental mode: updating only {target_months}")
 
     # Integrate stats into dataset
     updated_count = 0
@@ -478,49 +548,82 @@ def integrate_download_stats(dataset: List[Dict], repo_to_packages: Dict, packag
             npm_packages = matched_packages.get('npm', [])
             pypi_packages = matched_packages.get('pypi', [])
 
-            # Initialize usage fields
-            pypi_total = 0
-            npm_total = 0
-            monthly_breakdown = []
+            if target_months:
+                # INCREMENTAL MODE: merge with existing breakdown
+                existing_breakdown = repo.get('usage_monthly_breakdown', [])
 
-            # Calculate totals and monthly breakdown
-            for month in months:
-                pypi_month = 0
-                pypi_by_country = {}
-                npm_month = 0
+                # Calculate new data for target months only
+                new_months_data = {}
+                for month in target_months:
+                    pypi_month = 0
+                    npm_month = 0
+                    pypi_by_country = {}
 
-                # Sum PyPI downloads for this month
-                for pkg_name in pypi_packages:
-                    pkg_meta = package_metadata.get(('pypi', pkg_name), {})
-                    month_data = pkg_meta.get('monthly', {}).get(month, 0)
+                    for pkg_name in pypi_packages:
+                        pkg_meta = package_metadata.get(('pypi', pkg_name), {})
+                        month_data = pkg_meta.get('monthly', {}).get(month, 0)
+                        if isinstance(month_data, dict):
+                            for country, downloads in month_data.items():
+                                pypi_by_country[country] = pypi_by_country.get(country, 0) + downloads
+                                pypi_month += downloads
+                        else:
+                            pypi_month += month_data
 
-                    if isinstance(month_data, dict):
-                        # Country-level breakdown: aggregate across all packages
-                        for country, downloads in month_data.items():
-                            pypi_by_country[country] = pypi_by_country.get(country, 0) + downloads
-                            pypi_month += downloads
-                    else:
-                        # Aggregated total
-                        pypi_month += month_data
+                    for pkg_name in npm_packages:
+                        pkg_meta = package_metadata.get(('npm', pkg_name), {})
+                        npm_month += pkg_meta.get('monthly', {}).get(month, 0)
 
-                # Sum npm downloads for this month (npm has no country breakdown)
-                for pkg_name in npm_packages:
-                    pkg_meta = package_metadata.get(('npm', pkg_name), {})
-                    npm_month += pkg_meta.get('monthly', {}).get(month, 0)
+                    entry = {'month': month, 'pypi': pypi_month, 'npm': npm_month}
+                    if pypi_by_country:
+                        entry['pypi_by_country'] = pypi_by_country
+                    new_months_data[month] = entry
 
-                # Build monthly breakdown entry
-                breakdown_entry = {
-                    'month': month,
-                    'pypi': pypi_month,
-                    'npm': npm_month
-                }
-                if pypi_by_country:
-                    breakdown_entry['pypi_by_country'] = pypi_by_country
+                # Merge new data into existing breakdown
+                monthly_breakdown = merge_monthly_breakdown(
+                    existing_breakdown, new_months_data, target_months
+                )
 
-                monthly_breakdown.append(breakdown_entry)
+            else:
+                # FULL MODE: original behavior
+                monthly_breakdown = []
+                for month in months:
+                    pypi_month = 0
+                    pypi_by_country = {}
+                    npm_month = 0
 
-                pypi_total += pypi_month
-                npm_total += npm_month
+                    # Sum PyPI downloads for this month
+                    for pkg_name in pypi_packages:
+                        pkg_meta = package_metadata.get(('pypi', pkg_name), {})
+                        month_data = pkg_meta.get('monthly', {}).get(month, 0)
+
+                        if isinstance(month_data, dict):
+                            # Country-level breakdown: aggregate across all packages
+                            for country, downloads in month_data.items():
+                                pypi_by_country[country] = pypi_by_country.get(country, 0) + downloads
+                                pypi_month += downloads
+                        else:
+                            # Aggregated total
+                            pypi_month += month_data
+
+                    # Sum npm downloads for this month (npm has no country breakdown)
+                    for pkg_name in npm_packages:
+                        pkg_meta = package_metadata.get(('npm', pkg_name), {})
+                        npm_month += pkg_meta.get('monthly', {}).get(month, 0)
+
+                    # Build monthly breakdown entry
+                    breakdown_entry = {
+                        'month': month,
+                        'pypi': pypi_month,
+                        'npm': npm_month
+                    }
+                    if pypi_by_country:
+                        breakdown_entry['pypi_by_country'] = pypi_by_country
+
+                    monthly_breakdown.append(breakdown_entry)
+
+            # Calculate totals from breakdown (source of truth)
+            pypi_total = sum(entry.get('pypi', 0) for entry in monthly_breakdown)
+            npm_total = sum(entry.get('npm', 0) for entry in monthly_breakdown)
 
             # Add usage fields to repository
             repo['usage_pypi_downloads'] = pypi_total
@@ -536,14 +639,32 @@ def integrate_download_stats(dataset: List[Dict], repo_to_packages: Dict, packag
 
             updated_count += 1
         else:
-            # Repository has no matched packages
-            repo['usage_pypi_downloads'] = 0
-            repo['usage_npm_downloads'] = 0
-            repo['usage_total_downloads'] = 0
-            repo['usage_monthly_breakdown'] = [{'month': month, 'pypi': 0, 'npm': 0} for month in months]
-            repo['usage_matched_packages'] = {'pypi': [], 'npm': []}
-            repo['usage_match_method'] = 'none'
-            repo['usage_last_updated'] = dt.date.today().isoformat()
+            # Repository has no matched packages - handle differently for incremental vs full
+            if target_months:
+                # Preserve existing data, just update target months to 0
+                existing_breakdown = repo.get('usage_monthly_breakdown', [])
+                if existing_breakdown:
+                    # Merge zeros for target months
+                    new_months_data = {m: {'month': m, 'pypi': 0, 'npm': 0} for m in target_months}
+                    monthly_breakdown = merge_monthly_breakdown(
+                        existing_breakdown, new_months_data, target_months
+                    )
+                    repo['usage_monthly_breakdown'] = monthly_breakdown
+                    # Recalculate totals
+                    repo['usage_pypi_downloads'] = sum(entry.get('pypi', 0) for entry in monthly_breakdown)
+                    repo['usage_npm_downloads'] = sum(entry.get('npm', 0) for entry in monthly_breakdown)
+                    repo['usage_total_downloads'] = repo['usage_pypi_downloads'] + repo['usage_npm_downloads']
+                    repo['usage_last_updated'] = dt.date.today().isoformat()
+                # If no existing breakdown, skip this repo in incremental mode
+            else:
+                # Full mode: set all to zeros
+                repo['usage_pypi_downloads'] = 0
+                repo['usage_npm_downloads'] = 0
+                repo['usage_total_downloads'] = 0
+                repo['usage_monthly_breakdown'] = [{'month': month, 'pypi': 0, 'npm': 0} for month in months]
+                repo['usage_matched_packages'] = {'pypi': [], 'npm': []}
+                repo['usage_match_method'] = 'none'
+                repo['usage_last_updated'] = dt.date.today().isoformat()
 
     logger.info(f"Updated {updated_count} repositories with download statistics")
 
@@ -647,10 +768,19 @@ def main():
                        help="Preserve country-level breakdown for PyPI downloads (default: True)")
     parser.add_argument("--no-countries", dest="countries", action="store_false",
                        help="Aggregate PyPI downloads to monthly totals (no country breakdown)")
+    parser.add_argument("--months", nargs='+', type=str,
+                       help="Specific months to update (YYYY-MM format, e.g., --months 2025-10 2025-11). "
+                            "If provided, only these months are updated and merged with existing data.")
     args = parser.parse_args()
 
     # Setup logging
     logger = setup_logging()
+
+    # Validate months if provided
+    target_months = None
+    if args.months:
+        target_months = validate_months(args.months)
+        logger.info(f"Incremental mode: updating only {target_months}")
 
     logger.info("=== MCP Package Usage Statistics Collection ===")
     logger.info(f"Date range: {START_DATE} to {END_DATE}")
@@ -693,7 +823,8 @@ def main():
     # Integrate statistics into dataset
     logger.info("Integrating download statistics into dataset...")
     updated_dataset = integrate_download_stats(
-        dataset, repo_to_packages, package_metadata, START_DATE, END_DATE, logger
+        dataset, repo_to_packages, package_metadata, START_DATE, END_DATE, logger,
+        target_months=target_months
     )
 
     # Save updated dataset

@@ -20,7 +20,7 @@ def compare_results(original: dict, alternative: dict) -> None:
     """Generate comparison report between two validation results."""
     print("=" * 80)
     print("HUMAN VALIDATION COMPARISON")
-    print("Original (clservers_classified.csv) vs Alternative (clservers_classified_alternative.csv)")
+    print("Original (clservers_classified.csv.gz) vs Alternative (clservers_classified_alternative.csv.gz)")
     print("=" * 80)
     print()
 

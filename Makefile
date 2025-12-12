@@ -110,18 +110,18 @@ data-cl-servers:
 	python scripts/data-classification-servers/clservers_3_dfprocessing.py --task naics
 	@echo "  Matching and merging all results..."
 	python scripts/data-classification-servers/clservers_4_datamatch.py
-	@echo "✅ CLServers pipeline complete: data/final/clservers_classified.csv"
+	@echo "✅ CLServers pipeline complete: data/final/clservers_classified.csv.gz"
 
 data-cl-tools:
 	@echo "🔄 Running CLTools pipeline (O*NET task mapping)..."
 	python scripts/data-classification-tools/cltools_main.py --run
-	python scripts/data-classification-tools/cltools_datamatch.py --stage4 data/internal-cl/cltools_3_results.csv --stage2 data/final/clservers_classified.csv --usage data/initial/data_unified_filtered.json --output data/final/cltools_classified.csv
-	@echo "✅ CLTools pipeline complete: data/final/cltools_classified.csv"
+	python scripts/data-classification-tools/cltools_datamatch.py --stage4 data/internal-cl/cltools_3_results.csv --stage2 data/final/clservers_classified.csv.gz --usage data/initial/data_unified_filtered.json --output data/final/cltools_classified.csv.gz
+	@echo "✅ CLTools pipeline complete: data/final/cltools_classified.csv.gz"
 
 data-cl-servers-enrich:
 	@echo "🔄 Enriching CLServers with aggregated tool classifications..."
-	python scripts/data-classification-tools/cltools_datamatch_toservers.py --cltools data/final/cltools_classified.csv --clservers data/final/clservers_classified.csv --output data/final/clservers_classified.csv
-	@echo "✅ CLServers enrichment complete: data/final/clservers_classified.csv"
+	python scripts/data-classification-tools/cltools_datamatch_toservers.py --cltools data/final/cltools_classified.csv.gz --clservers data/final/clservers_classified.csv.gz --output data/final/clservers_classified.csv.gz
+	@echo "✅ CLServers enrichment complete: data/final/clservers_classified.csv.gz"
 
 data-cl-all: data-task-clusters data-cl-servers data-cl-tools data-cl-servers-enrich
 

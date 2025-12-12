@@ -90,14 +90,6 @@ dev = [
     "pyright>=1.1.382",
 ]
 
-[tool.uv]
-dev-dependencies = [
-    "pre-commit>=3.8.0",
-    "pyright>=1.1.382",
-    "pytest>=8.0.0",
-    "ruff>=0.12.3",
-]
-
 [tool.uv.sources]
 inspect-k8s-sandbox = {git = "https://github.com/UKGovernmentBEIS/inspect_k8s_sandbox.git"}
 

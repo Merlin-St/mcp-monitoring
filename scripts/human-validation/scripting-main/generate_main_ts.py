@@ -2495,9 +2495,9 @@ def main():
                        help='Study type: servers (full Q0-Q5) or tools (Q1+Q2 only)')
     parser.add_argument('--servers', type=int, default=5,
                        help='Number of servers/tools to include (default: 5)')
-    parser.add_argument('--clservers', default='../../data/final/clservers_classified.csv',
+    parser.add_argument('--clservers', default='../../data/final/clservers_classified.csv.gz',
                        help='Path to CLServers CSV file')
-    parser.add_argument('--cltools', default='../../data/final/cltools_classified.csv',
+    parser.add_argument('--cltools', default='../../data/final/cltools_classified.csv.gz',
                        help='Path to CLTools CSV file')
     parser.add_argument('--questions', default='questions_config.csv',
                        help='Path to questions CSV file with choices')

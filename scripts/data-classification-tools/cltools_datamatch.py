@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 
 def enrich_with_metadata(
     cltools_path: str = "data/internal-cl/cltools_3_results.csv",
-    clservers_path: str = "data/final/clservers_classified.csv",
+    clservers_path: str = "data/final/clservers_classified.csv.gz",
     usage_data_path: str = "data/initial/data_unified_filtered.json",
     output_path: Optional[str] = None
 ) -> str:
@@ -63,7 +63,7 @@ def enrich_with_metadata(
     
     # Set default output path
     if output_path is None:
-        output_path = "data/final/cltools_classified.csv"
+        output_path = "data/final/cltools_classified.csv.gz"
     
     logger.info(f"Output file: {output_path}")
     
@@ -204,7 +204,9 @@ def enrich_with_metadata(
     # Save enriched data
     logger.info(f"Saving enriched data to {output_path}...")
     try:
-        enriched_df.to_csv(output_path, index=False)
+        # Use compression if output path ends with .gz
+        compression = 'gzip' if output_path.endswith('.gz') else None
+        enriched_df.to_csv(output_path, index=False, compression=compression)
         logger.info(f"Successfully saved {len(enriched_df)} rows to {output_path}")
     except Exception as e:
         logger.error(f"Error saving enriched file: {e}")

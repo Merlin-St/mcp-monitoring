@@ -12,19 +12,22 @@ Features:
 - Preserves all existing metadata
 - Skips packages that already have download data
 - Rate limiting to respect API limits
+- Supports incremental updates for specific months
 
 Usage:
     python usage_collect_npm.py                           # Update usage_npm.json
     python usage_collect_npm.py --input custom.json      # Custom input file
     python usage_collect_npm.py --start-date 2024-01-01  # Custom date range
     python usage_collect_npm.py --force                   # Refetch all packages
+    python usage_collect_npm.py --months 2025-10 2025-11 # Collect specific months only
 """
 
 import argparse
 import datetime as dt
 import json
 import time
-from typing import Dict, List, Set
+from typing import Dict, List, Tuple
+import re
 import logging
 
 import requests
@@ -45,6 +48,76 @@ def setup_logging():
         ]
     )
     return logging.getLogger(__name__)
+
+
+def parse_months_to_date_range(months: List[str]) -> Tuple[dt.date, dt.date, List[str]]:
+    """
+    Convert list of YYYY-MM month strings to start and end dates.
+
+    Args:
+        months: List of month strings like ['2025-10', '2025-11']
+
+    Returns:
+        Tuple of (start_date, end_date, validated_months)
+
+    Raises:
+        ValueError: If month format is invalid
+    """
+    logger = logging.getLogger(__name__)
+
+    pattern = re.compile(r'^(\d{4})-(0[1-9]|1[0-2])$')
+    parsed_months = []
+
+    for month in months:
+        match = pattern.match(month)
+        if not match:
+            raise ValueError(f"Invalid month format: {month}. Expected YYYY-MM.")
+        year, month_num = int(match.group(1)), int(match.group(2))
+        parsed_months.append((year, month_num, month))
+
+    # Sort by date
+    parsed_months.sort(key=lambda x: (x[0], x[1]))
+    validated_months = [m[2] for m in parsed_months]
+
+    # Get start date (first day of earliest month)
+    first_year, first_month = parsed_months[0][0], parsed_months[0][1]
+    start_date = dt.date(first_year, first_month, 1)
+
+    # Get end date (last day of latest month)
+    last_year, last_month = parsed_months[-1][0], parsed_months[-1][1]
+    if last_month == 12:
+        end_date = dt.date(last_year + 1, 1, 1) - dt.timedelta(days=1)
+    else:
+        end_date = dt.date(last_year, last_month + 1, 1) - dt.timedelta(days=1)
+
+    logger.info(f"Parsed months {validated_months} to date range: {start_date} to {end_date}")
+    return start_date, end_date, validated_months
+
+
+def merge_monthly_data(existing_monthly: Dict[str, int], new_monthly: Dict[str, int],
+                       target_months: List[str]) -> Dict[str, int]:
+    """
+    Merge new monthly data into existing data, only updating specified months.
+
+    Args:
+        existing_monthly: Existing monthly download counts
+        new_monthly: New monthly download counts from API
+        target_months: List of months to update (e.g., ['2025-10', '2025-11'])
+
+    Returns:
+        Merged monthly data with target months updated
+    """
+    merged = dict(existing_monthly)  # Copy existing
+
+    for month in target_months:
+        if month in new_monthly:
+            merged[month] = new_monthly[month]
+        else:
+            # New month not in API response - set to 0
+            merged[month] = 0
+
+    return merged
+
 
 def load_usage_npm_file(file_path: str) -> Dict:
     """Load usage_npm.json file with package data."""
@@ -176,6 +249,43 @@ def collect_npm_downloads(package_names: List[str], start_date: dt.date, end_dat
                     'total': 0
                 }
                 not_found_packages += 1
+            elif response.status_code == 429:
+                # Rate limited - wait and retry once
+                logger.warning(f"Rate limited on {package_name}, waiting 60s and retrying...")
+                time.sleep(60)
+                retry_response = requests.get(url, timeout=10)
+                if retry_response.status_code == 200:
+                    data = retry_response.json()
+                    if 'downloads' in data:
+                        monthly_stats = {}
+                        total = 0
+                        for month in months:
+                            monthly_stats[month] = 0
+                        for download_entry in data['downloads']:
+                            date_str = download_entry['day']
+                            downloads = download_entry['downloads']
+                            month = date_str[:7]
+                            if month in monthly_stats:
+                                monthly_stats[month] += downloads
+                            total += downloads
+                        download_stats[package_name] = {
+                            'monthly': monthly_stats,
+                            'total': total
+                        }
+                        successful_requests += 1
+                    else:
+                        download_stats[package_name] = {
+                            'monthly': {month: 0 for month in months},
+                            'total': 0
+                        }
+                        successful_requests += 1
+                else:
+                    logger.warning(f"Retry failed for {package_name}: HTTP {retry_response.status_code}")
+                    download_stats[package_name] = {
+                        'monthly': {month: 0 for month in months},
+                        'total': 0
+                    }
+                    failed_requests += 1
             else:
                 # Other HTTP error
                 logger.warning(f"Error fetching {package_name}: HTTP {response.status_code}")
@@ -201,7 +311,7 @@ def collect_npm_downloads(package_names: List[str], start_date: dt.date, end_dat
             failed_requests += 1
 
         # Rate limiting - be respectful to npm API
-        time.sleep(0.1)
+        time.sleep(1.0)
 
     # Calculate summary statistics
     total_downloads = sum(stats['total'] for stats in download_stats.values())
@@ -218,21 +328,45 @@ def collect_npm_downloads(package_names: List[str], start_date: dt.date, end_dat
     return download_stats
 
 def update_usage_npm_file(data: Dict, download_stats: Dict[str, Dict], output_file: str,
-                         start_date: dt.date, end_date: dt.date):
+                         start_date: dt.date, end_date: dt.date,
+                         target_months: List[str] = None):
     """
     Update usage_npm.json with download statistics.
 
     Preserves all existing metadata and only updates monthly/total fields.
+    If target_months is provided, only those months are updated (incremental mode).
+
+    Args:
+        data: Usage npm data dictionary
+        download_stats: Download statistics from npm API
+        output_file: Path to output file
+        start_date: Collection start date
+        end_date: Collection end date
+        target_months: Optional list of months to update (incremental mode)
     """
     logger = logging.getLogger(__name__)
+
+    if target_months:
+        logger.info(f"Incremental mode: updating only months {target_months}")
 
     # Update packages with download data
     updated_count = 0
     for package_name, stats in download_stats.items():
         if package_name in data['packages']:
-            # Update monthly and total, preserve metadata
-            data['packages'][package_name]['monthly'] = stats['monthly']
-            data['packages'][package_name]['total'] = stats['total']
+            existing_pkg = data['packages'][package_name]
+
+            if target_months:
+                # Incremental update: merge only target months
+                existing_monthly = existing_pkg.get('monthly', {})
+                new_monthly = stats['monthly']
+                merged_monthly = merge_monthly_data(existing_monthly, new_monthly, target_months)
+                existing_pkg['monthly'] = merged_monthly
+                existing_pkg['total'] = sum(merged_monthly.values())
+            else:
+                # Full update (original behavior)
+                existing_pkg['monthly'] = stats['monthly']
+                existing_pkg['total'] = stats['total']
+
             updated_count += 1
 
     # Update metadata
@@ -268,6 +402,9 @@ def main():
                        help="Start date for collection (YYYY-MM-DD)")
     parser.add_argument("--end-date", default=DEFAULT_END_DATE.isoformat(),
                        help="End date for collection (YYYY-MM-DD)")
+    parser.add_argument("--months", nargs='+', type=str,
+                       help="Specific months to collect (YYYY-MM format, e.g., --months 2025-10 2025-11). "
+                            "If provided, only these months are collected and merged with existing data.")
     parser.add_argument("--force", action='store_true',
                        help="Refetch all packages, ignoring existing data")
 
@@ -283,9 +420,18 @@ def main():
     logger.info(f"Output file: {output_file}")
 
     try:
-        # Parse dates
-        start_date = dt.datetime.strptime(args.start_date, '%Y-%m-%d').date()
-        end_date = dt.datetime.strptime(args.end_date, '%Y-%m-%d').date()
+        # Handle --months flag
+        target_months = None
+        if args.months:
+            start_date, end_date, target_months = parse_months_to_date_range(args.months)
+            logger.info(f"Month-specific mode: collecting {target_months}")
+            # Force refetch when using --months to get latest data for those months
+            force = True
+        else:
+            # Parse dates from arguments
+            start_date = dt.datetime.strptime(args.start_date, '%Y-%m-%d').date()
+            end_date = dt.datetime.strptime(args.end_date, '%Y-%m-%d').date()
+            force = args.force
 
         logger.info(f"Collection period: {start_date} to {end_date}")
 
@@ -297,19 +443,20 @@ def main():
             return
 
         # Get packages that need download data
-        packages_to_fetch = get_packages_to_fetch(data, force=args.force)
+        packages_to_fetch = get_packages_to_fetch(data, force=force)
 
         if not packages_to_fetch:
-            logger.info("All packages already have download data. Use --force to refetch.")
+            logger.info("All packages already have download data. Use --force or --months to refetch.")
             return
 
         # Collect download statistics
         download_stats = collect_npm_downloads(packages_to_fetch, start_date, end_date)
 
-        # Update and save results
-        update_usage_npm_file(data, download_stats, output_file, start_date, end_date)
+        # Update and save results (pass target_months for incremental mode)
+        update_usage_npm_file(data, download_stats, output_file, start_date, end_date,
+                             target_months=target_months)
 
-        logger.info("✓ npm collection completed successfully")
+        logger.info("npm collection completed successfully")
 
     except Exception as e:
         logger.error(f"npm collection failed: {e}")

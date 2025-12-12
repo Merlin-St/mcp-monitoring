@@ -532,7 +532,9 @@ def export_csv(
     # Write CSV
     out_df = pd.DataFrame(rows)
     Path(out_csv_path).parent.mkdir(parents=True, exist_ok=True)
-    out_df.to_csv(out_csv_path, index=False, encoding="utf-8")
+    # Use compression if output path ends with .gz
+    compression = 'gzip' if out_csv_path.endswith('.gz') else None
+    out_df.to_csv(out_csv_path, index=False, encoding="utf-8", compression=compression)
     log.info("Wrote %d rows to %s", len(rows), out_csv_path)
 
 

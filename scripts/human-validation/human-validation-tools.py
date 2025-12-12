@@ -843,8 +843,8 @@ def main():
     parser.add_argument(
         "--llm-file",
         type=str,
-        default="cltools_classified.csv",
-        help="LLM classification file name (default: cltools_classified.csv)",
+        default="cltools_classified.csv.gz",
+        help="LLM classification file name (default: cltools_classified.csv.gz)",
     )
     parser.add_argument(
         "--exclude-participants",

@@ -176,7 +176,7 @@ The system extracts and classifies:
 
 ## Dashboard & Visualization
 
-**Note**: Dashboard components have been moved to https://github.com/AI-Safety-Institute/sr-mcp-dashboard from data/final/clservers_classified.csv onwards. This repository focuses on data collection, processing, and analysis.
+**Note**: Dashboard components have been moved to https://github.com/AI-Safety-Institute/sr-mcp-dashboard from data/final/clservers_classified.csv.gz onwards. This repository focuses on data collection, processing, and analysis.
 
 ## Key Dependencies
 
@@ -241,14 +241,14 @@ The system extracts and classifies:
 - `data/internal-cl/clservers_1_dataprep_servers_sample.json` - CLServers Step 1 finance server sample
 - `clservers_input.jsonl` - Input for CLServers Inspect evaluation
 - `data/internal-cl/clservers_3_results.json` - CLServers Step 3 filtering results (JSON)
-- `data/final/clservers_classified.csv` - CLServers final classified servers with metadata (CSV)
+- `data/final/clservers_classified.csv.gz` - CLServers final classified servers with metadata (CSV.gz compressed)
 - `output-validation/cl-validation/clservers_validation.json` - Validation results comparing human vs LLM labels
 - `data/external-cl/clservers_validate_labelled.csv` - Human-labeled validation dataset
 
 **CLTools Pipeline Files:**
 - `cltools_samples.jsonl` - MCP tool samples for O*NET classification
 - `data/internal-cl/cltools_3_results.csv` - CLTools task classification results
-- `data/final/cltools_classified.csv` - CLTools enriched with metadata from CLServers
+- `data/final/cltools_classified.csv.gz` - CLTools enriched with metadata from CLServers (CSV.gz compressed)
 - `data/internal-cl/cltools_prep.json` - Snapshot of all tool records (preprocessed data)
 - `data/internal-task-clusters/task_clusters_names.csv` - O*NET task clusters with generated names
 - `task_clusters_*.json` - Various clustering summary and result files
@@ -484,9 +484,9 @@ python scripts/data-classification-tools/cltools_main.py \
 # Enrich CLTools output with metadata
 python scripts/data-classification-tools/cltools_datamatch.py \
     --stage4 data/internal-cl/cltools_3_results.csv \
-    --stage2 data/final/clservers_classified.csv \
+    --stage2 data/final/clservers_classified.csv.gz \
     --usage data/initial/data_unified_filtered.json \
-    --output data/final/cltools_classified.csv
+    --output data/final/cltools_classified.csv.gz
 
 # Task Clustering Pipeline
 python scripts/onet-task-clusters/task_clusters_run.py --k2 400              # Run clustering with 400 L2 clusters
@@ -499,16 +499,16 @@ python scripts/onet-task-clusters/task_clusters_embed_match.py               # M
 #   - Step 2b: NAICS classification - assigns 3-digit NAICS industry code to each server
 #   - Step 3a: Processes finance .eval files to JSON (data/internal-cl/clservers_3_results.json)
 #   - Step 3b: Processes NAICS .eval files to JSON (data/internal-cl/clservers_naics_results.json)
-#   - Step 4: Merges finance + NAICS + metadata → final CSV (data/final/clservers_classified.csv)
+#   - Step 4: Merges finance + NAICS + metadata → final CSV (data/final/clservers_classified.csv.gz)
 
 # CLTools Pipeline: O*NET Task Mapping + Functionality Classification
 #   - Main: Maps MCP tools to O*NET occupational tasks and classifies tool functionality (perception/reasoning/action)
 #   - DataMatch: Enriches results with creation dates and usage data
-#   - Output: data/final/cltools_classified.csv with task mapping, functionality classification, and metadata
+#   - Output: data/final/cltools_classified.csv.gz with task mapping, functionality classification, and metadata
 
 # Outputs:
-# - CLServers: data/final/clservers_classified.csv (ALL servers with finance yes/no + NAICS code + metadata)
-# - CLTools: data/final/cltools_classified.csv (O*NET task mappings + functionality classification + metadata)
+# - CLServers: data/final/clservers_classified.csv.gz (ALL servers with finance yes/no + NAICS code + metadata)
+# - CLTools: data/final/cltools_classified.csv.gz (O*NET task mappings + functionality classification + metadata)
 
 # Requirements:
 # - ANTHROPIC_API_KEY environment variable set
@@ -530,7 +530,7 @@ python scripts/human-validation/human-validation-scoring.py
 
 # Input:
 # - data/external-cl-human-valid/data_exp_*.csv (Gorilla experiment data)
-# - data/final/clservers_classified.csv (LLM classifications)
+# - data/final/clservers_classified.csv.gz (LLM classifications)
 
 # Output:
 # - output-validation/cl-validation/human-validation-scores.json (comprehensive statistics)

@@ -147,8 +147,8 @@ def aggregate_tool_classifications(cltools_df: pd.DataFrame) -> pd.DataFrame:
 
 
 def enrich_servers_with_tools(
-    cltools_path: str = "data/final/cltools_classified.csv",
-    clservers_path: str = "data/final/clservers_classified.csv",
+    cltools_path: str = "data/final/cltools_classified.csv.gz",
+    clservers_path: str = "data/final/clservers_classified.csv.gz",
     output_path: Optional[str] = None
 ) -> str:
     """

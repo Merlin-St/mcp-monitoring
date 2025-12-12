@@ -485,16 +485,16 @@ def main():
     comparisons = [
         {
             "dataset_type": "clservers",
-            "file1": data_dir / "clservers_classified.csv",
-            "file2": data_dir / "clservers_classified_alternative.csv",
+            "file1": data_dir / "clservers_classified.csv.gz",
+            "file2": data_dir / "clservers_classified_alternative.csv.gz",
             "model1_name": "Claude Sonnet 4.5",
             "model2_name": "GPT-5",
             "output_key": "clservers",
         },
         {
             "dataset_type": "cltools",
-            "file1": data_dir / "cltools_classified.csv",
-            "file2": data_dir / "cltools_classified_gpt5.csv",
+            "file1": data_dir / "cltools_classified.csv.gz",
+            "file2": data_dir / "cltools_classified_gpt5.csv.gz",
             "model1_name": "Claude Sonnet 4.5",
             "model2_name": "GPT-5",
             "output_key": "cltools",
