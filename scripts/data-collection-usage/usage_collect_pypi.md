@@ -1,27 +1,7 @@
 PyPI Data Collection:
 To get PyPI download statistics, run this query in Google Cloud Console BigQuery web UI:
 
-SELECT 
-    file.project AS package_name,
-    FORMAT_DATE('%Y-%m', DATE_TRUNC(DATE(timestamp), MONTH)) AS month,
-    COUNT(*) AS downloads
-FROM 
-    `bigquery-public-data.pypi.file_downloads`
-WHERE 
-    LOWER(file.project) LIKE '%mcp%'
-    AND DATE(timestamp) >= '2024-11-01'
-    AND DATE(timestamp) < '2025-09-01'
-GROUP BY 
-    package_name, 
-    month
-ORDER BY 
-    package_name, 
-    month
-
-Export the results as JSON and save as 'usage_bigquery_webresults_pypi.json'
-
-
-Alternative with metadata: 
+Option 1 (main query w/o geo data)
 
 WITH monthly_downloads AS (
   SELECT
@@ -31,7 +11,7 @@ WITH monthly_downloads AS (
   FROM
     `bigquery-public-data.pypi.file_downloads` AS file
   WHERE
-    DATE(file.timestamp) BETWEEN '2024-11-01' AND '2025-09-30'
+    DATE(file.timestamp) BETWEEN '2024-11-01' AND '2025-10-31'
   GROUP BY
     name,
     month
@@ -75,17 +55,16 @@ LEFT JOIN
   latest_metadata AS lm
 ON
   md.name = lm.name
-  AND lm.rn = 1  -- only latest version
+  AND lm.rn = 1
 WHERE
-  CONTAINS_SUBSTR(IFNULL(lm.name, ''), 'mcp')
-  OR CONTAINS_SUBSTR(IFNULL(lm.summary, ''), 'mcp')
-  OR CONTAINS_SUBSTR(IFNULL(lm.description, ''), 'mcp')
-  OR CONTAINS_SUBSTR(IFNULL(lm.keywords, ''), 'mcp')
+  CONTAINS_SUBSTR(LOWER(IFNULL(lm.name, '')), 'mcp')
+  OR CONTAINS_SUBSTR(LOWER(IFNULL(lm.summary, '')), 'mcp')
+  OR CONTAINS_SUBSTR(LOWER(IFNULL(lm.description, '')), 'mcp')
+  OR CONTAINS_SUBSTR(LOWER(IFNULL(lm.keywords, '')), 'mcp')
 ORDER BY
   md.name, md.month DESC;
 
-
-Latest option 3: With country code
+Option 2: With country code
 
 WITH monthly_downloads AS (
   SELECT
