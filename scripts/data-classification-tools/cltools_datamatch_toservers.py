@@ -280,12 +280,12 @@ def main():
     )
     parser.add_argument(
         '--cltools',
-        default="data/final/cltools_classified.csv",
+        default="data/final/cltools_classified.csv.gz",
         help="Path to CLTools CSV file"
     )
     parser.add_argument(
         '--clservers',
-        default="data/final/clservers_classified.csv",
+        default="data/final/clservers_classified.csv.gz",
         help="Path to CLServers CSV file to enrich"
     )
     parser.add_argument(

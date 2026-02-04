@@ -231,7 +231,7 @@ def main():
     )
     parser.add_argument(
         '--cltools', 
-        default="data/internal-cl/cltools_3_results.csv",
+        default="data/internal-cl/cltools_3_results_claude45.csv",
         help="Path to task output CSV file"
     )
     parser.add_argument(
