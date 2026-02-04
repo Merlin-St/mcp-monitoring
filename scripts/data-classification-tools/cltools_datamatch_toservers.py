@@ -3,7 +3,9 @@
 CLTools to CLServers Data Matching Tool
 
 This module enriches CLServers CSV with aggregated tool-level classifications from CLTools.
-For each server, it computes:
+Servers without any tools are dropped from the output (inner join behavior).
+
+For each server with tools, it computes:
 - highest_automation_func: Highest automation functionality (Actions > Reasoning > Perception)
 - main_automation_subfunc: Most common automation sub-functionality
 - main_onet_task_level1: Most common Level 1 O*NET task cluster name
@@ -167,6 +169,9 @@ def enrich_servers_with_tools(
     """
     Enrich CLServers CSV with aggregated tool classifications from CLTools.
 
+    IMPORTANT: This function performs an inner join, meaning servers without
+    any tools in the CLTools dataset will be dropped from the output.
+
     Args:
         cltools_path: Path to CLTools CSV file
         clservers_path: Path to CLServers CSV file to enrich
@@ -238,32 +243,24 @@ def enrich_servers_with_tools(
         logger.info(f"Dropping existing O*NET/occupation columns to overwrite: {existing_onet_cols}")
         clservers_df = clservers_df.drop(columns=existing_onet_cols)
 
-    # Merge with CLServers data
+    # Merge with CLServers data (inner join to keep only servers with tools)
     logger.info("Merging aggregated tool classifications with CLServers data...")
     enriched_df = clservers_df.merge(
         aggregated_tools,
         on='server_id',
-        how='left'
+        how='inner'
     )
 
     # Log merge statistics
-    total_servers = len(enriched_df)
-    matched_servers = enriched_df['highest_automation_func'].notna().sum()
-    unmatched_servers = total_servers - matched_servers
+    original_servers = len(clservers_df)
+    servers_with_tools = len(enriched_df)
+    servers_without_tools = original_servers - servers_with_tools
 
-    logger.info("Merge complete:")
-    logger.info(f"  Total servers: {total_servers}")
-    logger.info(f"  Servers with tool classifications: {matched_servers}")
-    logger.info(f"  Servers without tool classifications: {unmatched_servers}")
-
-    if unmatched_servers > 0:
-        logger.warning(
-            f"{unmatched_servers} servers could not be matched with tool classifications "
-            "(likely servers with no tools in CLTools dataset)"
-        )
-        # Log some examples
-        unmatched_ids = enriched_df[enriched_df['highest_automation_func'].isna()]['server_id'].unique()[:5]
-        logger.warning(f"Examples of unmatched server_ids: {list(unmatched_ids)}")
+    logger.info("Merge complete (inner join - only servers with tools kept):")
+    logger.info(f"  Original CLServers count: {original_servers}")
+    logger.info(f"  Servers with tools (kept): {servers_with_tools}")
+    logger.info(f"  Servers without tools (dropped): {servers_without_tools}")
+    logger.info(f"  Retention rate: {servers_with_tools/original_servers*100:.1f}%")
 
     # Save enriched data
     logger.info(f"Saving enriched data to {output_path}...")
@@ -282,7 +279,7 @@ def enrich_servers_with_tools(
     for col in new_cols:
         if col in enriched_df.columns:
             non_null = enriched_df[col].notna().sum()
-            logger.info(f"  {col}: {non_null} non-null values ({non_null/total_servers*100:.1f}%)")
+            logger.info(f"  {col}: {non_null} non-null values ({non_null/servers_with_tools*100:.1f}%)")
 
     return output_path
 
