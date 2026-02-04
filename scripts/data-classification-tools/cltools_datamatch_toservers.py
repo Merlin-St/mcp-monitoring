@@ -9,6 +9,7 @@ For each server, it computes:
 - main_onet_task_level1: Most common Level 1 O*NET task cluster name
 - main_onet_task_level2: Most common Level 2 O*NET task cluster name
 - main_onet_task_level3: Most common task_id
+- occupation_title_main: Most common occupation title from O*NET
 """
 
 import pandas as pd
@@ -121,6 +122,18 @@ def aggregate_tool_classifications(cltools_df: pd.DataFrame) -> pd.DataFrame:
         logger.warning("Column 'task_id' not found in CLTools data - skipping level3 aggregation")
         aggregated['main_onet_task_level3'] = None
 
+    # Check if occupation_title column exists for occupation aggregation
+    if 'occupation_title' in cltools_df.columns:
+        occupation_agg = cltools_df.groupby('server_id')['occupation_title'].apply(
+            lambda x: get_most_common(x)
+        ).reset_index()
+        occupation_agg = occupation_agg.rename(columns={'occupation_title': 'occupation_title_main'})
+        aggregated = aggregated.merge(occupation_agg, on='server_id', how='left')
+        logger.info(f"Added occupation_title_main for {aggregated['occupation_title_main'].notna().sum()} servers")
+    else:
+        logger.warning("Column 'occupation_title' not found in CLTools data - skipping occupation aggregation")
+        aggregated['occupation_title_main'] = None
+
     # Rename columns to match desired output
     aggregated = aggregated.rename(columns={
         'tool_functionality_main': 'highest_automation_func',
@@ -216,12 +229,13 @@ def enrich_servers_with_tools(
     # Aggregate tool classifications
     aggregated_tools = aggregate_tool_classifications(cltools_df)
 
-    # Drop existing O*NET columns if they exist (to allow overwriting)
+    # Drop existing O*NET/occupation columns if they exist (to allow overwriting)
     onet_columns = ['highest_automation_func', 'main_automation_subfunc',
-                    'main_onet_task_level1', 'main_onet_task_level2', 'main_onet_task_level3']
+                    'main_onet_task_level1', 'main_onet_task_level2', 'main_onet_task_level3',
+                    'occupation_title_main']
     existing_onet_cols = [col for col in onet_columns if col in clservers_df.columns]
     if existing_onet_cols:
-        logger.info(f"Dropping existing O*NET columns to overwrite: {existing_onet_cols}")
+        logger.info(f"Dropping existing O*NET/occupation columns to overwrite: {existing_onet_cols}")
         clservers_df = clservers_df.drop(columns=existing_onet_cols)
 
     # Merge with CLServers data
@@ -263,10 +277,12 @@ def enrich_servers_with_tools(
     # Log summary of new columns
     logger.info("Summary of new columns:")
     new_cols = ['highest_automation_func', 'main_automation_subfunc',
-                'main_onet_task_level1', 'main_onet_task_level2', 'main_onet_task_level3']
+                'main_onet_task_level1', 'main_onet_task_level2', 'main_onet_task_level3',
+                'occupation_title_main']
     for col in new_cols:
-        non_null = enriched_df[col].notna().sum()
-        logger.info(f"  {col}: {non_null} non-null values ({non_null/total_servers*100:.1f}%)")
+        if col in enriched_df.columns:
+            non_null = enriched_df[col].notna().sum()
+            logger.info(f"  {col}: {non_null} non-null values ({non_null/total_servers*100:.1f}%)")
 
     return output_path
 

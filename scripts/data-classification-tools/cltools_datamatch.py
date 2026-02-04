@@ -2,9 +2,9 @@
 """
 CLTools Data Matching Tool
 
-This module provides functionality to enrich the CLTools task output CSV with 
-creation_date information from the CLServers CSV file and usage data from 
-data_usage.json file.
+This module provides functionality to enrich the CLTools task output CSV with
+creation_date information from the CLServers CSV file, usage data from
+data_usage.json file, and occupation_title from O*NET task statements.
 """
 
 import pandas as pd
@@ -12,6 +12,9 @@ import logging
 import json
 from pathlib import Path
 from typing import Optional
+
+# Default path for O*NET task statements file
+ONET_TASK_STATEMENTS_PATH = "data/external-cl/cl_onet_taskstatements.csv"
 
 # Configure logging
 logging.basicConfig(
@@ -153,6 +156,38 @@ def enrich_with_metadata(
 
     # Add creation_date column (rename created_at for clarity)
     enriched_df = enriched_df.rename(columns={'created_at': 'creation_date'})
+
+    # Add occupation_title from O*NET task statements based on task_id
+    if 'task_id' in enriched_df.columns and Path(ONET_TASK_STATEMENTS_PATH).exists():
+        logger.info("Adding occupation_title from O*NET task statements...")
+        try:
+            onet_df = pd.read_csv(ONET_TASK_STATEMENTS_PATH)
+            # Create task_id to occupation title mapping
+            onet_mapping = onet_df[['Task ID', 'Title']].drop_duplicates()
+            onet_mapping = onet_mapping.rename(columns={
+                'Task ID': 'task_id',
+                'Title': 'occupation_title'
+            })
+
+            # Remove existing occupation_title column if it exists
+            if 'occupation_title' in enriched_df.columns:
+                enriched_df = enriched_df.drop(columns=['occupation_title'])
+
+            # Merge occupation_title
+            enriched_df = enriched_df.merge(
+                onet_mapping[['task_id', 'occupation_title']],
+                on='task_id',
+                how='left'
+            )
+
+            occupation_matched = enriched_df['occupation_title'].notna().sum()
+            logger.info(f"  Matched occupation_title: {occupation_matched}/{len(enriched_df)} ({occupation_matched/len(enriched_df)*100:.1f}%)")
+        except Exception as e:
+            logger.warning(f"Could not add occupation_title: {e}")
+    elif 'task_id' not in enriched_df.columns:
+        logger.info("Skipping occupation_title (no task_id column)")
+    else:
+        logger.warning(f"O*NET file not found: {ONET_TASK_STATEMENTS_PATH}")
 
     # Filter out tools from non-MCP servers (those without CLServers metadata)
     tools_before_filter = len(enriched_df)
