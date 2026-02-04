@@ -306,14 +306,8 @@ def main():
         lambda server_id: server_lookup.get(server_id, {}).get('usage_last_updated', '')
     )
 
-    # Check if pypi_by_country field exists in unified data
-    has_country_data = any('pypi_by_country' in server for server in server_lookup.values())
-    if not has_country_data:
-        raise ValueError("country level data not found")
-
-    results_df['pypi_by_country'] = results_df['server_id'].apply(
-        lambda server_id: server_lookup.get(server_id, {}).get('pypi_by_country', '')
-    )
+    # Note: pypi_by_country geo data is now inside usage_monthly_breakdown entries,
+    # not at the server level. The breakdown already contains this data.
 
     # Count successful matches
     matched_created_at = len(results_df[results_df['created_at'] != ''])
@@ -325,7 +319,6 @@ def main():
     matched_repository_url = len(results_df[results_df['repository_url'] != ''])
     matched_usage_total_downloads = len(results_df[results_df['usage_total_downloads'] != ''])
     matched_usage_last_updated = len(results_df[results_df['usage_last_updated'] != ''])
-    matched_pypi_by_country = len(results_df[results_df['pypi_by_country'] != ''])
 
     logger.info(f"Matched creation dates: {matched_created_at}/{len(results_df)} ({matched_created_at/len(results_df)*100:.1f}%)")
     logger.info(f"Matched use counts: {matched_use_count}/{len(results_df)} ({matched_use_count/len(results_df)*100:.1f}%)")
@@ -336,7 +329,6 @@ def main():
     logger.info(f"Matched repository_url: {matched_repository_url}/{len(results_df)} ({matched_repository_url/len(results_df)*100:.1f}%)")
     logger.info(f"Matched usage_total_downloads: {matched_usage_total_downloads}/{len(results_df)} ({matched_usage_total_downloads/len(results_df)*100:.1f}%)")
     logger.info(f"Matched usage_last_updated: {matched_usage_last_updated}/{len(results_df)} ({matched_usage_last_updated/len(results_df)*100:.1f}%)")
-    logger.info(f"Matched pypi_by_country: {matched_pypi_by_country}/{len(results_df)} ({matched_pypi_by_country/len(results_df)*100:.1f}%)")
 
     # Match NAICS classifications
     naics_file = 'data/internal-cl/clservers_naics_results.json'
@@ -406,11 +398,11 @@ def main():
     results_df = expand_tools_columns(results_df)
     
     # Reorder columns to put metadata fields after basic server info
+    # Note: pypi_by_country geo data is now embedded inside usage_monthly_breakdown entries
     input_columns = ['server_name', 'server_id', 'name', 'owner', 'repository_url', 'canonical_official',
                      'description', 'created_at', 'use_count', 'stargazers_count',
                      'usage_pypi_downloads', 'usage_npm_downloads', 'usage_total_downloads',
                      'usage_monthly_breakdown', 'usage_matched_packages', 'usage_match_method', 'usage_last_updated',
-                     'pypi_by_country',
                      'readme_filtered', 'readme_summary', 'topics', 'data_sources']
     naics_columns = ['naics_code', 'naics_title', 'naics_reasoning']
     analysis_columns = ['analysis_notes', 'is_finance_llm', 'asset_type', 'level', 'action_space_description', 'generality_industry', 'generality_environment']
@@ -436,7 +428,14 @@ def main():
     # Select only columns that exist in the DataFrame and exclude unwanted columns
     existing_columns = [col for col in ordered_columns if col in results_df.columns]
     results_df = results_df[existing_columns]
-    
+
+    # Convert list/dict columns to JSON strings for proper CSV serialization
+    for col in ['usage_monthly_breakdown', 'usage_matched_packages', 'topics']:
+        if col in results_df.columns:
+            results_df[col] = results_df[col].apply(
+                lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x
+            )
+
     # Save the enhanced results
     output_file = "data/final/clservers_classified.csv.gz"
     results_df.to_csv(output_file, index=False, compression='gzip')

@@ -204,6 +204,13 @@ def enrich_with_metadata(
     # Save enriched data
     logger.info(f"Saving enriched data to {output_path}...")
     try:
+        # Convert list/dict columns to JSON strings for proper CSV serialization
+        for col in ['usage_monthly_breakdown', 'usage_matched_packages', 'topics']:
+            if col in enriched_df.columns:
+                enriched_df[col] = enriched_df[col].apply(
+                    lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x
+                )
+
         # Use compression if output path ends with .gz
         compression = 'gzip' if output_path.endswith('.gz') else None
         enriched_df.to_csv(output_path, index=False, compression=compression)
