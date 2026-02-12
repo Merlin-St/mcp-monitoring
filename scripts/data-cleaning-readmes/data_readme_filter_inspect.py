@@ -19,7 +19,9 @@ Usage:
 """
 
 import json
+import os
 from pathlib import Path
+from datetime import datetime
 
 from inspect_ai import Task, task
 from inspect_ai.dataset import json_dataset
@@ -185,10 +187,43 @@ def prepare_readme_dataset():
     
     # Filter to servers that have initial filtered README content
     servers_with_readme = [
-        server for server in data 
+        server for server in data
         if server.get('readme_filteredinitial') and server.get('readme_filteredinitial').strip()
     ]
-    
+
+    # Apply date filtering via environment variables (for incremental updates)
+    created_after = os.environ.get('MCP_CREATED_AFTER')
+    created_before = os.environ.get('MCP_CREATED_BEFORE')
+    skip_existing = os.environ.get('MCP_SKIP_EXISTING_FILTERED', '').strip() == '1'
+
+    if skip_existing:
+        before_skip = len(servers_with_readme)
+        servers_with_readme = [s for s in servers_with_readme if not s.get('readme_filtered', '').strip()]
+        logger.info(f"Skipped servers with existing readme_filtered: {before_skip} -> {len(servers_with_readme)}")
+
+    if created_after or created_before:
+        before_date_filter = len(servers_with_readme)
+        date_filtered = []
+        for server in servers_with_readme:
+            created_at = server.get('created_at', '')
+            if not created_at:
+                continue
+            try:
+                dt_str = created_at.replace('Z', '+00:00')
+                if 'T' in dt_str:
+                    dt = datetime.fromisoformat(dt_str).replace(tzinfo=None)
+                else:
+                    dt = datetime.strptime(dt_str[:10], '%Y-%m-%d')
+                if created_after and dt < datetime.strptime(created_after, '%Y-%m-%d'):
+                    continue
+                if created_before and dt > datetime.strptime(created_before, '%Y-%m-%d').replace(hour=23, minute=59, second=59):
+                    continue
+                date_filtered.append(server)
+            except (ValueError, TypeError):
+                continue
+        servers_with_readme = date_filtered
+        logger.info(f"Date filtered: {before_date_filter} -> {len(servers_with_readme)} (after={created_after}, before={created_before})")
+
     logger.info(f"Found {len(servers_with_readme)} servers with initial filtered README content")
     
     # Create dataset samples

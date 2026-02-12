@@ -146,6 +146,11 @@ def expand_tools_columns(df):
 
 def main():
     """Main data matching function"""
+    import argparse
+    parser = argparse.ArgumentParser(description='CLServers Step 4: Data Matching')
+    parser.add_argument('--append-to', type=str, help='Path to existing clservers_classified.csv.gz to append new results to')
+    args = parser.parse_args()
+
     logger.info("Starting CLServers Step 4 Data Matching")
     
     # Load CLServers Step 3 results from JSON
@@ -440,7 +445,18 @@ def main():
     output_file = "data/final/clservers_classified.csv.gz"
     results_df.to_csv(output_file, index=False, compression='gzip')
     logger.info(f"Enhanced results saved to {output_file}")
-    
+
+    # Append to existing file if requested
+    if args.append_to and Path(args.append_to).exists():
+        logger.info(f"Appending to existing file: {args.append_to}")
+        existing_df = pd.read_csv(args.append_to)
+        logger.info(f"Existing data: {len(existing_df)} servers")
+        combined_df = pd.concat([existing_df, results_df], ignore_index=True)
+        combined_df = combined_df.drop_duplicates(subset=['server_id'], keep='last')
+        logger.info(f"Combined: {len(combined_df)} servers (new: {len(results_df)}, existing: {len(existing_df)}, after dedup: {len(combined_df)})")
+        combined_df.to_csv(output_file, index=False, compression='gzip')
+        logger.info(f"Saved combined results to {output_file}")
+
     # Generate summary with metadata insights
     summary = {
         "processing_timestamp": datetime.now().isoformat(),

@@ -154,6 +154,8 @@ def main():
     parser.add_argument('--samples', type=int, help='Number of servers to sample (default: 100)')
     parser.add_argument('--all', action='store_true', help='Process all servers')
     parser.add_argument('--finance', action='store_true', help='Only process finance-related servers (uses is_finance_related column)')
+    parser.add_argument('--created-after', type=str, help='Only include servers created after this date (YYYY-MM-DD)')
+    parser.add_argument('--created-before', type=str, help='Only include servers created before this date (YYYY-MM-DD)')
     args = parser.parse_args()
     
     # Determine sample size
@@ -177,7 +179,37 @@ def main():
         return
     
     servers = load_filtered_dataset(input_file)
-    
+
+    # Filter by creation date if specified
+    if args.created_after or args.created_before:
+        servers_before = len(servers)
+        filtered = []
+        for server in servers:
+            created_at = server.get('created_at', '')
+            if not created_at:
+                continue
+            try:
+                dt_str = created_at.replace('Z', '+00:00')
+                if 'T' in dt_str:
+                    dt = datetime.fromisoformat(dt_str).replace(tzinfo=None)
+                else:
+                    dt = datetime.strptime(dt_str[:10], '%Y-%m-%d')
+
+                if args.created_after:
+                    after_dt = datetime.strptime(args.created_after, '%Y-%m-%d')
+                    if dt < after_dt:
+                        continue
+                if args.created_before:
+                    before_dt = datetime.strptime(args.created_before, '%Y-%m-%d')
+                    if dt > before_dt.replace(hour=23, minute=59, second=59):
+                        continue
+                filtered.append(server)
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Could not parse date for server {server.get('id', 'unknown')}: {e}")
+                continue
+        servers = filtered
+        logger.info(f"Date filtered: {servers_before} -> {len(servers)} servers (after={args.created_after}, before={args.created_before})")
+
     # Filter for finance-related servers if flag is set
     if args.finance:
         finance_servers = [s for s in servers if s.get('is_finance_related')]
@@ -197,7 +229,14 @@ def main():
         servers = mcp_servers
     else:
         logger.info("No servers explicitly marked as non-MCP, keeping all servers")
-    
+
+    # Filter out servers with no tools
+    before_tool_filter = len(servers)
+    servers = [s for s in servers if s.get('tools') and len(s['tools']) > 0]
+    no_tools_count = before_tool_filter - len(servers)
+    if no_tools_count > 0:
+        logger.info(f"Filtered out {no_tools_count} servers with no tools, keeping {len(servers)} servers")
+
     # Sample servers if needed
     if sample_size is not None:
         servers = sample_servers(servers, sample_size)

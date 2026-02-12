@@ -32,7 +32,8 @@ def enrich_with_metadata(
     cltools_path: str = "data/internal-cl/cltools_3_results.csv",
     clservers_path: str = "data/final/clservers_classified.csv.gz",
     usage_data_path: str = "data/initial/data_unified_filtered.json",
-    output_path: Optional[str] = None
+    output_path: Optional[str] = None,
+    append_to: Optional[str] = None
 ) -> str:
     """
     Enrich task output CSV with creation_date and use_count from CLServers CSV,
@@ -253,7 +254,25 @@ def enrich_with_metadata(
     except Exception as e:
         logger.error(f"Error saving enriched file: {e}")
         raise
-    
+
+    # Append to existing file if requested
+    if append_to and Path(append_to).exists():
+        logger.info(f"Appending to existing file: {append_to}")
+        existing_df = pd.read_csv(append_to)
+        logger.info(f"Existing data: {len(existing_df)} tools")
+        combined_df = pd.concat([existing_df, enriched_df], ignore_index=True)
+        if 'tool_id' in combined_df.columns:
+            combined_df = combined_df.drop_duplicates(subset=['tool_id'], keep='last')
+        logger.info(f"Combined: {len(combined_df)} tools (new: {len(enriched_df)}, existing: {len(existing_df)}, after dedup: {len(combined_df)})")
+        for col in ['usage_monthly_breakdown', 'usage_matched_packages', 'topics']:
+            if col in combined_df.columns:
+                combined_df[col] = combined_df[col].apply(
+                    lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x
+                )
+        compression = 'gzip' if output_path.endswith('.gz') else None
+        combined_df.to_csv(output_path, index=False, compression=compression)
+        logger.info(f"Saved combined results to {output_path}")
+
     return output_path
 
 
@@ -280,10 +299,15 @@ def main():
         help="Path to data/initial/data_unified_filtered.json file with detailed usage data"
     )
     parser.add_argument(
-        '--output', 
+        '--output',
         help="Output path (default: adds '_enriched' suffix)"
     )
-    
+    parser.add_argument(
+        '--append-to',
+        default=None,
+        help="Path to existing cltools_classified.csv.gz to append new results to"
+    )
+
     args = parser.parse_args()
     
     try:
@@ -291,7 +315,8 @@ def main():
             cltools_path=args.cltools,
             clservers_path=args.clservers,
             usage_data_path=getattr(args, 'usage_data'),
-            output_path=args.output
+            output_path=args.output,
+            append_to=args.append_to
         )
         logger.info("Enrichment completed successfully!")
         logger.info(f"Enriched file available at: {output_file}")

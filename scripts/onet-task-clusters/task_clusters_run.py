@@ -27,11 +27,11 @@ import tempfile
 
 # Import inspect_ai analysis modules for confidence intervals
 try:
-    from inspect_ai.analysis.beta import evals_df
+    from inspect_ai.analysis import evals_df
     INSPECT_ANALYSIS_AVAILABLE = True
 except ImportError:
     logger = logging.getLogger(__name__)
-    logger.warning("inspect_ai.analysis.beta not available - confidence intervals will not be calculated")
+    logger.warning("inspect_ai.analysis not available - confidence intervals will not be calculated")
     INSPECT_ANALYSIS_AVAILABLE = False
 
 # Import our modules

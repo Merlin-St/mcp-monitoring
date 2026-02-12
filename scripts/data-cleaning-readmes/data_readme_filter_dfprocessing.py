@@ -65,7 +65,7 @@ def load_eval_results(logs_dir: str) -> List[Dict[str, Any]]:
         logger.info(f"Processing only the latest evaluation file: {latest_eval_file}")
         
         # Use Inspect's DataFrame processing functions on the specific file
-        from inspect_ai.analysis.beta import samples_df, messages_df
+        from inspect_ai.analysis import samples_df, messages_df
         
         samples_df_data = samples_df(latest_eval_file)
         messages_df_data = messages_df(latest_eval_file)

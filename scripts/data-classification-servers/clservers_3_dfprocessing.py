@@ -57,7 +57,7 @@ def process_naics_results(log_dir="logs"):
     shutil.copy2(latest_naics_file, temp_file)
 
     try:
-        from inspect_ai.analysis.beta import samples_df, messages_df
+        from inspect_ai.analysis import samples_df, messages_df
 
         samples_df_data = samples_df(temp_dir)
         messages_df_data = messages_df(temp_dir)
@@ -233,8 +233,8 @@ def main():
     
     try:
         # Read results using messages DataFrame
-        from inspect_ai.analysis.beta import samples_df, messages_df
-        
+        from inspect_ai.analysis import samples_df, messages_df
+
         samples_df_data = samples_df(log_dir)
         messages_df_data = messages_df(log_dir)
         logger.info(f"Loaded samples DataFrame with {len(samples_df_data)} samples")

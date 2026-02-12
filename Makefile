@@ -6,7 +6,13 @@
 # Prerequisites:
 # - Virtual environment: uv sync / source ~/mcp-monitoring/.venv/bin/activate
 
-.PHONY: help data-collect-servers data-collect-usage data-collect-all data-initial data-clean-readmes data-initial-clean data-cl-servers data-cl-tools data-cl-servers-enrich data-cl-all data-task-clusters clean lint lint-fix workflow-data-creation workflow-complete
+.PHONY: help data-collect-servers data-collect-usage data-collect-all data-initial data-clean-readmes data-initial-clean data-cl-servers data-cl-tools data-cl-servers-enrich data-cl-all data-task-clusters clean lint lint-fix workflow-data-creation workflow-complete data-update-initial data-update-clean-readmes data-update-cl-servers data-update-cl-tools data-update-cl-servers-enrich data-update-cl-all data-update-all data-update-test
+
+# Configurable parameters for incremental updates
+DATE_AFTER ?= 2025-10-01
+DATE_BEFORE ?= 2026-01-31
+MODEL ?= anthropic/claude-sonnet-4-5-20250929
+MAX_CONNECTIONS ?= 50
 
 # Default target
 help:
@@ -34,10 +40,21 @@ help:
 	@echo "    lint                   Run code quality checks"
 	@echo "    lint-fix               Auto-fix code quality issues"
 	@echo ""
+	@echo "  Incremental Update (classify only new servers by date):"
+	@echo "    data-update-initial    Re-unify data, preserve LLM fields"
+	@echo "    data-update-clean-readmes  Filter READMEs for new servers only"
+	@echo "    data-update-cl-servers Classify new servers, append to existing"
+	@echo "    data-update-cl-tools   Classify new tools, append to existing"
+	@echo "    data-update-cl-servers-enrich  Re-enrich with tool aggregations"
+	@echo "    data-update-cl-all     Full incremental classification pipeline"
+	@echo "    data-update-all        Full incremental pipeline (collect+process+classify)"
+	@echo "    data-update-test       Mini-test: 10 servers from date range"
+	@echo ""
 	@echo "  Complete Workflows:"
 	@echo "    workflow-data-creation Data collection + initial processing"
 	@echo "    workflow-complete      Full pipeline (all steps)"
 	@echo ""
+	@echo "  Config: DATE_AFTER=$(DATE_AFTER) DATE_BEFORE=$(DATE_BEFORE) MODEL=$(MODEL)"
 	@echo "  Prerequisites: source ~/mcp-monitoring/.venv/bin/activate"
 
 # ===============================
@@ -161,3 +178,73 @@ workflow-data-creation: data-collect-all data-initial-clean
 
 workflow-complete: data-collect-all data-initial-clean data-cl-all
 	@echo "✅ Complete workflow finished"
+
+
+# ===============================
+# Incremental Update Pipeline
+# ===============================
+# Only classifies NEW servers (by creation date) and appends to existing data.
+# Usage: make data-update-all DATE_AFTER=2025-10-01 DATE_BEFORE=2026-01-31
+# Mini-test: make data-update-test DATE_AFTER=2025-10-01 DATE_BEFORE=2026-01-31
+
+data-update-initial:
+	@echo "🔄 Re-unifying data with LLM field preservation..."
+	python scripts/data-unification/data_unified_processor.py
+	python scripts/data-unification/data_unified_add_usage.py
+	python scripts/data-unification/data_unified_create_filtered_subset.py --preserve-llm-fields
+	@echo "✅ Unified datasets created with LLM fields preserved"
+
+data-update-clean-readmes:
+	@echo "🔄 Filtering READMEs for new servers only ($(DATE_AFTER) to $(DATE_BEFORE))..."
+	MCP_CREATED_AFTER=$(DATE_AFTER) MCP_CREATED_BEFORE=$(DATE_BEFORE) MCP_SKIP_EXISTING_FILTERED=1 \
+		inspect eval scripts/data-cleaning-readmes/data_readme_filter_inspect.py --model $(MODEL) --temperature 0 --max-connections $(MAX_CONNECTIONS)
+	python scripts/data-cleaning-readmes/data_readme_filter_dfprocessing.py
+	@echo "✅ README filtering complete for new servers"
+
+data-update-cl-servers:
+	@echo "🔄 Classifying new servers ($(DATE_AFTER) to $(DATE_BEFORE))..."
+	python scripts/data-classification-servers/clservers_1_dataprep.py --all --created-after $(DATE_AFTER) --created-before $(DATE_BEFORE)
+	@echo "  Running finance identification on new servers..."
+	inspect eval scripts/data-classification-servers/clservers_2_inspect.py --model $(MODEL) --temperature 0 --max-connections $(MAX_CONNECTIONS)
+	@echo "  Running NAICS industry classification on new servers..."
+	inspect eval scripts/data-classification-servers/clservers_2_inspect.py@naics_classification_task --model $(MODEL) --temperature 0
+	@echo "  Processing results..."
+	python scripts/data-classification-servers/clservers_3_dfprocessing.py --task finance-identification
+	python scripts/data-classification-servers/clservers_3_dfprocessing.py --task naics
+	@echo "  Matching and appending to existing data..."
+	python scripts/data-classification-servers/clservers_4_datamatch.py --append-to data/final/clservers_classified.csv.gz
+	@echo "✅ CLServers incremental update complete"
+
+data-update-cl-tools:
+	@echo "🔄 Classifying new tools ($(DATE_AFTER) to $(DATE_BEFORE))..."
+	python scripts/data-classification-tools/cltools_main.py --run --created-after $(DATE_AFTER) --created-before $(DATE_BEFORE) --model $(MODEL) --max-connections $(MAX_CONNECTIONS)
+	python scripts/data-classification-tools/cltools_datamatch.py \
+		--cltools data/internal-cl/cltools_3_results.csv \
+		--clservers data/final/clservers_classified.csv.gz \
+		--usage data/initial/data_unified_filtered.json \
+		--output data/final/cltools_classified.csv.gz \
+		--append-to data/final/cltools_classified.csv.gz
+	@echo "✅ CLTools incremental update complete"
+
+data-update-cl-servers-enrich:
+	@echo "🔄 Re-enriching CLServers with aggregated tool classifications..."
+	python scripts/data-classification-tools/cltools_datamatch_toservers.py --cltools data/final/cltools_classified.csv.gz --clservers data/final/clservers_classified.csv.gz --output data/final/clservers_classified.csv.gz
+	@echo "✅ CLServers enrichment complete"
+
+data-update-cl-all: data-update-cl-servers data-update-cl-tools data-update-cl-servers-enrich
+
+data-update-all: data-collect-servers data-update-initial data-update-clean-readmes data-update-cl-all
+	@echo "✅ Full incremental update complete"
+
+data-update-test:
+	@echo "🧪 Mini-test: classifying 10 new servers from $(DATE_AFTER) to $(DATE_BEFORE)..."
+	python scripts/data-classification-servers/clservers_1_dataprep.py --samples 10 --created-after $(DATE_AFTER) --created-before $(DATE_BEFORE)
+	@echo "  Running finance identification (test)..."
+	inspect eval scripts/data-classification-servers/clservers_2_inspect.py --model $(MODEL) --temperature 0 --max-connections 5
+	@echo "  Running NAICS classification (test)..."
+	inspect eval scripts/data-classification-servers/clservers_2_inspect.py@naics_classification_task --model $(MODEL) --temperature 0
+	@echo "  Processing test results..."
+	python scripts/data-classification-servers/clservers_3_dfprocessing.py --task finance-identification
+	python scripts/data-classification-servers/clservers_3_dfprocessing.py --task naics
+	python scripts/data-classification-servers/clservers_4_datamatch.py
+	@echo "✅ Mini-test complete - check data/final/clservers_classified.csv.gz"

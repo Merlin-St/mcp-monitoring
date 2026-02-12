@@ -39,7 +39,7 @@ from inspect_ai.dataset import json_dataset
 from inspect_ai.model import ChatMessageUser
 from inspect_ai.solver import chain, solver, system_message
 # analysis dataframes  
-from inspect_ai.analysis.beta import samples_df, messages_df  # noqa: F401
+from inspect_ai.analysis import samples_df, messages_df  # noqa: F401
 
 # ---------- Logging ----------
 logging.basicConfig(
@@ -554,6 +554,8 @@ def main():
     ap.add_argument("--max-connections", type=int, default=None, help="Maximum number of concurrent connections for inspect eval")
     ap.add_argument("--run", action="store_true", help="Also launch `inspect eval` to produce logs for all tasks")
     ap.add_argument("--process-only", action="store_true", help="Skip data prep and eval, only process existing eval files to CSV")
+    ap.add_argument("--created-after", default=None, help="Only include servers created after this date (YYYY-MM-DD)")
+    ap.add_argument("--created-before", default=None, help="Only include servers created before this date (YYYY-MM-DD)")
     args = ap.parse_args()
 
     # Generate dated log directories if not provided
@@ -570,6 +572,37 @@ def main():
     if not args.process_only:
         # 1) Data prep
         servers = load_filtered_dataset(args.servers)
+
+        # Filter by creation date if specified
+        if args.created_after or args.created_before:
+            from datetime import datetime as dt_cls
+            servers_before = len(servers)
+            date_filtered = []
+            for server in servers:
+                created_at = server.get('created_at', '')
+                if not created_at:
+                    continue
+                try:
+                    dt_str = created_at.replace('Z', '+00:00')
+                    if 'T' in dt_str:
+                        server_dt = dt_cls.fromisoformat(dt_str).replace(tzinfo=None)
+                    else:
+                        server_dt = dt_cls.strptime(dt_str[:10], '%Y-%m-%d')
+                    if args.created_after:
+                        after_dt = dt_cls.strptime(args.created_after, '%Y-%m-%d')
+                        if server_dt < after_dt:
+                            continue
+                    if args.created_before:
+                        before_dt = dt_cls.strptime(args.created_before, '%Y-%m-%d')
+                        if server_dt > before_dt.replace(hour=23, minute=59, second=59):
+                            continue
+                    date_filtered.append(server)
+                except (ValueError, TypeError) as e:
+                    log.warning(f"Could not parse date for server {server.get('id', 'unknown')}: {e}")
+                    continue
+            servers = date_filtered
+            log.info(f"Date filtered: {servers_before} -> {len(servers)} servers (after={args.created_after}, before={args.created_before})")
+
         tools = extract_tools_from_servers(servers, finance_only=args.finance)
         samples = create_inspect_samples_from_tools(tools)
         save_tools_json(tools, args.tools_json)

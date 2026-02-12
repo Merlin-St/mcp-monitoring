@@ -16,7 +16,7 @@ from inspect_ai import Task, task
 from inspect_ai.dataset import Sample, json_dataset
 from inspect_ai.solver import generate, system_message
 from inspect_ai.scorer import includes
-from inspect_ai.analysis.beta import messages_df, samples_df, evals_df
+from inspect_ai.analysis import messages_df, samples_df, evals_df
 
 # Configure logging
 logging.basicConfig(

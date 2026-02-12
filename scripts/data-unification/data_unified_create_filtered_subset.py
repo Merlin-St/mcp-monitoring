@@ -285,8 +285,30 @@ def apply_readme_filtering(data: List[Dict[str, Any]], apply_filtering: bool = T
     
     return data, filtering_stats
 
-def create_filtered_subset(enable_readme_filtering: bool = True):
+def create_filtered_subset(enable_readme_filtering: bool = True, preserve_llm_fields: bool = False):
     """Create filtered subset based on quality criteria"""
+
+    # Load existing LLM fields if preservation is requested
+    llm_fields_lookup = {}
+    if preserve_llm_fields:
+        existing_file = 'data/initial/data_unified_filtered.json'
+        try:
+            with open(existing_file, 'r', encoding='utf-8') as f:
+                existing_data = json.load(f)
+            for server in existing_data:
+                sid = server.get('id', '')
+                if sid and server.get('readme_filtered'):
+                    llm_fields_lookup[sid] = {
+                        'readme_filtered': server.get('readme_filtered', ''),
+                        'readme_summary': server.get('readme_summary', ''),
+                        'readme_is_mcp_server': server.get('readme_is_mcp_server'),
+                        'tools': server.get('tools', []),
+                    }
+            logger.info(f"Loaded LLM fields for {len(llm_fields_lookup)} servers from existing dataset")
+        except FileNotFoundError:
+            logger.warning(f"Existing file {existing_file} not found, skipping LLM field preservation")
+        except Exception as e:
+            logger.warning(f"Could not load existing LLM fields: {e}")
 
     logger.info("Loading unified dashboard data...")
     with open('data/initial/data_unified.json', 'r') as f:
@@ -354,7 +376,23 @@ def create_filtered_subset(enable_readme_filtering: bool = True):
     
     # Apply README filtering if requested
     filtered_data, filtering_stats = apply_readme_filtering(filtered_data, enable_readme_filtering)
-    
+
+    # Preserve LLM fields from previous run
+    if preserve_llm_fields and llm_fields_lookup:
+        preserved_count = 0
+        for server in filtered_data:
+            sid = server.get('id', '')
+            if sid in llm_fields_lookup:
+                fields = llm_fields_lookup[sid]
+                server['readme_filtered'] = fields['readme_filtered']
+                server['readme_summary'] = fields['readme_summary']
+                server['readme_is_mcp_server'] = fields['readme_is_mcp_server']
+                # Only restore LLM-extracted tools if server has no source-provided tools
+                if not server.get('tools') and fields.get('tools'):
+                    server['tools'] = fields['tools']
+                preserved_count += 1
+        logger.info(f"Preserved LLM fields for {preserved_count}/{len(filtered_data)} servers")
+
     # Save filtered dataset
     output_file = 'data/initial/data_unified_filtered.json'
     with open(output_file, 'w') as f:
@@ -402,19 +440,24 @@ def create_filtered_subset(enable_readme_filtering: bool = True):
 
 def main():
     parser = argparse.ArgumentParser(description='Create filtered subset of MCP servers with optional README filtering')
-    parser.add_argument('--no-readme-filtering', action='store_true', 
+    parser.add_argument('--no-readme-filtering', action='store_true',
                        help='Skip README content filtering (default: apply filtering)')
+    parser.add_argument('--preserve-llm-fields', action='store_true',
+                       help='Preserve LLM-generated fields (readme_filtered, readme_summary, readme_is_mcp_server, tools) from existing data_unified_filtered.json')
     args = parser.parse_args()
-    
+
     # Apply README filtering by default, unless explicitly disabled
     apply_filtering = not args.no_readme_filtering
-    
+
     if apply_filtering:
         logger.info("README content filtering will be applied")
     else:
         logger.info("README content filtering will be skipped")
-    
-    create_filtered_subset(enable_readme_filtering=apply_filtering)
+
+    if args.preserve_llm_fields:
+        logger.info("LLM field preservation is enabled")
+
+    create_filtered_subset(enable_readme_filtering=apply_filtering, preserve_llm_fields=args.preserve_llm_fields)
 
 if __name__ == "__main__":
     main()

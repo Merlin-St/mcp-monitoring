@@ -1,0 +1,923 @@
+"""
+Heuristic-based AI text detection for MCP server READMEs.
+
+This module implements a practical, zero-dependency fallback for detecting
+AI-generated README content. It uses a multi-signal approach based on:
+
+1. Lexical fingerprints: Overused words/phrases typical of LLM output
+2. Structural patterns: Section heading conventions, formatting regularity
+3. Burstiness analysis: Sentence length variance (AI text is more uniform)
+4. Hedging language: AI models over-hedge compared to human developers
+5. AI attribution signals: Explicit mentions of AI generation
+6. Code-to-prose ratio: AI-generated READMEs tend to be prose-heavy
+7. Emoji and badge patterns: AI generators often insert consistent badge blocks
+
+Based on findings from:
+- "Fingerprinting AI Coding Agents on GitHub" (MSR 2026, arXiv 2601.17406)
+- Binoculars (ICML 2024): perplexity-based intuitions adapted to heuristics
+- Empirical observations of AI-generated GitHub READMEs
+
+This is a PROXY detector. It produces a composite score in [0, 1] indicating
+the likelihood that a README was substantially AI-generated. It does NOT
+replace proper ML-based detection (Pangram, Binoculars) but provides a
+usable baseline that runs without API keys or GPU.
+"""
+
+import json
+import logging
+import math
+import re
+import statistics
+import sys
+from collections import Counter
+from pathlib import Path
+
+# ---------------------------------------------------------------------------
+# Paths
+# ---------------------------------------------------------------------------
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+INPUT_FILE = PROJECT_ROOT / "data" / "external-aicreatedmcp" / "data_unified_filtered_subset.json"
+OUTPUT_DIR = PROJECT_ROOT / "data" / "external-aicreatedmcp" / "agent1-pangram"
+OUTPUT_FILE = OUTPUT_DIR / "heuristic_results.json"
+SUMMARY_FILE = OUTPUT_DIR / "heuristic_summary.json"
+LOG_DIR = PROJECT_ROOT / "logs"
+
+# ---------------------------------------------------------------------------
+# Logging
+# ---------------------------------------------------------------------------
+LOG_DIR.mkdir(parents=True, exist_ok=True)
+OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    handlers=[
+        logging.FileHandler(LOG_DIR / "agent1_heuristic_detect.log"),
+        logging.StreamHandler(sys.stdout),
+    ],
+)
+logger = logging.getLogger("heuristic_detect")
+
+
+# ============================================================================
+# Signal 1: Lexical Fingerprints
+# ============================================================================
+
+# Phrases that appear disproportionately in LLM-generated text.
+# Weighted by how discriminative each phrase is (higher = more AI-indicative).
+AI_PHRASE_FINGERPRINTS = {
+    # High-confidence AI indicators (weight 3)
+    "it's important to note": 3,
+    "it is important to note": 3,
+    "it's worth noting": 3,
+    "it is worth noting": 3,
+    "it's worth mentioning": 3,
+    "it is worth mentioning": 3,
+    "delve into": 3,
+    "delving into": 3,
+    "in the realm of": 3,
+    "game-changer": 3,
+    "game changer": 3,
+    "dive into": 2,
+    "deep dive": 2,
+    "a]testament to": 3,
+    "landscape of": 2,
+    "ever-evolving": 3,
+    "tapestry of": 3,
+    "paradigm shift": 3,
+    "a myriad of": 3,
+    "plethora of": 2,
+    "synergy": 2,
+    "harness the power": 3,
+    "harnessing the power": 3,
+    "leverage the power": 2,
+    "leveraging the power": 2,
+    "cutting-edge": 2,
+    "state-of-the-art": 1,
+    "best-in-class": 2,
+    "world-class": 1,
+    "revolutionize": 2,
+    "revolutionizes": 2,
+    "revolutionizing": 2,
+    "empower developers": 3,
+    "empowers developers": 3,
+    "empowering developers": 3,
+    "seamlessly integrates": 2,
+    "seamless integration": 2,
+    "seamlessly": 1,
+    "furthermore": 1,
+    "moreover": 1,
+    "additionally": 1,
+    "in conclusion": 2,
+    "in summary": 1,
+    "comprehensive solution": 2,
+    "robust and scalable": 2,
+    "robust solution": 2,
+    "elevate your": 2,
+    "take .* to the next level": 2,
+    "streamline your": 2,
+    "streamlining": 1,
+    "supercharge": 2,
+    "turbocharge": 2,
+    "unlock the full potential": 3,
+    "unlock the potential": 2,
+    "unleash the power": 3,
+    "at its core": 1,
+    "under the hood": 1,
+    "whether you're a": 2,
+    "whether you are a": 2,
+    "designed with .* in mind": 2,
+
+    # Medium-confidence AI indicators (weight 1)
+    "intuitive": 1,
+    "effortlessly": 1,
+    "effortless": 1,
+    "straightforward": 1,
+    "out of the box": 1,
+    "battle-tested": 1,
+    "production-ready": 1,
+    "developer-friendly": 1,
+    "lightweight yet powerful": 2,
+    "simple yet powerful": 2,
+    "powerful yet": 1,
+    "built with .* in mind": 1,
+    "with ease": 1,
+
+    # AI tool co-authored indicators (weight 4 – very strong)
+    "generated by ai": 4,
+    "generated with ai": 4,
+    "created by chatgpt": 4,
+    "created by claude": 4,
+    "written by ai": 4,
+    "ai-generated": 2,
+    "co-authored-by.*noreply@anthropic": 4,
+    "co-authored-by.*github.com": 1,
+    "generated with claude": 4,
+    "generated with chatgpt": 4,
+    "generated with gpt": 4,
+    "generated by gpt": 4,
+    "made with .* ai": 2,
+    "powered by chatgpt": 2,
+    "powered by claude": 2,
+    "built using ai": 2,
+    "readme-ai": 3,
+    "readme.ai": 3,
+}
+
+# Words that AI overuses compared to typical developer writing
+AI_OVERUSED_WORDS = {
+    "comprehensive": 2,
+    "robust": 1,
+    "scalable": 1,
+    "modular": 1,
+    "versatile": 1,
+    "dynamic": 1,
+    "innovative": 2,
+    "facilitate": 2,
+    "facilitates": 2,
+    "utilize": 1,
+    "utilizes": 1,
+    "utilizing": 1,
+    "leverage": 1,
+    "leverages": 1,
+    "leveraging": 1,
+    "enhance": 1,
+    "enhances": 1,
+    "enhancing": 1,
+    "streamline": 1,
+    "streamlines": 1,
+    "ensures": 1,
+    "ensuring": 1,
+    "providing": 1,
+    "enables": 1,
+    "enabling": 1,
+    "efficiently": 1,
+    "optimized": 1,
+    "optimizes": 1,
+    "empowers": 1,
+    "empowering": 1,
+}
+
+
+def score_lexical_fingerprints(text: str) -> dict:
+    """
+    Score text against known AI lexical fingerprints.
+    Returns a dict with raw score, max possible, and normalized score [0, 1].
+    """
+    text_lower = text.lower()
+    matches = []
+    total_weight = 0
+
+    for phrase, weight in AI_PHRASE_FINGERPRINTS.items():
+        if ".*" in phrase:
+            # Regex pattern
+            pattern = re.compile(phrase, re.IGNORECASE)
+            count = len(pattern.findall(text_lower))
+        else:
+            count = text_lower.count(phrase)
+        if count > 0:
+            matches.append({"phrase": phrase, "count": count, "weight": weight})
+            total_weight += weight * min(count, 3)  # cap repeat contribution
+
+    # Overused words (count only if density is high)
+    word_count = len(text.split())
+    if word_count > 50:
+        words = Counter(re.findall(r'\b\w+\b', text_lower))
+        for word, weight in AI_OVERUSED_WORDS.items():
+            freq = words.get(word, 0)
+            # Flag if word appears more than once per 500 words
+            if freq > 0 and (freq / word_count) > 0.002:
+                matches.append({"phrase": f"overused:{word}", "count": freq, "weight": weight})
+                total_weight += weight
+
+    # Normalize: practical max for a heavily AI-generated README
+    # is roughly 30-50 weighted points; cap at 40 for sigmoid-like scaling
+    normalized = min(1.0, total_weight / 25.0)
+
+    return {
+        "signal": "lexical_fingerprints",
+        "raw_score": total_weight,
+        "normalized_score": round(normalized, 4),
+        "match_count": len(matches),
+        "top_matches": sorted(matches, key=lambda m: m["weight"] * m["count"], reverse=True)[:10],
+    }
+
+
+# ============================================================================
+# Signal 2: Structural Patterns
+# ============================================================================
+
+# AI-generated READMEs tend to follow very standard patterns:
+# - Table of Contents with specific sections
+# - Specific heading ordering: Overview, Features, Installation, Usage, etc.
+STANDARD_AI_HEADINGS = [
+    r"## (?:table of contents|toc)",
+    r"## (?:overview|about)",
+    r"## (?:features|key features|highlights)",
+    r"## (?:getting started|quick start|quickstart)",
+    r"## (?:installation|install|setup)",
+    r"## (?:usage|how to use|examples)",
+    r"## (?:configuration|config|settings)",
+    r"## (?:api|api reference|api documentation)",
+    r"## (?:contributing|contribute|how to contribute)",
+    r"## (?:license|licensing)",
+    r"## (?:acknowledgements|acknowledgments|credits)",
+    r"## (?:faq|frequently asked questions)",
+    r"## (?:roadmap|future plans)",
+    r"## (?:changelog|what's new|release notes)",
+    r"## (?:troubleshooting|common issues)",
+    r"## (?:tech stack|technologies|built with)",
+    r"## (?:architecture|system design)",
+    r"## (?:testing|tests|test suite)",
+    r"## (?:deployment|deploy)",
+    r"## (?:prerequisites|requirements)",
+]
+
+
+def score_structural_patterns(text: str) -> dict:
+    """
+    Score the structural regularity of the README.
+    AI-generated READMEs tend to have more standardized section headings.
+    """
+    text_lower = text.lower()
+
+    # Count how many standard AI-style headings are present
+    heading_matches = 0
+    matched_headings = []
+    for pattern in STANDARD_AI_HEADINGS:
+        if re.search(pattern, text_lower):
+            heading_matches += 1
+            matched_headings.append(pattern)
+
+    # Total headings in the document
+    all_headings = re.findall(r'^#{1,3}\s+.+', text, re.MULTILINE)
+    total_headings = len(all_headings)
+
+    # Ratio of standard headings to total headings
+    heading_standardization = heading_matches / max(total_headings, 1)
+
+    # AI-generated READMEs often have many headings (>= 6) and high standardization
+    if total_headings >= 8 and heading_standardization >= 0.6:
+        structural_score = 0.8
+    elif total_headings >= 6 and heading_standardization >= 0.5:
+        structural_score = 0.6
+    elif total_headings >= 4 and heading_matches >= 4:
+        structural_score = 0.4
+    elif heading_matches >= 3:
+        structural_score = 0.3
+    else:
+        structural_score = 0.1
+
+    # Check for table of contents (strong AI indicator)
+    has_toc = bool(re.search(r'(?:table of contents|## toc|## contents)', text_lower))
+    if has_toc:
+        structural_score = min(1.0, structural_score + 0.15)
+
+    # Check for badge blocks at top (common in AI-generated READMEs)
+    badge_pattern = r'\[!\[.*?\]\(.*?\)\]\(.*?\)'
+    badges = re.findall(badge_pattern, text[:2000])  # Look in first 2000 chars
+    if len(badges) >= 3:
+        structural_score = min(1.0, structural_score + 0.1)
+
+    return {
+        "signal": "structural_patterns",
+        "normalized_score": round(structural_score, 4),
+        "total_headings": total_headings,
+        "standard_heading_matches": heading_matches,
+        "heading_standardization": round(heading_standardization, 4),
+        "has_toc": has_toc,
+        "badge_count": len(badges),
+        "matched_headings": matched_headings[:5],
+    }
+
+
+# ============================================================================
+# Signal 3: Burstiness (Sentence Length Variance)
+# ============================================================================
+
+def score_burstiness(text: str) -> dict:
+    """
+    Measure the burstiness of the text (variance in sentence length).
+    AI-generated text tends to have more uniform sentence lengths (low burstiness).
+    Human-written text tends to mix short and long sentences more freely.
+    """
+    # Extract sentences (simple heuristic)
+    # Remove code blocks first to avoid distortion
+    cleaned = re.sub(r'```[\s\S]*?```', '', text)
+    cleaned = re.sub(r'`[^`]+`', '', cleaned)
+    # Remove markdown headings (they're not sentences)
+    cleaned = re.sub(r'^#{1,6}\s+.+$', '', cleaned, flags=re.MULTILINE)
+    # Remove markdown links and images
+    cleaned = re.sub(r'!\[.*?\]\(.*?\)', '', cleaned)
+    cleaned = re.sub(r'\[([^\]]+)\]\([^\)]+\)', r'\1', cleaned)
+    # Remove HTML tags
+    cleaned = re.sub(r'<[^>]+>', '', cleaned)
+
+    # Split into sentences
+    sentences = re.split(r'[.!?]+(?:\s|$)', cleaned)
+    sentences = [s.strip() for s in sentences if len(s.strip().split()) >= 3]
+
+    if len(sentences) < 5:
+        return {
+            "signal": "burstiness",
+            "normalized_score": 0.5,  # Inconclusive
+            "sentence_count": len(sentences),
+            "insufficient_data": True,
+        }
+
+    # Calculate sentence lengths
+    lengths = [len(s.split()) for s in sentences]
+    mean_len = statistics.mean(lengths)
+    stdev_len = statistics.stdev(lengths) if len(lengths) >= 2 else 0
+    cv = stdev_len / mean_len if mean_len > 0 else 0  # Coefficient of variation
+
+    # Low CV (< 0.4) suggests uniform sentence lengths (AI-like)
+    # High CV (> 0.7) suggests varied writing (human-like)
+    # We invert: higher score = more AI-like
+    if cv < 0.3:
+        burstiness_score = 0.8
+    elif cv < 0.45:
+        burstiness_score = 0.6
+    elif cv < 0.6:
+        burstiness_score = 0.4
+    elif cv < 0.75:
+        burstiness_score = 0.25
+    else:
+        burstiness_score = 0.1
+
+    return {
+        "signal": "burstiness",
+        "normalized_score": round(burstiness_score, 4),
+        "sentence_count": len(sentences),
+        "mean_sentence_length": round(mean_len, 2),
+        "stdev_sentence_length": round(stdev_len, 2),
+        "coefficient_of_variation": round(cv, 4),
+    }
+
+
+# ============================================================================
+# Signal 4: Hedging Language Density
+# ============================================================================
+
+HEDGE_PHRASES = [
+    "it's important to", "it is important to",
+    "it's worth", "it is worth",
+    "note that", "please note",
+    "keep in mind", "bear in mind",
+    "it should be noted", "arguably",
+    "to some extent", "in some cases",
+    "it depends on", "depending on your",
+    "this may vary", "your mileage may vary",
+    "for most use cases", "in most scenarios",
+    "typically", "generally speaking",
+    "as a general rule", "in practice",
+    "it can be helpful", "you might want to",
+    "consider using", "you may want to",
+    "one approach is to", "another option is",
+]
+
+
+def score_hedging(text: str) -> dict:
+    """
+    Measure hedging language density.
+    AI text tends to over-hedge compared to developer documentation.
+    """
+    text_lower = text.lower()
+    word_count = len(text.split())
+    if word_count < 50:
+        return {
+            "signal": "hedging",
+            "normalized_score": 0.5,
+            "insufficient_data": True,
+        }
+
+    hedge_count = 0
+    found_hedges = []
+    for phrase in HEDGE_PHRASES:
+        count = text_lower.count(phrase)
+        if count > 0:
+            hedge_count += count
+            found_hedges.append({"phrase": phrase, "count": count})
+
+    # Density: hedges per 1000 words
+    density = (hedge_count / word_count) * 1000
+
+    # Developer READMEs typically have < 2 hedges/1000 words
+    # AI-generated text often has 5-15 hedges/1000 words
+    if density >= 10:
+        hedge_score = 0.9
+    elif density >= 6:
+        hedge_score = 0.7
+    elif density >= 3:
+        hedge_score = 0.5
+    elif density >= 1.5:
+        hedge_score = 0.3
+    else:
+        hedge_score = 0.1
+
+    return {
+        "signal": "hedging",
+        "normalized_score": round(hedge_score, 4),
+        "hedge_count": hedge_count,
+        "hedges_per_1000_words": round(density, 2),
+        "top_hedges": sorted(found_hedges, key=lambda h: h["count"], reverse=True)[:5],
+    }
+
+
+# ============================================================================
+# Signal 5: Prose-to-Code Ratio
+# ============================================================================
+
+def score_prose_ratio(text: str) -> dict:
+    """
+    Measure the ratio of prose to code/config blocks.
+    AI-generated READMEs tend to have higher prose-to-code ratios with
+    longer descriptive paragraphs relative to code examples.
+    """
+    # Extract code blocks
+    code_blocks = re.findall(r'```[\s\S]*?```', text)
+    code_chars = sum(len(block) for block in code_blocks)
+
+    # Inline code
+    inline_code = re.findall(r'`[^`]+`', text)
+    inline_chars = sum(len(c) for c in inline_code)
+
+    total_chars = len(text)
+    prose_chars = total_chars - code_chars - inline_chars
+
+    if total_chars < 100:
+        return {
+            "signal": "prose_ratio",
+            "normalized_score": 0.5,
+            "insufficient_data": True,
+        }
+
+    prose_ratio = prose_chars / total_chars
+
+    # Very high prose ratio (>0.9) with long text is more AI-indicative
+    # Pure code-focused READMEs have ratio < 0.7
+    if prose_ratio >= 0.95 and total_chars > 2000:
+        prose_score = 0.7
+    elif prose_ratio >= 0.85 and total_chars > 3000:
+        prose_score = 0.6
+    elif prose_ratio >= 0.75:
+        prose_score = 0.4
+    else:
+        prose_score = 0.2
+
+    return {
+        "signal": "prose_ratio",
+        "normalized_score": round(prose_score, 4),
+        "prose_ratio": round(prose_ratio, 4),
+        "code_block_count": len(code_blocks),
+        "total_chars": total_chars,
+    }
+
+
+# ============================================================================
+# Signal 6: Formulaic Opening
+# ============================================================================
+
+FORMULAIC_OPENINGS = [
+    # AI generators often start with a very standard pattern
+    r"^#\s+\S+\s*\n+.*?(?:a |an )?(?:powerful|comprehensive|robust|versatile|lightweight|modern|fast|simple)"
+    r"(?:\s+(?:and|yet)\s+\w+)?\s+\w+",
+    r"^#\s+\S+\s*\n+\s*>?\s*(?:a |an )?(?:powerful|comprehensive|robust|versatile|modern)"
+    r"\s+(?:\w+\s+){0,3}(?:tool|framework|library|server|client|sdk|platform|solution)",
+    r"welcome to",
+    r"^#\s+.*?\n+.*?this (?:project|repository|repo|tool|server) (?:is|provides|offers|enables)",
+]
+
+
+def score_formulaic_opening(text: str) -> dict:
+    """Check if the README starts with a formulaic AI-style opening."""
+    first_500 = text[:500].lower()
+
+    matches = []
+    for pattern in FORMULAIC_OPENINGS:
+        if re.search(pattern, first_500, re.IGNORECASE | re.MULTILINE):
+            matches.append(pattern[:40] + "...")
+
+    # Strong opening patterns
+    opening_score = min(0.8, len(matches) * 0.3) if matches else 0.1
+
+    return {
+        "signal": "formulaic_opening",
+        "normalized_score": round(opening_score, 4),
+        "pattern_matches": len(matches),
+    }
+
+
+# ============================================================================
+# Signal 7: Explicit AI Attribution
+# ============================================================================
+
+# IMPORTANT: In MCP server READMEs, tools like "Claude", "Cursor", "Copilot",
+# "Windsurf" are almost always mentioned as *supported MCP clients*, NOT as
+# authorship indicators. The attribution signal must ONLY fire on explicit
+# claims that the README/code was *generated* or *written* by AI.
+#
+# We split this into two tiers:
+# - STRONG patterns: Explicit statements that the README/project was AI-generated
+# - WEAK patterns: Indirect hints (e.g., readme-ai badge, vibe coding mention)
+
+AI_ATTRIBUTION_STRONG = [
+    # Explicit "this was generated by AI" statements
+    r"(?:this )?(?:readme|documentation|docs|project|code|repo|repository) (?:was |is )?(?:generated|created|written|built|made) (?:by|with|using) (?:ai|chatgpt|claude|gpt|copilot|gemini|llm|an? ai)",
+    r"generated (?:by|with|using) (?:ai|chatgpt|claude|gpt-?[34]|copilot|gemini|llm)",
+    r"(?:entirely |fully |100% )?ai[- ]generated (?:readme|documentation|code|project)",
+    r"co-authored-by:.*noreply@anthropic",
+    r"co-authored-by:.*copilot",
+    r"co-authored-by:.*\bai\b",
+    # AI README generators
+    r"readme-ai",
+    r"generated with \[?readme",
+    # Explicit vibe coding claims
+    r"(?:this (?:project|repo|code|server) (?:was|is) )?vibe[- ]?cod(?:ing|ed)",
+    r"built (?:entirely |fully )?(?:by|with|using) (?:ai|an ai|claude code|cursor|copilot|chatgpt|aider|devin)",
+    r"(?:entirely |fully |100% )ai[- ](?:generated|created|written|built|coded)",
+]
+
+AI_ATTRIBUTION_WEAK = [
+    # Mentions that suggest AI involvement but could be about the project's purpose
+    r"ai[- ]?assisted (?:development|coding|creation)",
+    r"made with.*(?:claude|chatgpt|cursor|copilot|aider|devin)",
+    r"powered by ai",
+]
+
+
+def score_ai_attribution(text: str) -> dict:
+    """
+    Check for explicit AI authorship attribution in the README.
+
+    IMPORTANT: This signal is specifically designed for MCP server READMEs where
+    mentions of "Claude", "Cursor", "Copilot" etc. typically refer to supported
+    MCP clients, NOT to AI authorship. Only explicit generation/authorship claims
+    are counted.
+    """
+    text_lower = text.lower()
+    strong_matches = []
+    weak_matches = []
+
+    for pattern in AI_ATTRIBUTION_STRONG:
+        found = re.findall(pattern, text_lower)
+        if found:
+            strong_matches.extend(found[:3])
+
+    for pattern in AI_ATTRIBUTION_WEAK:
+        found = re.findall(pattern, text_lower)
+        if found:
+            weak_matches.extend(found[:3])
+
+    # Scoring: strong matches are definitive, weak are supplementary
+    if len(strong_matches) >= 2:
+        attribution_score = 0.95
+    elif len(strong_matches) == 1:
+        attribution_score = 0.85
+    elif len(weak_matches) >= 2:
+        attribution_score = 0.5
+    elif len(weak_matches) == 1:
+        attribution_score = 0.3
+    else:
+        attribution_score = 0.0
+
+    # Determine likely AI agent ONLY from explicit authorship context
+    # NOT from general mentions (which in MCP READMEs are about client support)
+    likely_agent = _identify_authoring_agent(text_lower, strong_matches + weak_matches)
+
+    return {
+        "signal": "ai_attribution",
+        "normalized_score": round(attribution_score, 4),
+        "strong_matches": strong_matches[:5],
+        "weak_matches": weak_matches[:5],
+        "likely_agent": likely_agent,
+    }
+
+
+def _identify_authoring_agent(text_lower: str, attribution_matches: list) -> str | None:
+    """
+    Identify which AI agent likely authored the content.
+    Only checks within attribution match contexts, not the entire README.
+    Falls back to checking for tool-specific patterns in the full text.
+    """
+    # If we have explicit attribution matches, check which agent is named
+    match_text = " ".join(str(m) for m in attribution_matches)
+    for agent in ["chatgpt", "claude code", "claude", "copilot", "cursor",
+                   "aider", "devin", "gemini", "gpt-4", "gpt4", "readme-ai", "codex"]:
+        if agent in match_text:
+            return agent
+
+    # Check for co-authored-by patterns (these are more specific)
+    if "co-authored-by" in text_lower:
+        if "noreply@anthropic" in text_lower:
+            return "claude"
+        if "copilot" in text_lower.split("co-authored-by")[1][:100] if "co-authored-by" in text_lower else "":
+            return "copilot"
+
+    # Check for readme-ai badge/mention (specific tool)
+    if "readme-ai" in text_lower or "readmeai" in text_lower:
+        return "readme-ai"
+
+    return None
+
+
+# ============================================================================
+# Signal 8: Emoji and Formatting Density
+# ============================================================================
+
+def score_emoji_formatting(text: str) -> dict:
+    """
+    AI-generated READMEs often use emoji bullets and heavy formatting.
+    Tools like readme-ai insert emoji section headers.
+    """
+    # Count emojis (common unicode ranges)
+    emoji_pattern = re.compile(
+        "[\U0001F600-\U0001F64F"  # emoticons
+        "\U0001F300-\U0001F5FF"  # symbols & pictographs
+        "\U0001F680-\U0001F6FF"  # transport & map symbols
+        "\U0001F1E0-\U0001F1FF"  # flags
+        "\U00002702-\U000027B0"  # dingbats
+        "\U000024C2-\U0001F251"  # enclosed characters
+        "\U0001F900-\U0001F9FF"  # supplemental symbols
+        "\U0001FA00-\U0001FA6F"  # chess symbols
+        "\U0001FA70-\U0001FAFF"  # symbols extended-a
+        "]+", flags=re.UNICODE
+    )
+    emojis = emoji_pattern.findall(text)
+    emoji_count = len(emojis)
+
+    # Count bold usage
+    bold_count = len(re.findall(r'\*\*[^*]+\*\*', text))
+
+    word_count = len(text.split())
+    emoji_density = (emoji_count / word_count * 1000) if word_count > 0 else 0
+
+    # Heading emojis (very AI-typical: "## 🚀 Features")
+    emoji_headings = len(re.findall(r'^#{1,3}\s*[\U0001F000-\U0001FFFF]', text, re.MULTILINE))
+
+    if emoji_headings >= 3:
+        emoji_score = 0.8
+    elif emoji_density >= 10:
+        emoji_score = 0.7
+    elif emoji_density >= 5:
+        emoji_score = 0.5
+    elif emoji_density >= 2:
+        emoji_score = 0.3
+    else:
+        emoji_score = 0.1
+
+    return {
+        "signal": "emoji_formatting",
+        "normalized_score": round(emoji_score, 4),
+        "emoji_count": emoji_count,
+        "emoji_density_per_1000": round(emoji_density, 2),
+        "emoji_headings": emoji_headings,
+        "bold_count": bold_count,
+    }
+
+
+# ============================================================================
+# Composite Scoring
+# ============================================================================
+
+# Weights for combining signals into a final score
+SIGNAL_WEIGHTS = {
+    "lexical_fingerprints": 0.25,
+    "structural_patterns": 0.10,
+    "burstiness": 0.15,
+    "hedging": 0.10,
+    "prose_ratio": 0.05,
+    "formulaic_opening": 0.10,
+    "ai_attribution": 0.20,  # Strong direct signal
+    "emoji_formatting": 0.05,
+}
+
+
+def compute_composite_score(signals: list[dict]) -> float:
+    """
+    Combine individual signal scores into a single composite AI probability.
+    Uses weighted average with special handling for attribution signals.
+    """
+    total_weight = 0
+    weighted_sum = 0
+
+    for signal in signals:
+        name = signal["signal"]
+        score = signal["normalized_score"]
+        weight = SIGNAL_WEIGHTS.get(name, 0.1)
+
+        weighted_sum += score * weight
+        total_weight += weight
+
+    if total_weight == 0:
+        return 0.5  # No signals
+
+    raw_composite = weighted_sum / total_weight
+
+    # Apply sigmoid-like calibration to spread scores away from 0.5
+    # This makes the distribution more bimodal (clearly AI or clearly human)
+    calibrated = 1 / (1 + math.exp(-6 * (raw_composite - 0.45)))
+
+    return round(calibrated, 4)
+
+
+def classify_readme(text: str) -> dict:
+    """
+    Run all heuristic signals on a README and produce a composite result.
+    Returns dict with ai_generated_probability and all signal details.
+    """
+    if not text or len(text.strip()) < 50:
+        return {
+            "ai_generated_probability": None,
+            "classification": "insufficient_data",
+            "signals": [],
+        }
+
+    signals = [
+        score_lexical_fingerprints(text),
+        score_structural_patterns(text),
+        score_burstiness(text),
+        score_hedging(text),
+        score_prose_ratio(text),
+        score_formulaic_opening(text),
+        score_ai_attribution(text),
+        score_emoji_formatting(text),
+    ]
+
+    composite = compute_composite_score(signals)
+
+    # Classification thresholds
+    if composite >= 0.7:
+        classification = "likely_ai_generated"
+    elif composite >= 0.4:
+        classification = "mixed_or_uncertain"
+    else:
+        classification = "likely_human_written"
+
+    # Determine likely AI agent from attribution signal
+    attribution_signal = next((s for s in signals if s["signal"] == "ai_attribution"), None)
+    likely_agent = attribution_signal.get("likely_agent") if attribution_signal else None
+
+    return {
+        "ai_generated_probability": composite,
+        "classification": classification,
+        "likely_ai_agent": likely_agent,
+        "signals": signals,
+    }
+
+
+# ============================================================================
+# Main Pipeline
+# ============================================================================
+
+def load_input_data() -> list[dict]:
+    """Load the 500-server subset JSON."""
+    logger.info("Loading input data from %s", INPUT_FILE)
+    with open(INPUT_FILE, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    logger.info("Loaded %d entries", len(data))
+    return data
+
+
+def run_heuristic_detection(entries: list[dict]) -> list[dict]:
+    """Run heuristic detection on all entries."""
+    results = []
+
+    for i, entry in enumerate(entries):
+        readme = entry.get("readme_content", "") or ""
+        analysis = classify_readme(readme)
+
+        result = {
+            "id": entry["id"],
+            "name": entry.get("name", ""),
+            "github_url": entry.get("github_url", ""),
+            "ai_generated_probability": analysis["ai_generated_probability"],
+            "detection_method": "heuristic_fingerprint",
+            "likely_ai_agent": analysis.get("likely_ai_agent"),
+            "classification": analysis["classification"],
+            "analysis_details": {
+                "signal_scores": {
+                    s["signal"]: s["normalized_score"]
+                    for s in analysis.get("signals", [])
+                },
+                "readme_length_chars": len(readme),
+                "signals": analysis.get("signals", []),
+            },
+        }
+        results.append(result)
+
+        if (i + 1) % 100 == 0:
+            logger.info("Progress: %d / %d servers processed", i + 1, len(entries))
+
+    return results
+
+
+def save_results(results: list[dict]) -> None:
+    """Save results and summary."""
+    with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
+        json.dump(results, f, indent=2, ensure_ascii=False)
+    logger.info("Results saved to %s", OUTPUT_FILE)
+
+    # Summary
+    valid = [r for r in results if r["ai_generated_probability"] is not None]
+    if valid:
+        probs = [r["ai_generated_probability"] for r in valid]
+        classifications = Counter(r["classification"] for r in valid)
+
+        summary = {
+            "total_servers": len(results),
+            "successfully_analyzed": len(valid),
+            "failed_or_skipped": len(results) - len(valid),
+            "detection_method": "heuristic_fingerprint",
+            "classification_distribution": dict(classifications),
+            "likely_ai_generated_count": classifications.get("likely_ai_generated", 0),
+            "mixed_or_uncertain_count": classifications.get("mixed_or_uncertain", 0),
+            "likely_human_written_count": classifications.get("likely_human_written", 0),
+            "likely_ai_generated_pct": round(
+                100 * classifications.get("likely_ai_generated", 0) / len(valid), 2
+            ),
+            "mixed_or_uncertain_pct": round(
+                100 * classifications.get("mixed_or_uncertain", 0) / len(valid), 2
+            ),
+            "likely_human_written_pct": round(
+                100 * classifications.get("likely_human_written", 0) / len(valid), 2
+            ),
+            "avg_ai_probability": round(sum(probs) / len(probs), 4),
+            "median_ai_probability": round(sorted(probs)[len(probs) // 2], 4),
+            "p10_ai_probability": round(sorted(probs)[int(len(probs) * 0.1)], 4),
+            "p90_ai_probability": round(sorted(probs)[int(len(probs) * 0.9)], 4),
+            "signal_weights": SIGNAL_WEIGHTS,
+            "agents_detected": dict(Counter(
+                r["likely_ai_agent"]
+                for r in valid
+                if r["likely_ai_agent"] is not None
+            )),
+        }
+    else:
+        summary = {
+            "total_servers": len(results),
+            "successfully_analyzed": 0,
+            "error": "No results obtained",
+        }
+
+    with open(SUMMARY_FILE, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+    logger.info("Summary saved to %s", SUMMARY_FILE)
+    logger.info("Summary:\n%s", json.dumps(summary, indent=2))
+
+
+def main():
+    """Run heuristic-based AI detection."""
+    logger.info("=" * 60)
+    logger.info("Starting heuristic AI detection for MCP server READMEs")
+    logger.info("=" * 60)
+
+    entries = load_input_data()
+    results = run_heuristic_detection(entries)
+    save_results(results)
+
+    logger.info("Heuristic detection complete.")
+
+
+if __name__ == "__main__":
+    main()
