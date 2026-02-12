@@ -220,23 +220,6 @@ def main():
             logger.error("No finance-related servers found")
             return
     
-    # Filter out servers explicitly marked as NOT MCP servers
-    non_mcp_servers = [s for s in servers if s.get('readme_is_mcp_server') == 0]
-    mcp_servers = [s for s in servers if s.get('readme_is_mcp_server') != 0]
-    
-    if non_mcp_servers:
-        logger.info(f"Filtered out {len(non_mcp_servers)} non-MCP servers, keeping {len(mcp_servers)} servers")
-        servers = mcp_servers
-    else:
-        logger.info("No servers explicitly marked as non-MCP, keeping all servers")
-
-    # Filter out servers with no tools
-    before_tool_filter = len(servers)
-    servers = [s for s in servers if s.get('tools') and len(s['tools']) > 0]
-    no_tools_count = before_tool_filter - len(servers)
-    if no_tools_count > 0:
-        logger.info(f"Filtered out {no_tools_count} servers with no tools, keeping {len(servers)} servers")
-
     # Sample servers if needed
     if sample_size is not None:
         servers = sample_servers(servers, sample_size)

@@ -6,7 +6,7 @@
 # Prerequisites:
 # - Virtual environment: uv sync / source ~/mcp-monitoring/.venv/bin/activate
 
-.PHONY: help data-collect-servers data-collect-usage data-collect-all data-initial data-clean-readmes data-initial-clean data-cl-servers data-cl-tools data-cl-servers-enrich data-cl-all data-task-clusters clean lint lint-fix workflow-data-creation workflow-complete data-update-initial data-update-clean-readmes data-update-cl-servers data-update-cl-tools data-update-cl-servers-enrich data-update-cl-all data-update-all data-update-test
+.PHONY: help data-collect-servers data-collect-usage data-collect-all data-initial data-clean-readmes data-initial-clean data-cl-aicreated data-cl-servers data-cl-tools data-cl-servers-enrich data-cl-all data-task-clusters clean lint lint-fix workflow-data-creation workflow-complete data-update-initial data-update-clean-readmes data-update-cl-aicreated data-update-cl-servers data-update-cl-tools data-update-cl-servers-enrich data-update-cl-all data-update-all data-update-test
 
 # Configurable parameters for incremental updates
 DATE_AFTER ?= 2025-10-01
@@ -29,6 +29,7 @@ help:
 	@echo "    data-initial-clean     Run data-initial + data-clean-readmes"
 	@echo ""
 	@echo "  Classification (Consequentiality Scoring):"
+	@echo "    data-cl-aicreated      Detect AI-created servers via git history"
 	@echo "    data-cl-servers        CLServers pipeline (server classification)"
 	@echo "    data-cl-tools          CLTools pipeline (O*NET task mapping)"
 	@echo "    data-cl-servers-enrich Enrich CLServers with tool aggregations"
@@ -43,6 +44,7 @@ help:
 	@echo "  Incremental Update (classify only new servers by date):"
 	@echo "    data-update-initial    Re-unify data, preserve LLM fields"
 	@echo "    data-update-clean-readmes  Filter READMEs for new servers only"
+	@echo "    data-update-cl-aicreated   Detect AI-created servers for date range"
 	@echo "    data-update-cl-servers Classify new servers, append to existing"
 	@echo "    data-update-cl-tools   Classify new tools, append to existing"
 	@echo "    data-update-cl-servers-enrich  Re-enrich with tool aggregations"
@@ -94,9 +96,20 @@ data-clean-readmes:
 	@echo "🔄 Filtering README content using LLM..."
 	inspect eval scripts/data-cleaning-readmes/data_readme_filter_inspect.py --model anthropic/claude-sonnet-4-5-20250929 --temperature 0 --max-connections 50
 	python scripts/data-cleaning-readmes/data_readme_filter_dfprocessing.py
+	python scripts/data-unification/data_unified_update_filtered_subset.py
 	@echo "✅ README filtering complete"
 
 data-initial-clean: data-initial data-clean-readmes
+
+
+# ===============================
+# AI-Created Detection
+# ===============================
+
+data-cl-aicreated:
+	@echo "🔄 Detecting AI-created servers via git history mining..."
+	python scripts/data-classification-aicreatedmcp/detect_ai_created.py --resume
+	@echo "✅ AI-created detection complete: data/internal-cl/aicreated_results.json"
 
 
 # ===============================
@@ -140,7 +153,7 @@ data-cl-servers-enrich:
 	python scripts/data-classification-tools/cltools_datamatch_toservers.py --cltools data/final/cltools_classified.csv.gz --clservers data/final/clservers_classified.csv.gz --output data/final/clservers_classified.csv.gz
 	@echo "✅ CLServers enrichment complete: data/final/clservers_classified.csv.gz"
 
-data-cl-all: data-task-clusters data-cl-servers data-cl-tools data-cl-servers-enrich
+data-cl-all: data-cl-aicreated data-task-clusters data-cl-servers data-cl-tools data-cl-servers-enrich
 
 
 
@@ -199,7 +212,13 @@ data-update-clean-readmes:
 	MCP_CREATED_AFTER=$(DATE_AFTER) MCP_CREATED_BEFORE=$(DATE_BEFORE) MCP_SKIP_EXISTING_FILTERED=1 \
 		inspect eval scripts/data-cleaning-readmes/data_readme_filter_inspect.py --model $(MODEL) --temperature 0 --max-connections $(MAX_CONNECTIONS)
 	python scripts/data-cleaning-readmes/data_readme_filter_dfprocessing.py
+	python scripts/data-unification/data_unified_update_filtered_subset.py
 	@echo "✅ README filtering complete for new servers"
+
+data-update-cl-aicreated:
+	@echo "🔄 Detecting AI-created servers ($(DATE_AFTER) to $(DATE_BEFORE))..."
+	python scripts/data-classification-aicreatedmcp/detect_ai_created.py --resume --created-after $(DATE_AFTER) --created-before $(DATE_BEFORE) --append-to data/internal-cl/aicreated_results.json
+	@echo "✅ AI-created detection complete for new servers"
 
 data-update-cl-servers:
 	@echo "🔄 Classifying new servers ($(DATE_AFTER) to $(DATE_BEFORE))..."
@@ -231,7 +250,7 @@ data-update-cl-servers-enrich:
 	python scripts/data-classification-tools/cltools_datamatch_toservers.py --cltools data/final/cltools_classified.csv.gz --clservers data/final/clservers_classified.csv.gz --output data/final/clservers_classified.csv.gz
 	@echo "✅ CLServers enrichment complete"
 
-data-update-cl-all: data-update-cl-servers data-update-cl-tools data-update-cl-servers-enrich
+data-update-cl-all: data-update-cl-aicreated data-update-cl-servers data-update-cl-tools data-update-cl-servers-enrich
 
 data-update-all: data-collect-servers data-update-initial data-update-clean-readmes data-update-cl-all
 	@echo "✅ Full incremental update complete"
