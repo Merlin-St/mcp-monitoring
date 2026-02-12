@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Agent 2: Detect AI-created MCP servers by mining git commit messages,
+Detect AI-created MCP servers by mining git commit messages,
 PR metadata, contributor info, and repository config files.
 
 Uses FULL commit pagination (up to 10,000 commits) and a BINARY
@@ -10,11 +10,16 @@ classification system (ai_authored = yes/no) based on four criteria:
 3. Bot contributors (AI-specific, not dependabot/renovate/snyk)
 4. >=1 AI tool handle mentions in commits/PRs
 
+Reads from data/initial/data_unified_filtered.json and outputs to
+data/internal-cl/aicreated_results.json and aicreated_summary.json.
+
 Usage:
-    python detect_ai_commits.py                    # Process all 500 servers
-    python detect_ai_commits.py --limit 50         # Process first 50
-    python detect_ai_commits.py --resume            # Resume from checkpoint
-    python detect_ai_commits.py --batch-size 25     # Smaller batches
+    python detect_ai_created.py                              # Process all servers
+    python detect_ai_created.py --limit 50                   # Process first 50
+    python detect_ai_created.py --resume                     # Resume from checkpoint
+    python detect_ai_created.py --batch-size 25              # Smaller batches
+    python detect_ai_created.py --created-after 2025-10-01   # Only recent servers
+    python detect_ai_created.py --append-to data/internal-cl/aicreated_results.json
 """
 
 import argparse
@@ -37,9 +42,9 @@ import aiohttp
 # Paths
 # ---------------------------------------------------------------------------
 SCRIPT_DIR = Path(__file__).resolve().parent
-PROJECT_ROOT = SCRIPT_DIR.parents[2]
-DATA_INPUT = PROJECT_ROOT / "data" / "external-aicreatedmcp" / "data_unified_filtered_subset.json"
-DATA_OUTPUT_DIR = PROJECT_ROOT / "data" / "external-aicreatedmcp" / "agent2-gitcommits"
+PROJECT_ROOT = SCRIPT_DIR.parents[1]
+DATA_INPUT = PROJECT_ROOT / "data" / "initial" / "data_unified_filtered.json"
+DATA_OUTPUT_DIR = PROJECT_ROOT / "data" / "internal-cl"
 LOG_DIR = PROJECT_ROOT / "logs"
 
 # ---------------------------------------------------------------------------
@@ -52,11 +57,11 @@ logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     handlers=[
-        logging.FileHandler(LOG_DIR / "agent2_detect_ai_commits.log"),
+        logging.FileHandler(LOG_DIR / "detect_ai_created.log"),
         logging.StreamHandler(),
     ],
 )
-logger = logging.getLogger("agent2")
+logger = logging.getLogger("detect_ai_created")
 
 # ---------------------------------------------------------------------------
 # Constants
@@ -66,8 +71,7 @@ COMMITS_PER_PAGE = 100
 MAX_COMMIT_PAGES = MAX_COMMITS_PER_REPO // COMMITS_PER_PAGE  # 100 pages
 
 # ---------------------------------------------------------------------------
-# AI Tool Handle Patterns (for criterion 5: mentions in commit/PR text)
-# These are @-handle style references plus tool names in context
+# AI Tool Handle Patterns (for criterion 4: mentions in commit/PR text)
 # ---------------------------------------------------------------------------
 AI_HANDLE_PATTERNS: dict[str, list[str]] = {
     "claude": [
@@ -332,7 +336,7 @@ class GitHubAPIClient:
                 headers={
                     "Authorization": f"token {self.token}",
                     "Accept": "application/vnd.github.v3+json",
-                    "User-Agent": "mcp-monitoring-agent2",
+                    "User-Agent": "mcp-monitoring-ai-detection",
                 },
                 timeout=aiohttp.ClientTimeout(total=30),
             )
@@ -480,12 +484,6 @@ def count_ai_handle_mentions(text: str) -> dict[str, int]:
     return results
 
 
-def is_multiline_commit(message: str) -> bool:
-    """Check if a commit message is multiline (>1 non-empty line)."""
-    lines = [ln.strip() for ln in message.strip().split("\n") if ln.strip()]
-    return len(lines) > 1
-
-
 # ---------------------------------------------------------------------------
 # Core analysis per repository
 # ---------------------------------------------------------------------------
@@ -506,7 +504,6 @@ async def fetch_all_commits(
             break
         all_commits.extend(commits_data)
         if len(commits_data) < COMMITS_PER_PAGE:
-            # Last page -- no more commits
             break
     return all_commits
 
@@ -532,7 +529,7 @@ async def analyze_repo(
         return result
 
     owner, repo = parsed
-    tool_scores: dict[str, int] = {}  # track which tool has most evidence
+    tool_scores: dict[str, int] = {}
 
     # -------------------------------------------------------------------
     # 1. Fetch ALL commits (paginated, up to 10,000)
@@ -540,7 +537,6 @@ async def analyze_repo(
     commits = await fetch_all_commits(client, owner, repo)
     result.total_commits_scanned = len(commits)
 
-    multiline_count = 0
     co_author_count = 0
     ai_mention_details: dict[str, int] = {}
     evidence_items: list[dict] = []
@@ -552,10 +548,6 @@ async def analyze_repo(
         committer_login = (commit_obj.get("committer") or {}).get("login", "")
         sha = commit_obj.get("sha", "")[:8]
         date = commit_info.get("author", {}).get("date", "")
-
-        # Track multiline commits
-        if is_multiline_commit(message):
-            multiline_count += 1
 
         # Criterion 1: Co-Authored-By lines
         coauthor_hits = detect_coauthor_ai(message)
@@ -570,12 +562,11 @@ async def analyze_repo(
                 date=date,
             )))
 
-        # Criterion 5: AI handle mentions in commits
+        # Criterion 4: AI handle mentions in commits
         handle_hits = count_ai_handle_mentions(message)
         for tool, count in handle_hits.items():
             ai_mention_details[tool] = ai_mention_details.get(tool, 0) + count
             tool_scores[tool] = tool_scores.get(tool, 0) + count
-            # Only add evidence for first few to keep output concise
             if len(evidence_items) < 200:
                 evidence_items.append(asdict(EvidenceItem(
                     sha=sha,
@@ -593,10 +584,6 @@ async def analyze_repo(
                 if bot_name not in result.bot_contributors:
                     result.bot_contributors.append(bot_name)
                     tool_scores[bot_tool] = tool_scores.get(bot_tool, 0) + 5
-
-    # Compute multiline ratio
-    if result.total_commits_scanned > 0:
-        result.multiline_commit_ratio = round(multiline_count / result.total_commits_scanned, 4)
 
     result.co_author_count = co_author_count
 
@@ -622,7 +609,7 @@ async def analyze_repo(
             result.co_author_count += count
             tool_scores[tool] = tool_scores.get(tool, 0) + count * 3
 
-        # Criterion 5: AI handle mentions in PRs
+        # Criterion 4: AI handle mentions in PRs
         handle_hits = count_ai_handle_mentions(pr_text)
         for tool, count in handle_hits.items():
             ai_mention_details[tool] = ai_mention_details.get(tool, 0) + count
@@ -649,7 +636,6 @@ async def analyze_repo(
     if status == 200 and isinstance(tree_data, dict):
         tree_items = tree_data.get("tree", [])
 
-    # Build set of all file paths
     repo_paths = set()
     for item in tree_items:
         path = item.get("path", "")
@@ -680,9 +666,6 @@ async def analyze_repo(
     # Criterion 3: Bot contributors (AI-specific only)
     if len(result.bot_contributors) > 0:
         reasons.append("bot_contributors")
-
-    # Criterion 4 (DROPPED): multiline commits — tracked but not used for classification
-    # Multiline ratio is still recorded in result.multiline_commit_ratio for reference
 
     # Criterion 4: >=1 AI tool handle mention total
     if result.ai_mention_count >= 1:
@@ -769,17 +752,14 @@ def generate_summary(all_results: list[dict]) -> dict:
     errors = sum(1 for r in all_results if r.get("error"))
     successfully_processed = total - errors
 
-    # Binary classification counts
     ai_yes = sum(1 for r in all_results if r.get("ai_authored") == "yes" and not r.get("error"))
     ai_no = sum(1 for r in all_results if r.get("ai_authored") == "no" and not r.get("error"))
 
-    # Reason breakdown
     reason_counts: dict[str, int] = {}
     for r in all_results:
         for reason in r.get("ai_authored_reasons", []):
             reason_counts[reason] = reason_counts.get(reason, 0) + 1
 
-    # Tool distribution (among ai_authored=yes)
     tool_counts: dict[str, int] = {}
     for r in all_results:
         if r.get("ai_authored") == "yes":
@@ -787,30 +767,19 @@ def generate_summary(all_results: list[dict]) -> dict:
             if agent and agent != "none":
                 tool_counts[agent] = tool_counts.get(agent, 0) + 1
 
-    # Config file prevalence
     config_counts: dict[str, int] = {}
     for r in all_results:
         for cfg in r.get("ai_config_files_found", []):
             config_counts[cfg] = config_counts.get(cfg, 0) + 1
 
-    # Commit stats
     total_commits = sum(r.get("total_commits_scanned", 0) for r in all_results if not r.get("error"))
     repos_over_100 = sum(
         1 for r in all_results
         if not r.get("error") and r.get("total_commits_scanned", 0) > 100
     )
 
-    # Co-author stats
     with_coauthor = sum(1 for r in all_results if r.get("co_author_count", 0) > 0)
 
-    # Multiline ratio stats
-    multiline_ratios = [
-        r["multiline_commit_ratio"] for r in all_results
-        if not r.get("error") and r.get("total_commits_scanned", 0) > 0
-    ]
-    avg_multiline = sum(multiline_ratios) / len(multiline_ratios) if multiline_ratios else 0
-
-    # AI mention stats
     with_mentions = sum(1 for r in all_results if r.get("ai_mention_count", 0) >= 1)
     total_mentions = sum(r.get("ai_mention_count", 0) for r in all_results)
 
@@ -828,7 +797,6 @@ def generate_summary(all_results: list[dict]) -> dict:
         "commit_statistics": {
             "total_commits_scanned": total_commits,
             "repos_with_over_100_commits": repos_over_100,
-            "average_multiline_commit_ratio": round(avg_multiline, 4),
         },
         "co_author_statistics": {
             "repos_with_ai_coauthors": with_coauthor,
@@ -867,13 +835,16 @@ def get_github_token() -> str:
 
 async def main():
     parser = argparse.ArgumentParser(
-        description="Detect AI-created MCP servers via git history mining (binary classification)"
+        description="Detect AI-created MCP servers via git history mining"
     )
     parser.add_argument("--limit", type=int, default=0, help="Max servers to process (0=all)")
     parser.add_argument("--batch-size", type=int, default=10, help="Servers per concurrent batch")
     parser.add_argument("--max-prs", type=int, default=30, help="Max PRs to fetch per repo")
     parser.add_argument("--resume", action="store_true", help="Resume from checkpoint")
     parser.add_argument("--concurrency", type=int, default=5, help="Max concurrent API requests")
+    parser.add_argument("--created-after", type=str, default=None, help="Only servers created after this date (YYYY-MM-DD)")
+    parser.add_argument("--created-before", type=str, default=None, help="Only servers created before this date (YYYY-MM-DD)")
+    parser.add_argument("--append-to", type=str, default=None, help="Append results to existing file (dedup by id)")
     args = parser.parse_args()
 
     # Get token
@@ -889,6 +860,26 @@ async def main():
         servers = json.load(f)
     logger.info("Loaded %d servers", len(servers))
 
+    # Filter by creation date if specified
+    if args.created_after or args.created_before:
+        before_filter = len(servers)
+        filtered = []
+        for s in servers:
+            created = s.get("created_at", "")
+            if not created:
+                continue
+            date_str = created[:10]  # YYYY-MM-DD
+            if args.created_after and date_str < args.created_after:
+                continue
+            if args.created_before and date_str > args.created_before:
+                continue
+            filtered.append(s)
+        servers = filtered
+        logger.info(
+            "Date filtered: %d -> %d servers (after=%s, before=%s)",
+            before_filter, len(servers), args.created_after, args.created_before,
+        )
+
     # Filter to servers with github_url
     servers = [s for s in servers if s.get("github_url")]
     logger.info("Servers with github_url: %d", len(servers))
@@ -899,7 +890,7 @@ async def main():
         logger.info("Limited to %d servers", len(servers))
 
     # Check for checkpoint
-    checkpoint_path = DATA_OUTPUT_DIR / "checkpoint_results.json"
+    checkpoint_path = DATA_OUTPUT_DIR / "aicreated_checkpoint.json"
     all_results: list[dict] = []
     processed_ids: set[str] = set()
 
@@ -910,10 +901,23 @@ async def main():
         servers = [s for s in servers if s.get("id") not in processed_ids]
         logger.info("Remaining to process: %d", len(servers))
 
+    # If appending, also skip already-processed IDs from existing file
+    if args.append_to:
+        append_path = Path(args.append_to)
+        if append_path.exists():
+            with open(append_path, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+            existing_ids = {r["id"] for r in existing}
+            before = len(servers)
+            servers = [s for s in servers if s.get("id") not in existing_ids]
+            logger.info("Append mode: skipping %d already-classified servers, %d remaining", before - len(servers), len(servers))
+
+    if not servers:
+        logger.info("No servers to process. Done.")
+        return
+
     # Process in batches
     client = GitHubAPIClient(token, max_concurrent=args.concurrency)
-
-    # Check rate limit before starting
     await client.check_rate_limit()
 
     total_batches = (len(servers) + args.batch_size - 1) // args.batch_size
@@ -969,15 +973,27 @@ async def main():
         client.request_count,
     )
 
+    # If appending, merge with existing
+    if args.append_to:
+        append_path = Path(args.append_to)
+        if append_path.exists():
+            with open(append_path, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+            existing_by_id = {r["id"]: r for r in existing}
+            for r in all_results:
+                existing_by_id[r["id"]] = r
+            all_results = list(existing_by_id.values())
+            logger.info("Merged with existing: %d total results", len(all_results))
+
     # Save final results
-    output_path = DATA_OUTPUT_DIR / "ai_commit_evidence_results.json"
+    output_path = DATA_OUTPUT_DIR / "aicreated_results.json"
     with open(output_path, "w", encoding="utf-8") as f:
         json.dump(all_results, f, indent=2, default=str)
     logger.info("Results saved to %s", output_path)
 
     # Generate and save summary
     summary = generate_summary(all_results)
-    summary_path = DATA_OUTPUT_DIR / "ai_commit_evidence_summary.json"
+    summary_path = DATA_OUTPUT_DIR / "aicreated_summary.json"
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
     logger.info("Summary saved to %s", summary_path)
@@ -1000,12 +1016,6 @@ async def main():
     )
     logger.info("Reason breakdown: %s", json.dumps(summary["reason_breakdown"], indent=2))
     logger.info("Tool distribution: %s", json.dumps(summary["likely_ai_tool_distribution"], indent=2))
-    logger.info("Config file prevalence: %s", json.dumps(summary["ai_config_file_prevalence"], indent=2))
-    logger.info(
-        "Commits scanned: %d total, %d repos with >100 commits",
-        summary["commit_statistics"]["total_commits_scanned"],
-        summary["commit_statistics"]["repos_with_over_100_commits"],
-    )
 
     # Clean up checkpoint on successful completion
     if checkpoint_path.exists():
