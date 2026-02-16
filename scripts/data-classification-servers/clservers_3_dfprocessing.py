@@ -109,9 +109,9 @@ def process_naics_results(log_dir="logs"):
                     if json_obj:
                         sample_result["parsed_output"] = json_obj
 
-                        if sample_result["score"] > 0:
+                        naics_code = json_obj.get("naics_code")
+                        if naics_code:
                             valid_responses += 1
-                            naics_code = json_obj.get("naics_code", "unknown")
                             naics_assigned[naics_code] = naics_assigned.get(naics_code, 0) + 1
                     else:
                         sample_result["parsed_output"] = None

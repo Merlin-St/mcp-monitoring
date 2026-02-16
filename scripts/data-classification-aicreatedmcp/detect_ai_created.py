@@ -308,6 +308,8 @@ class ServerResult:
     ai_mention_count: int = 0
     ai_mention_details: dict = field(default_factory=dict)
     commit_evidence: list = field(default_factory=list)
+    # Percentage breakdown of likely creators (sums to 100)
+    likely_creators_details: dict = field(default_factory=dict)
     # Internal tracking
     tool_scores: dict = field(default_factory=dict)
     error: str = ""
@@ -682,10 +684,72 @@ async def analyze_repo(
 
     result.tool_scores = tool_scores
 
+    # -------------------------------------------------------------------
+    # 5. Compute likely_creators_details (percentage breakdown)
+    # -------------------------------------------------------------------
+    result.likely_creators_details = _compute_creators_details(result)
+
     # Trim evidence to keep output manageable
     result.commit_evidence = evidence_items[:100]
 
     return result
+
+
+def _compute_creators_details(result: ServerResult) -> dict:
+    """
+    Compute a percentage breakdown of likely creators (AI tools + human).
+    Returns a dict like {"claude": 50, "copilot": 15, "human": 35} summing to 100.
+
+    AI share is estimated from evidence density:
+    - co_author_count / total_commits gives the strongest signal (direct attribution)
+    - bot_contributors count as direct AI commits
+    - config_files indicate deliberate tool setup (minimum floor)
+    - ai_handle_mentions are weaker indirect evidence
+
+    For ai_authored="no", returns {"human": 100}.
+    """
+    if result.ai_authored == "no" or not result.tool_scores:
+        return {"human": 100}
+
+    total_commits = max(result.total_commits_scanned, 1)
+
+    # Direct evidence: co-authored commits + bot-authored commits (estimate 5 each)
+    direct_evidence = result.co_author_count + len(result.bot_contributors) * 5
+    evidence_ratio = min(direct_evidence / total_commits, 1.0)
+
+    # AI share from direct commit evidence
+    ai_share = evidence_ratio * 100
+
+    # Minimum floors based on how many criteria triggered
+    criteria_count = len(result.ai_authored_reasons)
+    min_floor = {1: 10, 2: 25, 3: 40, 4: 55}.get(criteria_count, 10)
+    ai_share = max(ai_share, min_floor)
+
+    # Modest cap for weak-only evidence (just a few handle mentions, nothing else)
+    if (criteria_count == 1
+            and "ai_handle_mentions" in result.ai_authored_reasons
+            and result.ai_mention_count <= 3):
+        ai_share = min(ai_share, 15)
+
+    ai_share = min(round(ai_share), 100)
+
+    # Distribute AI share among tools proportionally via tool_scores
+    total_tool_score = sum(result.tool_scores.values())
+    creators = {}
+    allocated = 0
+    sorted_tools = sorted(result.tool_scores.items(), key=lambda x: -x[1])
+    for tool, score in sorted_tools:
+        tool_pct = round(ai_share * (score / total_tool_score))
+        if tool_pct > 0:
+            creators[tool] = tool_pct
+            allocated += tool_pct
+
+    # Remainder goes to human (can be 0 for fully bot-authored repos)
+    human_share = 100 - allocated
+    if human_share > 0:
+        creators["human"] = human_share
+
+    return creators
 
 
 # ---------------------------------------------------------------------------
@@ -1017,10 +1081,63 @@ async def main():
     logger.info("Reason breakdown: %s", json.dumps(summary["reason_breakdown"], indent=2))
     logger.info("Tool distribution: %s", json.dumps(summary["likely_ai_tool_distribution"], indent=2))
 
+    # Merge AI-created fields into data_unified_filtered.json
+    merge_into_unified_filtered(all_results)
+
     # Clean up checkpoint on successful completion
     if checkpoint_path.exists():
         checkpoint_path.unlink()
         logger.info("Checkpoint removed (run completed successfully)")
+
+
+def merge_into_unified_filtered(all_results: list[dict]) -> None:
+    """
+    Merge ai_authored, ai_authored_reasons, likely_ai_agent, and
+    likely_creators_details into data/initial/data_unified_filtered.json
+    so downstream scripts (clservers_4_datamatch, cltools_datamatch) can
+    pick them up via the standard metadata lookup.
+    """
+    if not DATA_INPUT.exists():
+        logger.warning("Cannot merge: %s not found", DATA_INPUT)
+        return
+
+    logger.info("Merging AI-created fields into %s ...", DATA_INPUT)
+
+    # Build lookup: id -> fields to merge
+    ai_lookup: dict[str, dict] = {}
+    for r in all_results:
+        if r.get("error"):
+            continue
+        ai_lookup[r["id"]] = {
+            "ai_authored": r.get("ai_authored", ""),
+            "ai_authored_reasons": r.get("ai_authored_reasons", []),
+            "likely_ai_agent": r.get("likely_ai_agent", ""),
+            "likely_creators_details": r.get("likely_creators_details", {}),
+        }
+
+    logger.info("AI-created lookup: %d entries (excluding errors)", len(ai_lookup))
+
+    # Load, update, save
+    with open(DATA_INPUT, "r", encoding="utf-8") as f:
+        unified = json.load(f)
+
+    matched = 0
+    for server in unified:
+        server_id = server.get("id", "")
+        if server_id in ai_lookup:
+            server.update(ai_lookup[server_id])
+            matched += 1
+
+    logger.info(
+        "Merged AI-created fields: %d/%d servers matched (%.1f%%)",
+        matched, len(unified),
+        matched / len(unified) * 100 if unified else 0,
+    )
+
+    with open(DATA_INPUT, "w", encoding="utf-8") as f:
+        json.dump(unified, f, indent=2, ensure_ascii=False)
+
+    logger.info("Updated %s with AI-created fields", DATA_INPUT)
 
 
 if __name__ == "__main__":

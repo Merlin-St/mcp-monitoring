@@ -109,6 +109,8 @@ data-initial-clean: data-initial data-clean-readmes
 data-cl-aicreated:
 	@echo "🔄 Detecting AI-created servers via git history mining..."
 	python scripts/data-classification-aicreatedmcp/detect_ai_created.py --resume
+	@echo "🔄 Validating AI-created detection results..."
+	python -m pytest tests/test_ai_created.py -q
 	@echo "✅ AI-created detection complete: data/internal-cl/aicreated_results.json"
 
 
@@ -218,6 +220,8 @@ data-update-clean-readmes:
 data-update-cl-aicreated:
 	@echo "🔄 Detecting AI-created servers ($(DATE_AFTER) to $(DATE_BEFORE))..."
 	python scripts/data-classification-aicreatedmcp/detect_ai_created.py --resume --created-after $(DATE_AFTER) --created-before $(DATE_BEFORE) --append-to data/internal-cl/aicreated_results.json
+	@echo "🔄 Validating AI-created detection results..."
+	python -m pytest tests/test_ai_created.py -q
 	@echo "✅ AI-created detection complete for new servers"
 
 data-update-cl-servers:

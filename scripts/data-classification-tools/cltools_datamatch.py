@@ -85,9 +85,14 @@ def enrich_with_metadata(
         raise ValueError("Stage4 file missing required 'server_id' column")
     
     # Read CLServers data (only needed columns for memory efficiency)
-    logger.info("Loading CLServers metadata (creation date, use count, canonical_official, name, owner, repository_url)...")
+    clservers_cols = ['server_id', 'created_at', 'use_count', 'canonical_official', 'name', 'owner', 'repository_url',
+                      'ai_authored', 'ai_authored_reasons', 'likely_ai_agent', 'likely_creators_details']
+    logger.info("Loading CLServers metadata (creation date, use count, canonical_official, name, owner, repository_url, ai_created fields)...")
     try:
-        clservers_df = pd.read_csv(clservers_path, usecols=['server_id', 'created_at', 'use_count', 'canonical_official', 'name', 'owner', 'repository_url'])
+        # Read available columns (ai_created fields may not exist in older files)
+        all_clservers_cols = pd.read_csv(clservers_path, nrows=0).columns.tolist()
+        available_cols = [c for c in clservers_cols if c in all_clservers_cols]
+        clservers_df = pd.read_csv(clservers_path, usecols=available_cols)
         logger.info(f"Loaded {len(clservers_df)} rows from CLServers file")
     except Exception as e:
         logger.error(f"Error reading CLServers file: {e}")
@@ -142,8 +147,9 @@ def enrich_with_metadata(
     
     # Perform the merges
     logger.info("Merging with CLServers data on server_id...")
+    merge_cols = [c for c in clservers_df.columns if c != 'server_id'] + ['server_id']
     enriched_df = cltools_df.merge(
-        clservers_df[['server_id', 'created_at', 'use_count', 'canonical_official', 'name', 'owner', 'repository_url']],
+        clservers_df[merge_cols],
         on='server_id',
         how='left'
     )
@@ -241,7 +247,8 @@ def enrich_with_metadata(
     logger.info(f"Saving enriched data to {output_path}...")
     try:
         # Convert list/dict columns to JSON strings for proper CSV serialization
-        for col in ['usage_monthly_breakdown', 'usage_matched_packages', 'topics']:
+        for col in ['usage_monthly_breakdown', 'usage_matched_packages', 'topics',
+                    'ai_authored_reasons', 'likely_creators_details']:
             if col in enriched_df.columns:
                 enriched_df[col] = enriched_df[col].apply(
                     lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x

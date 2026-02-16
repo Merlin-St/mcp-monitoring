@@ -809,13 +809,13 @@ class UnifiedMCPDataProcessor:
 
             for server in batch:
                 try:
-                    # Determine primary source
+                    # Determine primary source (GitHub > Smithery > official)
                     if len(server.data_sources) == 1:
                         server.primary_source = server.data_sources[0]
-                    elif 'smithery' in server.data_sources:
-                        server.primary_source = 'smithery'
                     elif 'github' in server.data_sources:
                         server.primary_source = 'github'
+                    elif 'smithery' in server.data_sources:
+                        server.primary_source = 'smithery'
                     else:
                         server.primary_source = 'official'
 
@@ -1264,9 +1264,9 @@ class UnifiedMCPDataProcessor:
             logger.error("Failed to load data files")
             return False
         
-        # Process each data source
-        self.process_smithery_data()
+        # Process each data source (GitHub first so its fields take priority)
         self.process_github_data()
+        self.process_smithery_data()
         self.process_official_data()
         self.process_awesomelist_data()
 

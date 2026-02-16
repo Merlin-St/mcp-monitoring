@@ -314,6 +314,23 @@ def main():
     # Note: pypi_by_country geo data is now inside usage_monthly_breakdown entries,
     # not at the server level. The breakdown already contains this data.
 
+    # Add AI-created detection fields (from detect_ai_created.py → data_unified_filtered.json)
+    results_df['ai_authored'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('ai_authored', '')
+    )
+
+    results_df['ai_authored_reasons'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('ai_authored_reasons', '')
+    )
+
+    results_df['likely_ai_agent'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('likely_ai_agent', '')
+    )
+
+    results_df['likely_creators_details'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('likely_creators_details', '')
+    )
+
     # Count successful matches
     matched_created_at = len(results_df[results_df['created_at'] != ''])
     matched_use_count = len(results_df[results_df['use_count'] != ''])
@@ -420,6 +437,7 @@ def main():
         'transfer_stock_invest', 'transfer_crypto_and_stablecoin', 'sensitive_data_required'
     ]
     payment_columns = ['payments_analysis', 'payments_autonomy']
+    ai_created_columns = ['ai_authored', 'ai_authored_reasons', 'likely_ai_agent', 'likely_creators_details']
 
     # Get tool_count column and all tool columns (dynamically created)
     tool_count_column = ['tool_count'] if 'tool_count' in results_df.columns else []
@@ -428,14 +446,15 @@ def main():
     tool_columns.sort()  # Ensure consistent ordering
 
     # Create ordered column list (excluding other_columns)
-    ordered_columns = input_columns + naics_columns + tool_count_column + tool_columns + analysis_columns + capability_columns + transfer_columns + payment_columns
+    ordered_columns = input_columns + naics_columns + ai_created_columns + tool_count_column + tool_columns + analysis_columns + capability_columns + transfer_columns + payment_columns
     
     # Select only columns that exist in the DataFrame and exclude unwanted columns
     existing_columns = [col for col in ordered_columns if col in results_df.columns]
     results_df = results_df[existing_columns]
 
     # Convert list/dict columns to JSON strings for proper CSV serialization
-    for col in ['usage_monthly_breakdown', 'usage_matched_packages', 'topics']:
+    for col in ['usage_monthly_breakdown', 'usage_matched_packages', 'topics',
+                'ai_authored_reasons', 'likely_creators_details']:
         if col in results_df.columns:
             results_df[col] = results_df[col].apply(
                 lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x
