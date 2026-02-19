@@ -131,6 +131,7 @@ python scripts/data-collection-servers/officiallist_data_run.py --awesomelist
 **Consequentiality Scoring - CLTools Pipeline:**
 - `scripts/data-classification-tools/cltools_main.py` - Main O*NET task classification and functionality classification pipeline
 - `scripts/data-classification-tools/cltools_datamatch.py` - Enriches CLTools output with metadata from CLServers
+- `scripts/data-classification-tools/cltools_datamatch_toservers.py` - Optional: Enriches CLServers with aggregated tool classifications (occupation_title_main, highest_automation_func)
 - `scripts/onet-task-clusters/task_clusters_data.py` - O*NET task data loading and processing
 - `scripts/onet-task-clusters/task_clusters_embeddings.py` - Embedding generation for task clustering
 - `scripts/onet-task-clusters/task_clusters_llm.py` - LLM-based cluster naming and validation
@@ -483,10 +484,18 @@ python scripts/data-classification-tools/cltools_main.py \
 
 # Enrich CLTools output with metadata
 python scripts/data-classification-tools/cltools_datamatch.py \
-    --stage4 data/internal-cl/cltools_3_results.csv \
-    --stage2 data/final/clservers_classified.csv.gz \
-    --usage data/initial/data_unified_filtered.json \
+    --cltools data/internal-cl/cltools_3_results.csv \
+    --clservers data/final/clservers_classified.csv.gz \
+    --usage-data data/initial/data_unified_filtered.json \
     --output data/final/cltools_classified.csv.gz
+
+# Optional: Enrich CLServers with aggregated tool classifications
+# Adds occupation_title_main, highest_automation_func, main_onet_task_level1/2/3, main_automation_subfunc
+# Note: Performs inner join - servers without tools will be dropped
+python scripts/data-classification-tools/cltools_datamatch_toservers.py \
+    --cltools data/final/cltools_classified.csv.gz \
+    --clservers data/final/clservers_classified.csv.gz \
+    --output data/final/clservers_classified_enriched.csv.gz
 
 # Task Clustering Pipeline
 python scripts/onet-task-clusters/task_clusters_run.py --k2 400              # Run clustering with 400 L2 clusters
@@ -505,10 +514,14 @@ python scripts/onet-task-clusters/task_clusters_embed_match.py               # M
 #   - Main: Maps MCP tools to O*NET occupational tasks and classifies tool functionality (perception/reasoning/action)
 #   - DataMatch: Enriches results with creation dates and usage data
 #   - Output: data/final/cltools_classified.csv.gz with task mapping, functionality classification, and metadata
+#   - Optional DataMatchToServers: Aggregates tool classifications back to server level and enriches CLServers
+#     * Adds: occupation_title_main, highest_automation_func, main_onet_task_level1/2/3, main_automation_subfunc
+#     * Note: Inner join - servers without tools are dropped from output
 
 # Outputs:
 # - CLServers: data/final/clservers_classified.csv.gz (ALL servers with finance yes/no + NAICS code + metadata)
 # - CLTools: data/final/cltools_classified.csv.gz (O*NET task mappings + functionality classification + metadata)
+# - CLServers Enriched (optional): data/final/clservers_classified_enriched.csv.gz (CLServers + aggregated tool classifications)
 
 # Requirements:
 # - ANTHROPIC_API_KEY environment variable set

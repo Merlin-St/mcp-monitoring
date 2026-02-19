@@ -175,7 +175,7 @@ def enrich_servers_with_tools(
     Args:
         cltools_path: Path to CLTools CSV file
         clservers_path: Path to CLServers CSV file to enrich
-        output_path: Path for output file (default: adds '_enriched' suffix)
+        output_path: Path for output file (default: overwrites clservers_path)
 
     Returns:
         str: Path to the enriched output file
@@ -194,11 +194,9 @@ def enrich_servers_with_tools(
     if not Path(clservers_path).exists():
         raise FileNotFoundError(f"CLServers file not found: {clservers_path}")
 
-    # Set default output path
+    # Set default output path (overwrite input file)
     if output_path is None:
-        clservers_stem = Path(clservers_path).stem
-        clservers_suffix = Path(clservers_path).suffix
-        output_path = f"{Path(clservers_path).parent}/{clservers_stem}_enriched{clservers_suffix}"
+        output_path = clservers_path
 
     logger.info(f"Output file: {output_path}")
 
@@ -303,7 +301,7 @@ def main():
     )
     parser.add_argument(
         '--output',
-        help="Output path (default: adds '_enriched' suffix to clservers path)"
+        help="Output path (default: overwrites clservers path)"
     )
 
     args = parser.parse_args()
