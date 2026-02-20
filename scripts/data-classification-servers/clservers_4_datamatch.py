@@ -250,10 +250,15 @@ def main():
                 lambda x: x.get(field, '') if isinstance(x, dict) else ''
             )
     
-    # Add creation dates
+    # Add creation dates and normalize to consistent ISO format
     results_df['created_at'] = results_df['server_id'].apply(
         lambda server_id: server_lookup.get(server_id, {}).get('created_at', '')
     )
+    # Normalize mixed datetime formats (Smithery has microseconds, GitHub doesn't)
+    # so downstream pd.to_datetime() works without format="mixed"
+    results_df['created_at'] = pd.to_datetime(
+        results_df['created_at'], format='mixed', errors='coerce'
+    ).dt.strftime('%Y-%m-%dT%H:%M:%S+00:00').fillna('')
     
     # Add use count (Smithery usage metric)
     results_df['use_count'] = results_df['server_id'].apply(

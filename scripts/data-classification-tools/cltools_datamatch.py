@@ -163,6 +163,12 @@ def enrich_with_metadata(
 
     # Add creation_date column (rename created_at for clarity)
     enriched_df = enriched_df.rename(columns={'created_at': 'creation_date'})
+    # Normalize mixed datetime formats so downstream pd.to_datetime() works without format="mixed"
+    if 'creation_date' in enriched_df.columns:
+        enriched_df['creation_date'] = pd.to_datetime(
+            enriched_df['creation_date'], format='mixed', errors='coerce'
+        ).dt.strftime('%Y-%m-%dT%H:%M:%S+00:00')
+        enriched_df['creation_date'] = enriched_df['creation_date'].replace('NaT', pd.NA)
 
     # Add occupation_title from O*NET task statements based on task_id
     if 'task_id' in enriched_df.columns and Path(ONET_TASK_STATEMENTS_PATH).exists():
