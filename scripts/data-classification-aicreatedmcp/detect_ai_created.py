@@ -32,7 +32,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass, field, asdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
 
@@ -312,6 +312,17 @@ class ServerResult:
     likely_creators_details: dict = field(default_factory=dict)
     # Internal tracking
     tool_scores: dict = field(default_factory=dict)
+    # First-month analysis (within 30 days of created_at)
+    ai_authored_first_month: str = ""  # "yes", "no", or "" (no created_at)
+    ai_authored_first_month_reasons: list = field(default_factory=list)
+    first_month_co_author_count: int = 0
+    first_month_bot_contributors: list = field(default_factory=list)
+    first_month_ai_mention_count: int = 0
+    first_month_ai_mention_details: dict = field(default_factory=dict)
+    first_month_ai_config_files_found: list = field(default_factory=list)
+    first_month_tool_scores: dict = field(default_factory=dict)
+    first_month_likely_ai_agent: str = "none"
+    first_month_commits_scanned: int = 0
     error: str = ""
     processed_at: str = ""
 
@@ -486,6 +497,16 @@ def count_ai_handle_mentions(text: str) -> dict[str, int]:
     return results
 
 
+def parse_datetime_safe(date_str: str) -> datetime | None:
+    """Parse an ISO 8601 date string into a timezone-aware datetime, or None."""
+    if not date_str:
+        return None
+    try:
+        return datetime.fromisoformat(date_str.replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Core analysis per repository
 # ---------------------------------------------------------------------------
@@ -515,7 +536,11 @@ async def analyze_repo(
     server: dict,
     max_prs: int = 30,
 ) -> ServerResult:
-    """Analyze a single repository for AI tool evidence using binary classification."""
+    """Analyze a single repository for AI tool evidence using binary classification.
+
+    Computes both full-history and first-month (within 30 days of created_at)
+    AI detection metrics in a single pass over the commit/PR data.
+    """
 
     github_url = server.get("github_url", "")
     result = ServerResult(
@@ -533,6 +558,19 @@ async def analyze_repo(
     owner, repo = parsed
     tool_scores: dict[str, int] = {}
 
+    # First-month cutoff
+    created_dt = parse_datetime_safe(server.get("created_at", ""))
+    first_month_cutoff = created_dt + timedelta(days=30) if created_dt else None
+
+    # First-month accumulators
+    fm_tool_scores: dict[str, int] = {}
+    fm_co_author_count = 0
+    fm_ai_mention_details: dict[str, int] = {}
+    fm_bot_contributors: list[str] = []
+    fm_commits_scanned = 0
+    # Track newest first-month commit SHA for tree fetch
+    fm_newest_commit_sha: str | None = None
+
     # -------------------------------------------------------------------
     # 1. Fetch ALL commits (paginated, up to 10,000)
     # -------------------------------------------------------------------
@@ -549,7 +587,19 @@ async def analyze_repo(
         author_login = (commit_obj.get("author") or {}).get("login", "")
         committer_login = (commit_obj.get("committer") or {}).get("login", "")
         sha = commit_obj.get("sha", "")[:8]
+        full_sha = commit_obj.get("sha", "")
         date = commit_info.get("author", {}).get("date", "")
+
+        # Determine if commit is within first month
+        in_first_month = False
+        if first_month_cutoff and date:
+            commit_dt = parse_datetime_safe(date)
+            if commit_dt and commit_dt <= first_month_cutoff:
+                in_first_month = True
+                fm_commits_scanned += 1
+                # Track newest first-month commit (API returns newest first)
+                if fm_newest_commit_sha is None:
+                    fm_newest_commit_sha = full_sha
 
         # Criterion 1: Co-Authored-By lines
         coauthor_hits = detect_coauthor_ai(message)
@@ -563,6 +613,9 @@ async def analyze_repo(
                 tool=tool,
                 date=date,
             )))
+            if in_first_month:
+                fm_co_author_count += count
+                fm_tool_scores[tool] = fm_tool_scores.get(tool, 0) + count * 3
 
         # Criterion 4: AI handle mentions in commits
         handle_hits = count_ai_handle_mentions(message)
@@ -577,6 +630,9 @@ async def analyze_repo(
                     tool=tool,
                     date=date,
                 )))
+            if in_first_month:
+                fm_ai_mention_details[tool] = fm_ai_mention_details.get(tool, 0) + count
+                fm_tool_scores[tool] = fm_tool_scores.get(tool, 0) + count
 
         # Criterion 3: Bot contributors from commits
         for bot_tool, bot_names in AI_BOT_ACCOUNTS.items():
@@ -586,6 +642,9 @@ async def analyze_repo(
                 if bot_name not in result.bot_contributors:
                     result.bot_contributors.append(bot_name)
                     tool_scores[bot_tool] = tool_scores.get(bot_tool, 0) + 5
+                if in_first_month and bot_name not in fm_bot_contributors:
+                    fm_bot_contributors.append(bot_name)
+                    fm_tool_scores[bot_tool] = fm_tool_scores.get(bot_tool, 0) + 5
 
     result.co_author_count = co_author_count
 
@@ -603,6 +662,14 @@ async def analyze_repo(
         pr_body = pr.get("body", "") or ""
         pr_author = (pr.get("user") or {}).get("login", "")
         pr_text = f"{pr_title} {pr_body}"
+        pr_created = pr.get("created_at", "")
+
+        # Determine if PR is within first month
+        pr_in_first_month = False
+        if first_month_cutoff and pr_created:
+            pr_dt = parse_datetime_safe(pr_created)
+            if pr_dt and pr_dt <= first_month_cutoff:
+                pr_in_first_month = True
 
         # Criterion 1: Co-Authored-By in PR body
         coauthor_hits = detect_coauthor_ai(pr_body)
@@ -610,12 +677,18 @@ async def analyze_repo(
             co_author_count += count
             result.co_author_count += count
             tool_scores[tool] = tool_scores.get(tool, 0) + count * 3
+            if pr_in_first_month:
+                fm_co_author_count += count
+                fm_tool_scores[tool] = fm_tool_scores.get(tool, 0) + count * 3
 
         # Criterion 4: AI handle mentions in PRs
         handle_hits = count_ai_handle_mentions(pr_text)
         for tool, count in handle_hits.items():
             ai_mention_details[tool] = ai_mention_details.get(tool, 0) + count
             tool_scores[tool] = tool_scores.get(tool, 0) + count
+            if pr_in_first_month:
+                fm_ai_mention_details[tool] = fm_ai_mention_details.get(tool, 0) + count
+                fm_tool_scores[tool] = fm_tool_scores.get(tool, 0) + count
 
         # Criterion 3: Bot PR authors
         for bot_tool, bot_names in AI_BOT_ACCOUNTS.items():
@@ -623,6 +696,9 @@ async def analyze_repo(
                 if pr_author not in result.bot_contributors:
                     result.bot_contributors.append(pr_author)
                     tool_scores[bot_tool] = tool_scores.get(bot_tool, 0) + 5
+                if pr_in_first_month and pr_author not in fm_bot_contributors:
+                    fm_bot_contributors.append(pr_author)
+                    fm_tool_scores[bot_tool] = fm_tool_scores.get(bot_tool, 0) + 5
 
     result.ai_mention_details = ai_mention_details
     result.ai_mention_count = sum(ai_mention_details.values())
@@ -630,6 +706,7 @@ async def analyze_repo(
     # -------------------------------------------------------------------
     # 3. Check for AI config files in the repo (criterion 2)
     # -------------------------------------------------------------------
+    # Full-history: check current HEAD tree
     status, tree_data = await client.get(
         f"/repos/{owner}/{repo}/git/trees/HEAD",
         params={"recursive": "1"},
@@ -652,37 +729,85 @@ async def analyze_repo(
                 result.ai_config_files_found.append(config_path)
                 tool_scores[tool] = tool_scores.get(tool, 0) + 10
 
+    # First-month: check tree at newest first-month commit
+    if fm_newest_commit_sha:
+        fm_status, fm_tree_data = await client.get(
+            f"/repos/{owner}/{repo}/git/trees/{fm_newest_commit_sha}",
+            params={"recursive": "1"},
+        )
+        fm_tree_items = []
+        if fm_status == 200 and isinstance(fm_tree_data, dict):
+            fm_tree_items = fm_tree_data.get("tree", [])
+
+        fm_repo_paths = set()
+        for item in fm_tree_items:
+            path = item.get("path", "")
+            fm_repo_paths.add(path)
+            parts = path.split("/")
+            for i in range(1, len(parts)):
+                fm_repo_paths.add("/".join(parts[:i]))
+
+        for tool, config_paths in AI_CONFIG_FILES.items():
+            for config_path in config_paths:
+                if config_path in fm_repo_paths:
+                    result.first_month_ai_config_files_found.append(config_path)
+                    fm_tool_scores[tool] = fm_tool_scores.get(tool, 0) + 10
+
     # -------------------------------------------------------------------
-    # 4. Apply binary classification criteria
+    # 4. Apply binary classification criteria (full history)
     # -------------------------------------------------------------------
     reasons = []
 
-    # Criterion 1: >=1 Co-Authored-By line referencing an AI tool
     if result.co_author_count >= 1:
         reasons.append("co_authored_by")
-
-    # Criterion 2: AI configuration files present
     if len(result.ai_config_files_found) > 0:
         reasons.append("config_files")
-
-    # Criterion 3: Bot contributors (AI-specific only)
     if len(result.bot_contributors) > 0:
         reasons.append("bot_contributors")
-
-    # Criterion 4: >=1 AI tool handle mention total
     if result.ai_mention_count >= 1:
         reasons.append("ai_handle_mentions")
 
     result.ai_authored = "yes" if len(reasons) > 0 else "no"
     result.ai_authored_reasons = reasons
 
-    # Determine likely AI agent from tool scores
     if tool_scores:
         result.likely_ai_agent = max(tool_scores, key=tool_scores.get)
     else:
         result.likely_ai_agent = "none"
 
     result.tool_scores = tool_scores
+
+    # -------------------------------------------------------------------
+    # 4b. Apply binary classification criteria (first month)
+    # -------------------------------------------------------------------
+    result.first_month_co_author_count = fm_co_author_count
+    result.first_month_bot_contributors = fm_bot_contributors
+    result.first_month_ai_mention_details = fm_ai_mention_details
+    result.first_month_ai_mention_count = sum(fm_ai_mention_details.values())
+    result.first_month_tool_scores = fm_tool_scores
+    result.first_month_commits_scanned = fm_commits_scanned
+
+    if first_month_cutoff is None:
+        # No created_at available — cannot determine first month
+        result.ai_authored_first_month = ""
+    else:
+        fm_reasons = []
+        if fm_co_author_count >= 1:
+            fm_reasons.append("co_authored_by")
+        if len(result.first_month_ai_config_files_found) > 0:
+            fm_reasons.append("config_files")
+        if len(fm_bot_contributors) > 0:
+            fm_reasons.append("bot_contributors")
+        if result.first_month_ai_mention_count >= 1:
+            fm_reasons.append("ai_handle_mentions")
+
+        result.ai_authored_first_month = "yes" if len(fm_reasons) > 0 else "no"
+        result.ai_authored_first_month_reasons = fm_reasons
+
+    if fm_tool_scores:
+        result.first_month_likely_ai_agent = max(fm_tool_scores, key=fm_tool_scores.get)
+    else:
+        result.first_month_likely_ai_agent = "none"
 
     # -------------------------------------------------------------------
     # 5. Compute likely_creators_details (percentage breakdown)
@@ -847,6 +972,24 @@ def generate_summary(all_results: list[dict]) -> dict:
     with_mentions = sum(1 for r in all_results if r.get("ai_mention_count", 0) >= 1)
     total_mentions = sum(r.get("ai_mention_count", 0) for r in all_results)
 
+    # First-month statistics
+    fm_eligible = [r for r in all_results if not r.get("error") and r.get("ai_authored_first_month") != ""]
+    fm_total = len(fm_eligible)
+    fm_yes = sum(1 for r in fm_eligible if r.get("ai_authored_first_month") == "yes")
+    fm_no = sum(1 for r in fm_eligible if r.get("ai_authored_first_month") == "no")
+
+    fm_reason_counts: dict[str, int] = {}
+    for r in fm_eligible:
+        for reason in r.get("ai_authored_first_month_reasons", []):
+            fm_reason_counts[reason] = fm_reason_counts.get(reason, 0) + 1
+
+    fm_tool_counts: dict[str, int] = {}
+    for r in fm_eligible:
+        if r.get("ai_authored_first_month") == "yes":
+            agent = r.get("first_month_likely_ai_agent", "none")
+            if agent and agent != "none":
+                fm_tool_counts[agent] = fm_tool_counts.get(agent, 0) + 1
+
     return {
         "total_servers": total,
         "successfully_processed": successfully_processed,
@@ -868,6 +1011,15 @@ def generate_summary(all_results: list[dict]) -> dict:
         "ai_mention_statistics": {
             "repos_with_gte1_mentions": with_mentions,
             "total_mentions_across_all_repos": total_mentions,
+        },
+        "first_month": {
+            "eligible_servers": fm_total,
+            "ai_authored_first_month_yes": fm_yes,
+            "ai_authored_first_month_yes_pct": round(fm_yes / fm_total * 100, 1) if fm_total else 0,
+            "ai_authored_first_month_no": fm_no,
+            "ai_authored_first_month_no_pct": round(fm_no / fm_total * 100, 1) if fm_total else 0,
+            "reason_breakdown": dict(sorted(fm_reason_counts.items(), key=lambda x: -x[1])),
+            "likely_ai_tool_distribution": dict(sorted(fm_tool_counts.items(), key=lambda x: -x[1])),
         },
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -1080,6 +1232,15 @@ async def main():
     )
     logger.info("Reason breakdown: %s", json.dumps(summary["reason_breakdown"], indent=2))
     logger.info("Tool distribution: %s", json.dumps(summary["likely_ai_tool_distribution"], indent=2))
+    fm = summary.get("first_month", {})
+    logger.info(
+        "First-month AI authored (yes): %d/%d (%.1f%%)",
+        fm.get("ai_authored_first_month_yes", 0),
+        fm.get("eligible_servers", 0),
+        fm.get("ai_authored_first_month_yes_pct", 0),
+    )
+    logger.info("First-month reason breakdown: %s", json.dumps(fm.get("reason_breakdown", {}), indent=2))
+    logger.info("First-month tool distribution: %s", json.dumps(fm.get("likely_ai_tool_distribution", {}), indent=2))
 
     # Merge AI-created fields into data_unified_filtered.json
     merge_into_unified_filtered(all_results)
@@ -1113,6 +1274,9 @@ def merge_into_unified_filtered(all_results: list[dict]) -> None:
             "ai_authored_reasons": r.get("ai_authored_reasons", []),
             "likely_ai_agent": r.get("likely_ai_agent", ""),
             "likely_creators_details": r.get("likely_creators_details", {}),
+            "ai_authored_first_month": r.get("ai_authored_first_month", ""),
+            "ai_authored_first_month_reasons": r.get("ai_authored_first_month_reasons", []),
+            "first_month_likely_ai_agent": r.get("first_month_likely_ai_agent", "none"),
         }
 
     logger.info("AI-created lookup: %d entries (excluding errors)", len(ai_lookup))
