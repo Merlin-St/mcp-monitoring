@@ -349,6 +349,10 @@ def main():
         lambda server_id: server_lookup.get(server_id, {}).get('first_month_likely_ai_agent', '')
     )
 
+    results_df['date_first_ai_evidence'] = results_df['server_id'].apply(
+        lambda server_id: server_lookup.get(server_id, {}).get('date_first_ai_evidence', '')
+    )
+
     # Count successful matches
     matched_created_at = len(results_df[results_df['created_at'] != ''])
     matched_use_count = len(results_df[results_df['use_count'] != ''])
@@ -456,7 +460,8 @@ def main():
     ]
     payment_columns = ['payments_analysis', 'payments_autonomy']
     ai_created_columns = ['ai_authored', 'ai_authored_reasons', 'likely_ai_agent', 'likely_creators_details',
-                          'ai_authored_first_month', 'ai_authored_first_month_reasons', 'first_month_likely_ai_agent']
+                          'ai_authored_first_month', 'ai_authored_first_month_reasons', 'first_month_likely_ai_agent',
+                          'date_first_ai_evidence']
 
     # Get tool_count column and all tool columns (dynamically created)
     tool_count_column = ['tool_count'] if 'tool_count' in results_df.columns else []

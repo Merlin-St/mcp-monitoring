@@ -20,6 +20,7 @@ Usage:
     python detect_ai_created.py --batch-size 25              # Smaller batches
     python detect_ai_created.py --created-after 2025-10-01   # Only recent servers
     python detect_ai_created.py --append-to data/internal-cl/aicreated_results.json
+    python detect_ai_created.py --backfill-dates             # Backfill missing dates
 """
 
 import argparse
@@ -323,6 +324,7 @@ class ServerResult:
     first_month_tool_scores: dict = field(default_factory=dict)
     first_month_likely_ai_agent: str = "none"
     first_month_commits_scanned: int = 0
+    date_first_ai_evidence: str = ""  # ISO datetime of earliest commit_evidence entry
     error: str = ""
     processed_at: str = ""
 
@@ -447,6 +449,36 @@ class GitHubAPIClient:
             except Exception as e:
                 logger.debug("Request error for %s: %s", path, str(e))
                 return 0, None
+
+    async def get_oldest_commit_date_for_path(
+        self, owner: str, repo: str, file_path: str
+    ) -> str | None:
+        """Get the date of the oldest commit that introduced/modified a file.
+
+        Uses the commits API with ``path`` filter, paginating to find the
+        earliest commit that touches ``file_path``.  Returns an ISO-8601
+        date string or None.
+        """
+        oldest_date: str | None = None
+        page = 1
+        while True:
+            status, data = await self.get(
+                f"/repos/{owner}/{repo}/commits",
+                params={"path": file_path, "per_page": "100", "page": str(page)},
+            )
+            if status != 200 or not isinstance(data, list) or not data:
+                break
+            # Commits come newest-first; the last item on the last page is oldest
+            last_commit = data[-1]
+            oldest_date = (
+                last_commit.get("commit", {}).get("author", {}).get("date", "")
+            )
+            if len(data) < 100:
+                break  # reached last page
+            page += 1
+            if page > 20:  # safety cap
+                break
+        return oldest_date if oldest_date else None
 
 
 # ---------------------------------------------------------------------------
@@ -642,6 +674,14 @@ async def analyze_repo(
                 if bot_name not in result.bot_contributors:
                     result.bot_contributors.append(bot_name)
                     tool_scores[bot_tool] = tool_scores.get(bot_tool, 0) + 5
+                    if len(evidence_items) < 200:
+                        evidence_items.append(asdict(EvidenceItem(
+                            sha=sha,
+                            snippet=f"bot commit by {bot_name}",
+                            evidence_type="bot_contributor",
+                            tool=bot_tool,
+                            date=date,
+                        )))
                 if in_first_month and bot_name not in fm_bot_contributors:
                     fm_bot_contributors.append(bot_name)
                     fm_tool_scores[bot_tool] = fm_tool_scores.get(bot_tool, 0) + 5
@@ -677,6 +717,14 @@ async def analyze_repo(
             co_author_count += count
             result.co_author_count += count
             tool_scores[tool] = tool_scores.get(tool, 0) + count * 3
+            if len(evidence_items) < 200:
+                evidence_items.append(asdict(EvidenceItem(
+                    sha=f"PR#{pr.get('number', '')}",
+                    snippet=pr_body[:200],
+                    evidence_type="co_author",
+                    tool=tool,
+                    date=pr_created,
+                )))
             if pr_in_first_month:
                 fm_co_author_count += count
                 fm_tool_scores[tool] = fm_tool_scores.get(tool, 0) + count * 3
@@ -686,6 +734,14 @@ async def analyze_repo(
         for tool, count in handle_hits.items():
             ai_mention_details[tool] = ai_mention_details.get(tool, 0) + count
             tool_scores[tool] = tool_scores.get(tool, 0) + count
+            if len(evidence_items) < 200:
+                evidence_items.append(asdict(EvidenceItem(
+                    sha=f"PR#{pr.get('number', '')}",
+                    snippet=pr_text[:150],
+                    evidence_type="ai_handle_mention",
+                    tool=tool,
+                    date=pr_created,
+                )))
             if pr_in_first_month:
                 fm_ai_mention_details[tool] = fm_ai_mention_details.get(tool, 0) + count
                 fm_tool_scores[tool] = fm_tool_scores.get(tool, 0) + count
@@ -696,6 +752,14 @@ async def analyze_repo(
                 if pr_author not in result.bot_contributors:
                     result.bot_contributors.append(pr_author)
                     tool_scores[bot_tool] = tool_scores.get(bot_tool, 0) + 5
+                    if len(evidence_items) < 200:
+                        evidence_items.append(asdict(EvidenceItem(
+                            sha=f"PR#{pr.get('number', '')}",
+                            snippet=f"PR by {pr_author}",
+                            evidence_type="bot_contributor",
+                            tool=bot_tool,
+                            date=pr_created,
+                        )))
                 if pr_in_first_month and pr_author not in fm_bot_contributors:
                     fm_bot_contributors.append(pr_author)
                     fm_tool_scores[bot_tool] = fm_tool_scores.get(bot_tool, 0) + 5
@@ -728,6 +792,25 @@ async def analyze_repo(
             if config_path in repo_paths:
                 result.ai_config_files_found.append(config_path)
                 tool_scores[tool] = tool_scores.get(tool, 0) + 10
+
+    # Look up when each config file was first committed (for date evidence)
+    for config_path in result.ai_config_files_found:
+        cfg_tool = ""
+        for t, paths in AI_CONFIG_FILES.items():
+            if config_path in paths:
+                cfg_tool = t
+                break
+        date_str = await client.get_oldest_commit_date_for_path(
+            owner, repo, config_path
+        )
+        if date_str and len(evidence_items) < 200:
+            evidence_items.append(asdict(EvidenceItem(
+                sha="config_file",
+                snippet=f"Config file: {config_path}",
+                evidence_type="config_file",
+                tool=cfg_tool,
+                date=date_str,
+            )))
 
     # First-month: check tree at newest first-month commit
     if fm_newest_commit_sha:
@@ -816,6 +899,17 @@ async def analyze_repo(
 
     # Trim evidence to keep output manageable
     result.commit_evidence = evidence_items[:100]
+
+    # Compute earliest AI evidence date from commit_evidence
+    if result.ai_authored == "yes" and evidence_items:
+        evidence_dates = []
+        for ev in evidence_items:
+            dt = parse_datetime_safe(ev.get("date", ""))
+            if dt:
+                evidence_dates.append(dt)
+        if evidence_dates:
+            earliest = min(evidence_dates)
+            result.date_first_ai_evidence = earliest.strftime("%Y-%m-%dT%H:%M:%S+00:00")
 
     return result
 
@@ -1049,6 +1143,266 @@ def get_github_token() -> str:
     return ""
 
 
+async def backfill_dates(args):
+    """Backfill date_first_ai_evidence for servers that are missing it.
+
+    Two phases:
+    1. Re-derive dates from existing commit_evidence entries (no API calls).
+    2. For config-file-only servers still missing dates, look up the oldest
+       commit that introduced each config file via the GitHub commits API.
+
+    Updates aicreated_results.json, aicreated_summary.json, and
+    data_unified_filtered.json in place.
+    """
+    token = get_github_token()
+    if not token:
+        logger.error("No GitHub token found. Set GH_TOKEN or configure gh CLI.")
+        sys.exit(1)
+
+    results_path = DATA_OUTPUT_DIR / "aicreated_results.json"
+    if not results_path.exists():
+        logger.error("Results file not found: %s", results_path)
+        sys.exit(1)
+
+    with open(results_path, "r", encoding="utf-8") as f:
+        all_results = json.load(f)
+
+    ai_yes = [r for r in all_results if r.get("ai_authored") == "yes" and not r.get("error")]
+    missing_before = sum(1 for r in ai_yes if not r.get("date_first_ai_evidence"))
+    logger.info(
+        "Backfill: %d ai_authored=yes servers, %d missing date_first_ai_evidence",
+        len(ai_yes), missing_before,
+    )
+
+    # ------------------------------------------------------------------
+    # Phase 1: re-derive from existing commit_evidence (free, no API)
+    # ------------------------------------------------------------------
+    phase1_fixed = 0
+    for r in ai_yes:
+        if r.get("date_first_ai_evidence"):
+            continue
+        evidence = r.get("commit_evidence", [])
+        if not evidence:
+            continue
+        dates = []
+        for ev in evidence:
+            dt = parse_datetime_safe(ev.get("date", ""))
+            if dt:
+                dates.append(dt)
+        if dates:
+            earliest = min(dates)
+            r["date_first_ai_evidence"] = earliest.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+            phase1_fixed += 1
+
+    logger.info("Phase 1 (re-derive from existing evidence): fixed %d", phase1_fixed)
+
+    # ------------------------------------------------------------------
+    # Phase 2: config file date lookup via GitHub commits API
+    # ------------------------------------------------------------------
+    still_missing = [
+        r for r in ai_yes if not r.get("date_first_ai_evidence")
+    ]
+    logger.info("Phase 2: %d servers still need config file date lookup", len(still_missing))
+
+    if still_missing:
+        concurrency = getattr(args, "concurrency", 5)
+        client = GitHubAPIClient(token, max_concurrent=concurrency)
+        await client.check_rate_limit()
+
+        phase2_fixed = 0
+        for i, r in enumerate(still_missing):
+            parsed = extract_owner_repo(r.get("github_url", ""))
+            if not parsed:
+                continue
+            owner, repo = parsed
+            config_files = r.get("ai_config_files_found", [])
+            earliest_date: datetime | None = None
+            earliest_cfg = ""
+
+            for cfg in config_files:
+                date_str = await client.get_oldest_commit_date_for_path(
+                    owner, repo, cfg
+                )
+                if date_str:
+                    dt = parse_datetime_safe(date_str)
+                    if dt and (earliest_date is None or dt < earliest_date):
+                        earliest_date = dt
+                        earliest_cfg = cfg
+
+            if earliest_date:
+                date_iso = earliest_date.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                r["date_first_ai_evidence"] = date_iso
+                # Append a config_file evidence item
+                cfg_tool = ""
+                for t, paths in AI_CONFIG_FILES.items():
+                    if earliest_cfg in paths:
+                        cfg_tool = t
+                        break
+                if not r.get("commit_evidence"):
+                    r["commit_evidence"] = []
+                r["commit_evidence"].append(asdict(EvidenceItem(
+                    sha="config_file",
+                    snippet=f"Config file: {earliest_cfg}",
+                    evidence_type="config_file",
+                    tool=cfg_tool,
+                    date=date_iso,
+                )))
+                phase2_fixed += 1
+
+            if (i + 1) % 100 == 0:
+                logger.info(
+                    "Phase 2 progress: %d/%d processed, %d fixed, API calls: %d",
+                    i + 1, len(still_missing), phase2_fixed, client.request_count,
+                )
+
+        await client.close()
+        logger.info(
+            "Phase 2 (config file lookup): fixed %d (%d API calls)",
+            phase2_fixed, client.request_count,
+        )
+    else:
+        phase2_fixed = 0
+
+    # ------------------------------------------------------------------
+    # Phase 3: re-fetch commits/PRs for servers still missing dates
+    # (these have PR-based or bot evidence but no config files to date)
+    # ------------------------------------------------------------------
+    phase3_missing = [
+        r for r in all_results
+        if r.get("ai_authored") == "yes" and not r.get("error") and not r.get("date_first_ai_evidence")
+    ]
+    logger.info("Phase 3: %d servers need commit/PR re-fetch for dates", len(phase3_missing))
+
+    phase3_fixed = 0
+    if phase3_missing:
+        concurrency = getattr(args, "concurrency", 5)
+        client3 = GitHubAPIClient(token, max_concurrent=concurrency)
+        await client3.check_rate_limit()
+
+        for i, r in enumerate(phase3_missing):
+            parsed = extract_owner_repo(r.get("github_url", ""))
+            if not parsed:
+                continue
+            owner, repo = parsed
+            reasons = r.get("ai_authored_reasons", [])
+            earliest_date: datetime | None = None
+
+            # Scan commits for co-author / mention / bot evidence dates
+            if any(reason in reasons for reason in ("co_authored_by", "ai_handle_mentions", "bot_contributors")):
+                status, commits_page = await client3.get(
+                    f"/repos/{owner}/{repo}/commits",
+                    params={"per_page": "100", "page": "1"},
+                )
+                if status == 200 and isinstance(commits_page, list):
+                    for commit_obj in commits_page:
+                        commit_info = commit_obj.get("commit", {})
+                        message = commit_info.get("message", "")
+                        author_login = (commit_obj.get("author") or {}).get("login", "")
+                        committer_login = (commit_obj.get("committer") or {}).get("login", "")
+                        date = commit_info.get("author", {}).get("date", "")
+                        if not date:
+                            continue
+
+                        has_evidence = False
+                        # Check co-author
+                        if detect_coauthor_ai(message):
+                            has_evidence = True
+                        # Check mentions
+                        if count_ai_handle_mentions(message):
+                            has_evidence = True
+                        # Check bot authors
+                        for bot_tool, bot_names in AI_BOT_ACCOUNTS.items():
+                            bot_lower = [b.lower() for b in bot_names]
+                            if author_login.lower() in bot_lower or committer_login.lower() in bot_lower:
+                                has_evidence = True
+
+                        if has_evidence:
+                            dt = parse_datetime_safe(date)
+                            if dt and (earliest_date is None or dt < earliest_date):
+                                earliest_date = dt
+
+            # Scan PRs for co-author / mention / bot evidence dates
+            status, prs_data = await client3.get(
+                f"/repos/{owner}/{repo}/pulls",
+                params={"state": "all", "per_page": "30", "sort": "created", "direction": "asc"},
+            )
+            if status == 200 and isinstance(prs_data, list):
+                for pr in prs_data:
+                    pr_title = pr.get("title", "")
+                    pr_body = pr.get("body", "") or ""
+                    pr_author = (pr.get("user") or {}).get("login", "")
+                    pr_text = f"{pr_title} {pr_body}"
+                    pr_created = pr.get("created_at", "")
+                    if not pr_created:
+                        continue
+
+                    has_evidence = False
+                    if detect_coauthor_ai(pr_body):
+                        has_evidence = True
+                    if count_ai_handle_mentions(pr_text):
+                        has_evidence = True
+                    for bot_tool, bot_names in AI_BOT_ACCOUNTS.items():
+                        if pr_author.lower() in [b.lower() for b in bot_names]:
+                            has_evidence = True
+
+                    if has_evidence:
+                        dt = parse_datetime_safe(pr_created)
+                        if dt and (earliest_date is None or dt < earliest_date):
+                            earliest_date = dt
+
+            if earliest_date:
+                date_iso = earliest_date.strftime("%Y-%m-%dT%H:%M:%S+00:00")
+                r["date_first_ai_evidence"] = date_iso
+                if not r.get("commit_evidence"):
+                    r["commit_evidence"] = []
+                r["commit_evidence"].append(asdict(EvidenceItem(
+                    sha="backfill",
+                    snippet="Re-derived from commit/PR scan",
+                    evidence_type="backfill_scan",
+                    tool=r.get("likely_ai_agent", ""),
+                    date=date_iso,
+                )))
+                phase3_fixed += 1
+
+            if (i + 1) % 100 == 0:
+                logger.info(
+                    "Phase 3 progress: %d/%d processed, %d fixed, API calls: %d",
+                    i + 1, len(phase3_missing), phase3_fixed, client3.request_count,
+                )
+
+        await client3.close()
+        logger.info(
+            "Phase 3 (commit/PR re-fetch): fixed %d (%d API calls)",
+            phase3_fixed, client3.request_count,
+        )
+
+    total_fixed = phase1_fixed + phase2_fixed + phase3_fixed
+    final_missing = sum(
+        1 for r in all_results
+        if r.get("ai_authored") == "yes" and not r.get("error") and not r.get("date_first_ai_evidence")
+    )
+    logger.info(
+        "Backfill complete: %d dates added (phase1=%d, phase2=%d, phase3=%d), %d still missing",
+        total_fixed, phase1_fixed, phase2_fixed, phase3_fixed, final_missing,
+    )
+
+    # Save updated results
+    with open(results_path, "w", encoding="utf-8") as f:
+        json.dump(all_results, f, indent=2, default=str)
+    logger.info("Updated %s", results_path)
+
+    # Re-generate summary
+    summary = generate_summary(all_results)
+    summary_path = DATA_OUTPUT_DIR / "aicreated_summary.json"
+    with open(summary_path, "w", encoding="utf-8") as f:
+        json.dump(summary, f, indent=2)
+    logger.info("Updated %s", summary_path)
+
+    # Merge into data_unified_filtered.json
+    merge_into_unified_filtered(all_results)
+    logger.info("Backfill done.")
+
+
 async def main():
     parser = argparse.ArgumentParser(
         description="Detect AI-created MCP servers via git history mining"
@@ -1061,7 +1415,16 @@ async def main():
     parser.add_argument("--created-after", type=str, default=None, help="Only servers created after this date (YYYY-MM-DD)")
     parser.add_argument("--created-before", type=str, default=None, help="Only servers created before this date (YYYY-MM-DD)")
     parser.add_argument("--append-to", type=str, default=None, help="Append results to existing file (dedup by id)")
+    parser.add_argument(
+        "--backfill-dates", action="store_true",
+        help="Backfill date_first_ai_evidence for servers missing it "
+             "(config file commit lookup + re-derive from existing evidence)",
+    )
     args = parser.parse_args()
+
+    if args.backfill_dates:
+        await backfill_dates(args)
+        return
 
     # Get token
     token = get_github_token()
@@ -1277,6 +1640,7 @@ def merge_into_unified_filtered(all_results: list[dict]) -> None:
             "ai_authored_first_month": r.get("ai_authored_first_month", ""),
             "ai_authored_first_month_reasons": r.get("ai_authored_first_month_reasons", []),
             "first_month_likely_ai_agent": r.get("first_month_likely_ai_agent", "none"),
+            "date_first_ai_evidence": r.get("date_first_ai_evidence", ""),
         }
 
     logger.info("AI-created lookup: %d entries (excluding errors)", len(ai_lookup))
