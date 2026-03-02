@@ -54,7 +54,7 @@ def setup_logging():
     )
     return logging.getLogger(__name__)
 
-def search_npm_packages(search_term: str, size: int = 250, max_results: int = 2500) -> List[Dict]:
+def search_npm_packages(search_term: str, size: int = 250, max_results: int = 6000) -> List[Dict]:
     """
     Search npm registry for packages matching the search term.
 
@@ -618,7 +618,7 @@ def main():
     parser = argparse.ArgumentParser(description="Search npm registry for MCP-related packages")
     parser.add_argument("--output", default=DEFAULT_OUTPUT_FILE,
                        help="Output JSON file for search results")
-    parser.add_argument("--limit", type=int, default=2500,
+    parser.add_argument("--limit", type=int, default=6000,
                        help="Maximum results per search term")
     parser.add_argument("--terms", nargs='+',
                        help="Custom search terms (overrides default)")
