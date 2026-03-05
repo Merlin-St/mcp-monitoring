@@ -158,16 +158,13 @@ def main():
     parser.add_argument('--created-before', type=str, help='Only include servers created before this date (YYYY-MM-DD)')
     args = parser.parse_args()
     
-    # Determine sample size
-    if args.all:
-        sample_size = None  # Process all
-        logger.info("Processing ALL servers")
-    elif args.samples:
+    # Determine sample size (default: all servers)
+    if args.samples:
         sample_size = args.samples
         logger.info(f"Processing {sample_size} servers")
     else:
-        sample_size = 100  # Default
-        logger.info("Processing 100 servers (default)")
+        sample_size = None  # Process all by default
+        logger.info("Processing ALL servers (default)")
     
     # Set random seed for reproducibility
     random.seed(42)

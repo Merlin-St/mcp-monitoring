@@ -260,31 +260,47 @@ def enrich_with_metadata(
                     lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x
                 )
 
+        # Append to existing file if requested (load BEFORE writing to avoid overwrite)
+        if append_to and Path(append_to).exists():
+            logger.info(f"Appending to existing file: {append_to}")
+            existing_df = pd.read_csv(append_to, low_memory=False)
+            logger.info(f"Existing data: {len(existing_df)} tools, new data: {len(enriched_df)} tools")
+            enriched_df = pd.concat([existing_df, enriched_df], ignore_index=True)
+            if 'tool_id' in enriched_df.columns:
+                enriched_df = enriched_df.drop_duplicates(subset=['tool_id'], keep='last')
+            logger.info(f"Combined after dedup: {len(enriched_df)} tools")
+
+            # Refresh usage fields for ALL tools from unified dataset
+            # This ensures previously-processed tools get updated usage data too
+            usage_refresh_fields = [f for f in priority_usage_fields if f in usage_df.columns]
+            if usage_refresh_fields:
+                logger.info(f"Refreshing usage data for all {len(enriched_df)} tools...")
+                # Drop stale usage columns, re-merge fresh ones
+                enriched_df = enriched_df.drop(columns=[f for f in usage_refresh_fields if f in enriched_df.columns])
+                enriched_df = enriched_df.merge(
+                    usage_df[['server_id'] + usage_refresh_fields],
+                    on='server_id',
+                    how='left'
+                )
+                refreshed = enriched_df[usage_refresh_fields[0]].notna().sum() if usage_refresh_fields else 0
+                logger.info(f"Refreshed usage data for {refreshed}/{len(enriched_df)} tools")
+
+            # Re-serialize list/dict columns after merge
+            for col in ['usage_monthly_breakdown', 'usage_matched_packages', 'topics',
+                        'ai_authored_reasons', 'likely_creators_details']:
+                if col in enriched_df.columns:
+                    enriched_df[col] = enriched_df[col].apply(
+                        lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x
+                    )
+
         # Use compression if output path ends with .gz
         compression = 'gzip' if output_path.endswith('.gz') else None
         enriched_df.to_csv(output_path, index=False, compression=compression)
-        logger.info(f"Successfully saved {len(enriched_df)} rows to {output_path}")
+        logger.info(f"Successfully saved {len(enriched_df)} rows to {output_path}"
+        )
     except Exception as e:
         logger.error(f"Error saving enriched file: {e}")
         raise
-
-    # Append to existing file if requested
-    if append_to and Path(append_to).exists():
-        logger.info(f"Appending to existing file: {append_to}")
-        existing_df = pd.read_csv(append_to)
-        logger.info(f"Existing data: {len(existing_df)} tools")
-        combined_df = pd.concat([existing_df, enriched_df], ignore_index=True)
-        if 'tool_id' in combined_df.columns:
-            combined_df = combined_df.drop_duplicates(subset=['tool_id'], keep='last')
-        logger.info(f"Combined: {len(combined_df)} tools (new: {len(enriched_df)}, existing: {len(existing_df)}, after dedup: {len(combined_df)})")
-        for col in ['usage_monthly_breakdown', 'usage_matched_packages', 'topics']:
-            if col in combined_df.columns:
-                combined_df[col] = combined_df[col].apply(
-                    lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x
-                )
-        compression = 'gzip' if output_path.endswith('.gz') else None
-        combined_df.to_csv(output_path, index=False, compression=compression)
-        logger.info(f"Saved combined results to {output_path}")
 
     return output_path
 

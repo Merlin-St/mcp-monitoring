@@ -9,8 +9,8 @@
 .PHONY: help data-collect-servers data-collect-usage data-collect-all data-initial data-clean-readmes data-initial-clean data-cl-aicreated data-cl-servers data-cl-tools data-cl-servers-enrich data-cl-all data-task-clusters clean lint lint-fix workflow-data-creation workflow-complete data-update-initial data-update-clean-readmes data-update-cl-aicreated data-update-cl-servers data-update-cl-tools data-update-cl-servers-enrich data-update-cl-all data-update-all data-update-test
 
 # Configurable parameters for incremental updates
-DATE_AFTER ?= 2025-10-01
-DATE_BEFORE ?= 2026-01-31
+DATE_AFTER ?= 2026-02-01
+DATE_BEFORE ?= 2026-03-31
 MODEL ?= anthropic/claude-sonnet-4-5-20250929
 MAX_CONNECTIONS ?= 50
 

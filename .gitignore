@@ -47,7 +47,6 @@ embeddings_cache/
 cache/
 temp/
 *.npz
-*.jsonl
 
 # Playwright browser testing
 .playwright/

@@ -485,21 +485,45 @@ def main():
                 lambda x: json.dumps(x) if isinstance(x, (list, dict)) else x
             )
 
-    # Save the enhanced results
+    # Append to existing file if requested (load BEFORE writing to avoid overwrite)
     output_file = "data/final/clservers_classified.csv.gz"
-    results_df.to_csv(output_file, index=False, compression='gzip')
-    logger.info(f"Enhanced results saved to {output_file}")
-
-    # Append to existing file if requested
     if args.append_to and Path(args.append_to).exists():
         logger.info(f"Appending to existing file: {args.append_to}")
-        existing_df = pd.read_csv(args.append_to)
-        logger.info(f"Existing data: {len(existing_df)} servers")
-        combined_df = pd.concat([existing_df, results_df], ignore_index=True)
-        combined_df = combined_df.drop_duplicates(subset=['server_id'], keep='last')
-        logger.info(f"Combined: {len(combined_df)} servers (new: {len(results_df)}, existing: {len(existing_df)}, after dedup: {len(combined_df)})")
-        combined_df.to_csv(output_file, index=False, compression='gzip')
-        logger.info(f"Saved combined results to {output_file}")
+        existing_df = pd.read_csv(args.append_to, low_memory=False)
+        logger.info(f"Existing data: {len(existing_df)} servers, new data: {len(results_df)} servers")
+        results_df = pd.concat([existing_df, results_df], ignore_index=True)
+        results_df = results_df.drop_duplicates(subset=['server_id'], keep='last')
+        logger.info(f"Combined after dedup: {len(results_df)} servers")
+
+    # Refresh usage and metadata fields for ALL servers from unified dataset
+    # This ensures previously-processed servers get updated usage data too
+    refreshable_fields = [
+        'usage_pypi_downloads', 'usage_npm_downloads', 'usage_total_downloads',
+        'usage_monthly_breakdown', 'usage_matched_packages', 'usage_match_method', 'usage_last_updated',
+        'stargazers_count',
+        'ai_authored', 'ai_authored_reasons', 'likely_ai_agent', 'likely_creators_details',
+        'ai_authored_first_month', 'ai_authored_first_month_reasons', 'first_month_likely_ai_agent',
+        'date_first_ai_evidence',
+    ]
+    refreshed = 0
+    for idx, row in results_df.iterrows():
+        server_data = server_lookup.get(row['server_id'])
+        if server_data:
+            refreshed += 1
+            for field in refreshable_fields:
+                val = server_data.get(field)
+                if val is not None:
+                    if field in ('usage_monthly_breakdown', 'usage_matched_packages',
+                                 'ai_authored_reasons', 'likely_creators_details',
+                                 'ai_authored_first_month_reasons'):
+                        results_df.at[idx, field] = json.dumps(val) if isinstance(val, (list, dict)) else val
+                    else:
+                        results_df.at[idx, field] = val
+    logger.info(f"Refreshed usage/metadata for {refreshed}/{len(results_df)} servers from unified dataset")
+
+    # Save the enhanced results
+    results_df.to_csv(output_file, index=False, compression='gzip')
+    logger.info(f"Enhanced results saved to {output_file} ({len(results_df)} servers)")
 
     # Generate summary with metadata insights
     summary = {
