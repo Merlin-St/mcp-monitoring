@@ -15,6 +15,8 @@ from typing import Optional
 
 # Default path for O*NET task statements file
 ONET_TASK_STATEMENTS_PATH = "data/external-cl/cl_onet_taskstatements.csv"
+# Fallback path: task_clusters_names.csv contains the same Task ID -> Title mapping
+TASK_CLUSTERS_PATH = "data/internal-task-clusters/task_clusters_names.csv"
 
 # Configure logging
 logging.basicConfig(
@@ -26,6 +28,33 @@ logging.basicConfig(
     ]
 )
 logger = logging.getLogger(__name__)
+
+
+def _load_occupation_mapping() -> pd.DataFrame:
+    """Load task_id -> occupation_title mapping from O*NET data.
+
+    Tries cl_onet_taskstatements.csv first, falls back to task_clusters_names.csv.
+    Raises FileNotFoundError if neither file exists.
+    """
+    if Path(ONET_TASK_STATEMENTS_PATH).exists():
+        logger.info(f"Loading occupation mapping from {ONET_TASK_STATEMENTS_PATH}")
+        onet_df = pd.read_csv(ONET_TASK_STATEMENTS_PATH)
+        mapping = onet_df[['Task ID', 'Title']].drop_duplicates()
+        mapping = mapping.rename(columns={'Task ID': 'task_id', 'Title': 'occupation_title'})
+    elif Path(TASK_CLUSTERS_PATH).exists():
+        logger.info(f"Primary O*NET file not found, using fallback: {TASK_CLUSTERS_PATH}")
+        tc_df = pd.read_csv(TASK_CLUSTERS_PATH)
+        mapping = tc_df[['Task ID', 'Title']].drop_duplicates()
+        mapping = mapping.rename(columns={'Task ID': 'task_id', 'Title': 'occupation_title'})
+    else:
+        raise FileNotFoundError(
+            f"No O*NET mapping file found. Tried:\n"
+            f"  - {ONET_TASK_STATEMENTS_PATH}\n"
+            f"  - {TASK_CLUSTERS_PATH}\n"
+            f"Cannot assign occupation_title without this data."
+        )
+    logger.info(f"Loaded {len(mapping)} task_id -> occupation_title mappings")
+    return mapping
 
 
 def enrich_with_metadata(
@@ -171,36 +200,24 @@ def enrich_with_metadata(
         enriched_df['creation_date'] = enriched_df['creation_date'].replace('NaT', pd.NA)
 
     # Add occupation_title from O*NET task statements based on task_id
-    if 'task_id' in enriched_df.columns and Path(ONET_TASK_STATEMENTS_PATH).exists():
-        logger.info("Adding occupation_title from O*NET task statements...")
-        try:
-            onet_df = pd.read_csv(ONET_TASK_STATEMENTS_PATH)
-            # Create task_id to occupation title mapping
-            onet_mapping = onet_df[['Task ID', 'Title']].drop_duplicates()
-            onet_mapping = onet_mapping.rename(columns={
-                'Task ID': 'task_id',
-                'Title': 'occupation_title'
-            })
+    # Uses cl_onet_taskstatements.csv (primary) or task_clusters_names.csv (fallback)
+    onet_mapping = _load_occupation_mapping()
+    if 'task_id' in enriched_df.columns:
+        # Remove existing occupation_title column if it exists
+        if 'occupation_title' in enriched_df.columns:
+            enriched_df = enriched_df.drop(columns=['occupation_title'])
 
-            # Remove existing occupation_title column if it exists
-            if 'occupation_title' in enriched_df.columns:
-                enriched_df = enriched_df.drop(columns=['occupation_title'])
+        # Merge occupation_title
+        enriched_df = enriched_df.merge(
+            onet_mapping[['task_id', 'occupation_title']],
+            on='task_id',
+            how='left'
+        )
 
-            # Merge occupation_title
-            enriched_df = enriched_df.merge(
-                onet_mapping[['task_id', 'occupation_title']],
-                on='task_id',
-                how='left'
-            )
-
-            occupation_matched = enriched_df['occupation_title'].notna().sum()
-            logger.info(f"  Matched occupation_title: {occupation_matched}/{len(enriched_df)} ({occupation_matched/len(enriched_df)*100:.1f}%)")
-        except Exception as e:
-            logger.warning(f"Could not add occupation_title: {e}")
-    elif 'task_id' not in enriched_df.columns:
-        logger.info("Skipping occupation_title (no task_id column)")
+        occupation_matched = enriched_df['occupation_title'].notna().sum()
+        logger.info(f"  Matched occupation_title: {occupation_matched}/{len(enriched_df)} ({occupation_matched/len(enriched_df)*100:.1f}%)")
     else:
-        logger.warning(f"O*NET file not found: {ONET_TASK_STATEMENTS_PATH}")
+        logger.info("Skipping occupation_title (no task_id column)")
 
     # Filter out tools from non-MCP servers (those without CLServers metadata)
     tools_before_filter = len(enriched_df)
@@ -284,6 +301,18 @@ def enrich_with_metadata(
                 )
                 refreshed = enriched_df[usage_refresh_fields[0]].notna().sum() if usage_refresh_fields else 0
                 logger.info(f"Refreshed usage data for {refreshed}/{len(enriched_df)} tools")
+
+            # Backfill occupation_title for any rows missing it after append
+            if 'task_id' in enriched_df.columns and 'occupation_title' in enriched_df.columns:
+                missing_occ = enriched_df['occupation_title'].isna() & enriched_df['task_id'].notna()
+                if missing_occ.sum() > 0:
+                    logger.info(f"Backfilling occupation_title for {missing_occ.sum()} tools...")
+                    occ_map = onet_mapping.set_index('task_id')['occupation_title']
+                    enriched_df.loc[missing_occ, 'occupation_title'] = (
+                        enriched_df.loc[missing_occ, 'task_id'].map(occ_map).values
+                    )
+                    still_missing = enriched_df['occupation_title'].isna() & enriched_df['task_id'].notna()
+                    logger.info(f"After backfill: {still_missing.sum()} tools still missing occupation_title")
 
             # Re-serialize list/dict columns after merge
             for col in ['usage_monthly_breakdown', 'usage_matched_packages', 'topics',
