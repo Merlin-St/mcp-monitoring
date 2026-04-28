@@ -69,6 +69,18 @@ cd paper && pdflatex paper.filled && bibtex paper && \
     pdflatex paper.filled && pdflatex paper.filled
 ```
 
+## Bulk PR data (not in git)
+
+The Phase 2 PR dump under `data/prs/` (~4.4 GB of per-repo `.jsonl` files) is
+not committed. An archival copy lives in S3:
+
+```
+s3://aisi-data-eu-west-2-prod/users/merlin-stein/agents-prefer-agents/data/prs/
+```
+
+Mounted at `/mnt/s3/users/merlin-stein/agents-prefer-agents/data/prs/` on
+AISI dev VMs. To restore locally: `aws s3 sync <s3-uri> data/prs/`.
+
 ## Isolation
 
 This subproject lives entirely under `agents-prefer-agents/`. It does not
