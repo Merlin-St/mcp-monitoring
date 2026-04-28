@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.4.21)  28 APR 2026 10:07
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.4.21)  28 APR 2026 10:25
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -700,24 +700,31 @@ File: figures/figure1_ai_participation.pdf Graphic file (type pdf)
 Package pdftex.def Info: figures/figure1_ai_participation.pdf  used on input li
 ne 136.
 (pdftex.def)             Requested size: 478.06395pt x 308.90121pt.
-<figures/figure2_withinpr.pdf, id=132, 238.49101pt x 224.037pt>
+
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+ [3]
+<figures/figure2_withinpr.pdf, id=151, 238.49101pt x 224.037pt>
 File: figures/figure2_withinpr.pdf Graphic file (type pdf)
 <use figures/figure2_withinpr.pdf>
 Package pdftex.def Info: figures/figure2_withinpr.pdf  used on input line 149.
 (pdftex.def)             Requested size: 234.8775pt x 220.64525pt.
 
-[3] (./paper.filled.bbl
+Underfull \vbox (badness 10000) has occurred while \output is active []
+
+
+(./paper.filled.bbl
 LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 1
 2.
-
-(/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1pcr.fd
+ (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1pcr.fd
 File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
 )
 Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `pcr' (encoding: OT1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
- [4 <./figures/figure1_ai_participation.pdf>]
+
+[4 <./figures/figure1_ai_participation.pdf>]
 Underfull \hbox (badness 1210) in paragraph at lines 86--89
 []\OT1/ptm/m/n/10 (+20) Ghaleb, T. A.  Fin-ger-print-ing AI cod-ing agents on
  []
@@ -821,7 +828,7 @@ ce.json \OT1/ptm/m/n/10 (+20) --- snap-shot
  []
 
 ) (./appendix/extra_figures.filled.tex
-<figures/figure2_chain_length.pdf, id=366, 238.49101pt x 195.129pt>
+<figures/figure2_chain_length.pdf, id=351, 238.49101pt x 195.129pt>
 File: figures/figure2_chain_length.pdf Graphic file (type pdf)
 <use figures/figure2_chain_length.pdf>
 Package pdftex.def Info: figures/figure2_chain_length.pdf  used on input line 7
@@ -866,13 +873,13 @@ Package rerunfilecheck Info: File `paper.filled.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 20320 strings out of 476182
- 354268 string characters out of 5795595
+ 20323 strings out of 476182
+ 354292 string characters out of 5795595
  1960975 words of memory out of 5000000
  41640 multiletter control sequences out of 15000+600000
- 597710 words of font info for 305 fonts, out of 8000000 for 9000
+ 597911 words of font info for 307 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 75i,14n,79p,1633b,629s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,14n,79p,1644b,629s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/fontawesome5/FontAwesome5Fr
 ee-Solid.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex
 10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex9
@@ -891,10 +898,10 @@ hare/texlive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/
 texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/font
 s/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/tim
 es/utmri8a.pfb>
-Output written on paper.filled.pdf (13 pages, 355049 bytes).
+Output written on paper.filled.pdf (13 pages, 346351 bytes).
 PDF statistics:
- 497 PDF objects out of 1000 (max. 8388607)
- 405 compressed objects within 5 object streams
+ 482 PDF objects out of 1000 (max. 8388607)
+ 397 compressed objects within 4 object streams
  72 named destinations out of 1000 (max. 500000)
  53264 words of extra memory for PDF output out of 61914 (max. 10000000)
 
