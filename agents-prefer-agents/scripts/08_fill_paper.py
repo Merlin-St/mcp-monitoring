@@ -293,9 +293,50 @@ def main():
         if m4:
             subs[r"\PLACEHOLDERAUDITAIBOTSHAREOFMERGED"] = f"{m4.group(2)}\\%"
 
-    # Within-PR approval comparison from 06c_within_pr.py (strict definition).
+    # Within-PR DiD from 06c_within_pr.py (v2 schema: did/anchoring/ai_only/ai_opinion_pool).
     within_path = RESULTS_DIR / "within_pr_stats.json"
     defaults = {
+        # ---- v2 main DiD (§8.7 of 99_causalvalidity.md) ----
+        r"\PLACEHOLDERDIDN": "--",
+        r"\PLACEHOLDERDIDNAI": "--",
+        r"\PLACEHOLDERDIDNH": "--",
+        r"\PLACEHOLDERDIDNFULL": "--",
+        r"\PLACEHOLDERDIDDROPPCT": "--",
+        r"\PLACEHOLDERDIDDROPAIPCT": "--",
+        r"\PLACEHOLDERDIDDROPHPCT": "--",
+        r"\PLACEHOLDERDIDB1": "--",
+        r"\PLACEHOLDERDIDB2": "--",
+        r"\PLACEHOLDERDIDPP": "--",
+        r"\PLACEHOLDERDIDDELTA": "--",
+        r"\PLACEHOLDERDIDSE": "--",
+        r"\PLACEHOLDERDIDPVAL": "--",
+        # Cell rates (4 cells: reviewer x author).
+        r"\PLACEHOLDERAIAPPAIRATE": "--",
+        r"\PLACEHOLDERAIAPPHRATE": "--",
+        r"\PLACEHOLDERHAPPAIRATE": "--",
+        r"\PLACEHOLDERHAPPHRATE": "--",
+        # ---- AI opinion pool (parsed + native) ----
+        r"\PLACEHOLDERAIOPRSNATIVE": "--",
+        r"\PLACEHOLDERAIOPPRS": "--",
+        # ---- AI-only review (motivation) ----
+        r"\PLACEHOLDERAIONLYN": "--",
+        r"\PLACEHOLDERAIONLYPCT": "--",
+        # ---- §8.4 anchoring robustness ----
+        r"\PLACEHOLDERANCHORAN": "--",
+        r"\PLACEHOLDERANCHORBN": "--",
+        r"\PLACEHOLDERANCHORAGAP": "--",
+        r"\PLACEHOLDERANCHORBGAP": "--",
+        r"\PLACEHOLDERANCHORADID": "--",
+        r"\PLACEHOLDERANCHORDIDCI": "--",
+        r"\PLACEHOLDERANCHORAAIRATE": "--",
+        r"\PLACEHOLDERANCHORAHRATE": "--",
+        r"\PLACEHOLDERANCHORBAIRATE": "--",
+        r"\PLACEHOLDERANCHORBHRATE": "--",
+        r"\PLACEHOLDERANCHORANAI": "--",
+        r"\PLACEHOLDERANCHORANH": "--",
+        r"\PLACEHOLDERANCHORBNAI": "--",
+        r"\PLACEHOLDERANCHORBNH": "--",
+        # ---- Legacy (old 282-cohort) for backward compat ----
         r"\PLACEHOLDERAIREVIEWEVENTS": "--",
         r"\PLACEHOLDERAIAPPROVALS": "--",
         r"\PLACEHOLDERAIAPPROVALPCT": "--",
@@ -308,54 +349,131 @@ def main():
         r"\PLACEHOLDERWITHINGAP": "--",
         r"\PLACEHOLDERWITHINZTEST": "--",
         r"\PLACEHOLDERWITHINP": "--",
-        # Legacy keys for backward compat if template still references.
         r"\PLACEHOLDERWITHINAIAR": "--",
         r"\PLACEHOLDERWITHINHUAR": "--",
     }
     if within_path.exists():
         wp = json.loads(within_path.read_text())
-        # Descriptive AI-review-event stats.
-        states = wp.get("ai_review_event_states", {})
-        ai_rev_total = sum(states.values())
-        ai_appr = int(states.get("review_approved", 0))
-        defaults[r"\PLACEHOLDERAIREVIEWEVENTS"] = _num(ai_rev_total)
-        defaults[r"\PLACEHOLDERAIAPPROVALS"] = _num(ai_appr)
-        defaults[r"\PLACEHOLDERAIAPPROVALPCT"] = (
-            f"{100 * ai_appr / ai_rev_total:.1f}\\%" if ai_rev_total else "--"
-        )
 
-        cond = wp.get("conditional_on_ai_approval", {})
-        ai = cond.get("ai_authored", {})
-        hu = cond.get("human_authored", {})
-        n_total = cond.get("n_total", 0)
-        defaults[r"\PLACEHOLDERWITHINN"] = _num(n_total)
-        defaults[r"\PLACEHOLDERWITHINAIN"] = _num(ai.get("n", 0))
-        defaults[r"\PLACEHOLDERWITHINAINPCT"] = (
-            f"{100 * ai.get('n', 0) / n_total:.1f}\\%" if n_total else "--"
-        )
-        defaults[r"\PLACEHOLDERWITHINHUN"] = _num(hu.get("n", 0))
-        # Co-approval displayed as a percentage (e.g. "27.3%").
-        def _frac(x):
-            k, n = int(x.get("human_co_approved", 0)), int(x.get("n", 0))
-            if n == 0:
-                return "--"
-            return f"{100*k/n:.1f}\\%"
-        defaults[r"\PLACEHOLDERWITHINAIHR"] = _frac(ai)
-        defaults[r"\PLACEHOLDERWITHINHUHR"] = _frac(hu)
+        # ---- v2 main DiD ----
+        did = wp.get("did", {})
+        if did:
+            defaults[r"\PLACEHOLDERDIDN"] = _num(did.get("n", 0))
+            defaults[r"\PLACEHOLDERDIDNAI"] = _num(did.get("n_AI_auth", 0))
+            defaults[r"\PLACEHOLDERDIDNH"] = _num(did.get("n_H_auth", 0))
+            defaults[r"\PLACEHOLDERDIDNFULL"] = _num(did.get("n_full", 0))
+            for key, src in [
+                (r"\PLACEHOLDERDIDDROPPCT", "drop_pct"),
+                (r"\PLACEHOLDERDIDDROPAIPCT", "drop_AI_pct"),
+                (r"\PLACEHOLDERDIDDROPHPCT", "drop_H_pct"),
+            ]:
+                v = did.get(src)
+                if v is not None:
+                    defaults[key] = f"{v:.1f}\\%"
+            for key, src in [
+                (r"\PLACEHOLDERDIDB1", "bracket1_pp"),
+                (r"\PLACEHOLDERDIDB2", "bracket2_pp"),
+                (r"\PLACEHOLDERDIDPP", "did_pp"),
+            ]:
+                v = did.get(src)
+                if v is not None:
+                    defaults[key] = f"{v:+.2f}"
+            d = did.get("logit_delta")
+            se = did.get("logit_se")
+            p = did.get("logit_p")
+            if d is not None:
+                defaults[r"\PLACEHOLDERDIDDELTA"] = f"{d:+.3f}"
+            if se is not None:
+                defaults[r"\PLACEHOLDERDIDSE"] = f"{se:.3f}"
+            if p is not None:
+                # LaTeX-friendly p-value formatting; placeholder is the whole
+                # math segment including the leading "p" so callers write
+                # "(...; \PLACEHOLDERDIDPVAL)" rather than wrapping in $$.
+                if p < 1e-3:
+                    defaults[r"\PLACEHOLDERDIDPVAL"] = "$p<10^{-3}$"
+                else:
+                    defaults[r"\PLACEHOLDERDIDPVAL"] = f"$p={p:.3f}$"
+            # Cell rates as percentages.
+            cells = did.get("cells", {})
+            for cell_key, ph in [
+                ("AI_x_AI", r"\PLACEHOLDERAIAPPAIRATE"),
+                ("AI_x_H",  r"\PLACEHOLDERAIAPPHRATE"),
+                ("H_x_AI",  r"\PLACEHOLDERHAPPAIRATE"),
+                ("H_x_H",   r"\PLACEHOLDERHAPPHRATE"),
+            ]:
+                cell = cells.get(cell_key, {})
+                rate = cell.get("rate")
+                if rate is not None:
+                    defaults[ph] = f"{100*rate:.2f}\\%"
 
-        # Gap and z-test.
-        ztest = cond.get("ztest", {})
-        gap_pp = ztest.get("gap_pp")
-        p = ztest.get("p_two_sided")
-        z = ztest.get("z")
-        if gap_pp is not None:
-            defaults[r"\PLACEHOLDERWITHINGAP"] = f"{gap_pp:+.1f}"
-        if p is not None and z is not None:
-            defaults[r"\PLACEHOLDERWITHINZTEST"] = (
-                f"$z={z:.2f}$, two-sided $p={p:.2f}$"
-            )
-        if p is not None:
-            defaults[r"\PLACEHOLDERWITHINP"] = f"$p={p:.2f}$"
+        # ---- AI opinion pool ----
+        pool = wp.get("ai_opinion_pool", {})
+        if pool:
+            n_native_unique = pool.get("n_native_unique_prs")
+            if n_native_unique is not None:
+                defaults[r"\PLACEHOLDERAIOPRSNATIVE"] = _num(n_native_unique)
+            n_unique = pool.get("n_unique_prs")
+            if n_unique is not None:
+                defaults[r"\PLACEHOLDERAIOPPRS"] = _num(n_unique)
+
+        # ---- AI-only review context ----
+        ai_only = wp.get("ai_only", {})
+        if ai_only:
+            n_no_h = ai_only.get("no_human_explicit_n")
+            if n_no_h is not None:
+                defaults[r"\PLACEHOLDERAIONLYN"] = _num(n_no_h)
+            pct = ai_only.get("no_human_explicit_pct")
+            if pct is not None:
+                defaults[r"\PLACEHOLDERAIONLYPCT"] = f"{pct:.1f}\\%"
+
+        # ---- Anchoring robustness ----
+        anch = wp.get("anchoring", {})
+        if anch:
+            defaults[r"\PLACEHOLDERANCHORAN"] = _num(anch.get("A_n", 0))
+            defaults[r"\PLACEHOLDERANCHORBN"] = _num(anch.get("B_n", 0))
+            for key, src in [
+                (r"\PLACEHOLDERANCHORAGAP", "A_gap_pp"),
+                (r"\PLACEHOLDERANCHORBGAP", "B_gap_pp"),
+                (r"\PLACEHOLDERANCHORADID", "cross_stratum_did_pp"),
+            ]:
+                v = anch.get(src)
+                if v is not None:
+                    defaults[key] = f"{v:+.2f}"
+            lo = anch.get("cross_stratum_did_ci_lo_pp")
+            hi = anch.get("cross_stratum_did_ci_hi_pp")
+            if lo is not None and hi is not None:
+                defaults[r"\PLACEHOLDERANCHORDIDCI"] = f"95\\% CI [{lo:+.2f}, {hi:+.2f}]"
+            for cell_key, ph_rate, ph_n in [
+                ("A_AI", r"\PLACEHOLDERANCHORAAIRATE", r"\PLACEHOLDERANCHORANAI"),
+                ("A_H",  r"\PLACEHOLDERANCHORAHRATE",  r"\PLACEHOLDERANCHORANH"),
+                ("B_AI", r"\PLACEHOLDERANCHORBAIRATE", r"\PLACEHOLDERANCHORBNAI"),
+                ("B_H",  r"\PLACEHOLDERANCHORBHRATE",  r"\PLACEHOLDERANCHORBNH"),
+            ]:
+                cell = anch.get(cell_key, {})
+                rate = cell.get("rate")
+                n = cell.get("n")
+                if rate is not None:
+                    defaults[ph_rate] = f"{100*rate:.2f}\\%"
+                if n is not None:
+                    defaults[ph_n] = _num(n)
+
+        # ---- Legacy (old 282-cohort) for any remaining template text ----
+        legacy = wp.get("legacy_within_pr", {})
+        cond = legacy.get("conditional_on_ai_approval", {})
+        if cond:
+            ai = cond.get("ai_authored", {})
+            hu = cond.get("human_authored", {})
+            n_total = cond.get("n_total", 0)
+            defaults[r"\PLACEHOLDERWITHINN"] = _num(n_total)
+            defaults[r"\PLACEHOLDERWITHINAIN"] = _num(ai.get("n", 0))
+            defaults[r"\PLACEHOLDERWITHINHUN"] = _num(hu.get("n", 0))
+
+            def _frac(x):
+                k, n = int(x.get("human_co_approved", 0)), int(x.get("n", 0))
+                return f"{100*k/n:.1f}\\%" if n else "--"
+            defaults[r"\PLACEHOLDERWITHINAIHR"] = _frac(ai)
+            defaults[r"\PLACEHOLDERWITHINHUHR"] = _frac(hu)
+
     for k, v in defaults.items():
         subs[k] = v
 

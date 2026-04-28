@@ -288,12 +288,15 @@ def figure1(min_cell_n: int, granularity: str = "month"):
 
 
 def figure2_withinpr():
-    """Within-PR AI-AI-bias test, strict definition.
+    """Within-PR AI-AI-bias DiD on the stable doubly-engaged cohort.
 
-    Restricts to the small set of PRs where an AI bot actually issued an
-    APPROVED review (not a comment). For each author type, plots the human
-    co-approval rate on those PRs. The null prediction is: human co-approval
-    is the same for AI-authored and human-authored AI-approved PRs.
+    Two-panel design (see 99_causalvalidity.md §8.5b/§8.7):
+      Left: 4 bars — reviewer-type {AI, Human} x author-type {AI, Human}
+            approval rates on the stable doubly-engaged cohort.
+      Right: 2 bars — the two brackets in $\\rbt^A - \\rbt^H$:
+            "AI prefers AI more than humans do" (P(AI app|AI-auth) - P(H app|AI-auth))
+            "AI prefers humans less than humans do" (P(AI app|H-auth) - P(H app|H-auth))
+            Their difference is the DiD.
     """
     import json as _json
     wp_path = RESULTS_DIR / "within_pr_stats.json"
@@ -301,71 +304,97 @@ def figure2_withinpr():
         logger.warning("No within_pr_stats.json; skipping figure 2.")
         return
     wp = _json.loads(wp_path.read_text())
-    cond = wp["conditional_on_ai_approval"]
-    ai = cond["ai_authored"]
-    hu = cond["human_authored"]
-    n_total = cond["n_total"]
+    did = wp.get("did")
+    if not did:
+        logger.warning("No 'did' block in within_pr_stats.json; skipping figure 2.")
+        return
+    cells = did["cells"]
+    ai_AI = cells["AI_x_AI"]; ai_H = cells["AI_x_H"]
+    h_AI  = cells["H_x_AI"];  h_H  = cells["H_x_H"]
+    n_total = did["n"]; n_AI = did["n_AI_auth"]; n_H = did["n_H_auth"]
+    bracket1 = did["bracket1_pp"]; bracket2 = did["bracket2_pp"]
+    did_pp = did["did_pp"]; delta = did["logit_delta"]; pval = did["logit_p"]
 
-    def wilson(k, n, z=1.96):
-        if n <= 0:
-            return (0.0, 0.0)
-        phat = k / n
-        d = 1 + z * z / n
-        c = (phat + z * z / (2 * n)) / d
-        h = (z * np.sqrt(phat * (1 - phat) / n + z * z / (4 * n * n))) / d
-        return (max(0.0, c - h), min(1.0, c + h))
+    fig, (axL, axR) = plt.subplots(1, 2, figsize=(7.0, 3.4),
+                                   gridspec_kw={"width_ratios": [1.4, 1.0]})
 
-    ai_lo, ai_hi = wilson(ai["human_co_approved"], ai["n"])
-    hu_lo, hu_hi = wilson(hu["human_co_approved"], hu["n"])
-
-    fig, ax = plt.subplots(figsize=(3.3, 3.1))
-
-    colors = ["#d62728", "#1f77b4"]
-    labels = [
-        "AI-authored\n(n={:,})".format(ai["n"]),
-        "human-authored\n(n={:,})".format(hu["n"]),
+    # ---- LEFT: 4 bars (reviewer x author) ----
+    AI_REV = "#d62728"   # AI reviewer
+    HU_REV = "#1f77b4"   # Human reviewer
+    bar_data = [
+        ("AI rev /\nAI auth", ai_AI, AI_REV),
+        ("AI rev /\nH auth",  ai_H,  AI_REV),
+        ("Hum rev /\nAI auth", h_AI, HU_REV),
+        ("Hum rev /\nH auth",  h_H,  HU_REV),
     ]
-    rates = [ai["human_co_approved_rate"], hu["human_co_approved_rate"]]
-    cis = [(ai_lo, ai_hi), (hu_lo, hu_hi)]
+    xL = list(range(len(bar_data)))
+    rates = [c["rate"] for _, c, _ in bar_data]
+    los = [c["ci_lo"] for _, c, _ in bar_data]
+    his = [c["ci_hi"] for _, c, _ in bar_data]
+    cols = [c for _, _, c in bar_data]
+    axL.bar(xL, rates, color=cols, alpha=0.85, width=0.65,
+            edgecolor="black", lw=0.5)
+    for xi, r, lo, hi in zip(xL, rates, los, his):
+        axL.errorbar(xi, r, yerr=[[r - lo], [hi - r]],
+                     fmt="none", color="black", capsize=3, lw=0.8)
+        # Inline rate label
+        label_y = r * 0.5 if r > 0.20 else r + 0.04
+        label_color = "white" if r > 0.20 else "black"
+        axL.text(xi, label_y, f"{100*r:.1f}%",
+                 ha="center", va="center", fontsize=8, fontweight="bold",
+                 color=label_color)
 
-    x = [0, 1]
-    ax.bar(x, rates, color=colors, alpha=0.85, width=0.6,
-           edgecolor="black", lw=0.5)
-    for xi, rate, (lo, hi) in zip(x, rates, cis):
-        ax.errorbar(xi, rate, yerr=[[rate - lo], [hi - rate]],
-                    fmt="none", color="black", capsize=4, lw=0.9)
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=8)
-    ax.set_xlim(-0.7, 1.7)
-    ax.set_ylim(0, 0.80)
+    axL.set_xticks(xL)
+    axL.set_xticklabels([t for t, _, _ in bar_data], fontsize=7.5)
+    axL.set_xlim(-0.6, len(xL) - 0.4)
+    axL.set_ylim(0, 1.0)
     from matplotlib.ticker import PercentFormatter
-    ax.yaxis.set_major_formatter(PercentFormatter(xmax=1.0, decimals=0))
-    ax.set_ylabel("Share with HUMAN co-approval (Wilson 95% CI)")
-    # Pull z-test stats if available.
-    ztest = cond.get("ztest", {})
-    zval = ztest.get("z")
-    pval = ztest.get("p_two_sided")
-    p_line = (
-        f"two-prop. $z={zval:.2f}$, $p={pval:.2f}$"
-        if zval is not None and pval is not None else ""
-    )
-    ax.set_title(
-        "Human co-approval on {:,} AI-approved PRs\n{}".format(n_total, p_line),
+    axL.yaxis.set_major_formatter(PercentFormatter(xmax=1.0, decimals=0))
+    axL.set_ylabel("Approval rate (Wilson 95% CI)", fontsize=8.5)
+    axL.set_title(
+        f"Stable doubly-engaged cohort\nn={n_total:,} (AI-auth {n_AI:,}, H-auth {n_H:,})",
         fontsize=8.5,
     )
-    ax.grid(axis="y", lw=0.3, alpha=0.3)
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
+    axL.grid(axis="y", lw=0.3, alpha=0.3)
+    axL.spines["top"].set_visible(False)
+    axL.spines["right"].set_visible(False)
 
-    # Base-rate annotation for context (top of plot).
-    brate = wp.get("corpus_base_rate_ai_authored", 0.074)
-    ax.text(0.5, 0.78,
-            f"base rate of AI-authored in corpus: {brate*100:.1f}%\n"
-            f"share of AI-approved PRs that are AI-authored: "
-            f"{100*ai['n']/max(n_total,1):.1f}%",
-            ha="center", va="top", fontsize=6.5, color="#555555",
-            style="italic", transform=ax.transData)
+    # ---- RIGHT: 2 bars showing the brackets in rbt^A - rbt^H ----
+    bracket_labels = [
+        '"AI prefers AI more\nthan humans do"\n(on AI-authored)',
+        '"AI prefers humans less\nthan humans do"\n(on H-authored)',
+    ]
+    xR = [0, 1]
+    bracket_vals = [bracket1, bracket2]
+    bracket_colors = ["#9467bd", "#8c564b"]
+    axR.bar(xR, bracket_vals, color=bracket_colors, alpha=0.85, width=0.55,
+            edgecolor="black", lw=0.5)
+    for xi, v in zip(xR, bracket_vals):
+        # Annotate bar with value (above zero line)
+        axR.text(xi, v - 4 if v < 0 else v + 4,
+                 f"{v:+.1f} pp",
+                 ha="center", va="top" if v < 0 else "bottom",
+                 fontsize=8.5, fontweight="bold", color="black")
+    axR.axhline(0, color="black", lw=0.6)
+    axR.set_xticks(xR)
+    axR.set_xticklabels(bracket_labels, fontsize=7)
+    axR.set_xlim(-0.6, 1.6)
+    # y-axis covers both brackets generously
+    ymin = min(bracket_vals) * 1.15
+    axR.set_ylim(ymin, 10)
+    axR.set_ylabel("AI − Human approval rate (pp)", fontsize=8.5)
+    p_str = (
+        f"$\\delta={delta:+.3f}$, $p<10^{{-3}}$"
+        if pval is not None and pval < 1e-3
+        else f"$\\delta={delta:+.3f}$, $p={pval:.3f}$"
+    )
+    axR.set_title(
+        f"$\\widehat{{\\Delta^{{A}} - \\Delta^{{H}}}} = {did_pp:+.2f}$ pp\n{p_str}",
+        fontsize=8.5,
+    )
+    axR.grid(axis="y", lw=0.3, alpha=0.3)
+    axR.spines["top"].set_visible(False)
+    axR.spines["right"].set_visible(False)
 
     fig.tight_layout()
     out = PAPER_FIG_DIR / "figure2_withinpr.pdf"
