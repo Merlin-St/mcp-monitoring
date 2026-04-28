@@ -287,16 +287,27 @@ Scans `data/prs/*.jsonl` and prints per-bot match counts plus sample matches and
 | Cursor Bugbot | reject | `(?im)Cursor (Bugbot\|Bug-Bot) has reviewed your changes and found ([1-9]\d*) potential issues?` | 1,504 |
 | Sourcery | approve | `(?im)^Hey(\s+(there\|@\S+))?\s*-\s*I\'?ve reviewed your changes and they look great` | 986 |
 | Sourcery | reject | `(?im)^Hey(\s+(there\|@\S+))?\s*-\s*I\'?ve (reviewed your changes\s*-\s*here\'?s some feedback\|reviewed your changes and found some issues\|left some\|found \d+)` | 1,635 |
-| Claude | approve | `\ALGTM\b` (anchored to start of body) | 717 |
+| Claude | approve (start) | `\ALGTM\b` (anchored to start of body) | 717 |
+| Claude | approve (trailing) | `(?im)\b(all\s+(prior\|previous\|previously)\|prior\|previous)\s+(feedback\|concerns?\|issues?\|review\s+concerns?\|flagged\s+issues?\|identified\s+bugs?\|review\s+rounds?)\b[^\n]*?[—\-,.]?\s*LGTM\.?\s*$` | 16 |
+| Claude | approve (verdict-line) | `(?im)^[\s>*\-#]*\*{0,2}\s*(Recommendation\|Verdict\|Conclusion\|Decision)\s*\*{0,2}\s*[:\-]\s*(\*{0,2}\s*)?(✅\s*)?(Approve\|LGTM)\b` | 0 (in review bodies) |
+| Claude | approve (standalone) | `(?im)^[\s>*\-]*(\*\*\|✅\s*)\s*(Approve\|LGTM)\s*(\*\*)?\s*[!.]?\s*$` | 0 (in review bodies) |
 
-**Claude explained.** The pattern `\ALGTM\b` matches only when "LGTM" appears as the very first word of the review body (`\A` anchors to the absolute start of the body, not the start of any line). The trailing word-boundary `\b` accepts "LGTM —", "LGTM,", "LGTM\n", and "LGTM" alone, but rejects accidental substrings like "LGTMs" or "LGTMrebased".
+**Claude explained.** Claude has four approve patterns and no reject pattern. Each approve pattern targets a distinct surface form of the verdict.
 
-- *Yield.* 717 of 1,042 Claude `COMMENTED` reviews (≈69%). All five randomly-sampled matches were genuine approvals followed by an `<details>Extended reasoning</details>` block.
+1. **Start-of-body LGTM** (`\ALGTM\b`, case-insensitive). Matches only when "LGTM" appears as the very first characters of the body. `\A` anchors to the absolute start (not the start of any line, even with `(?m)`). The trailing `\b` accepts "LGTM —", "LGTM,", "LGTM\n", "LGTM" alone, but rejects "LGTMs" or "LGTMrebased". **Yield: 717.**
+
+2. **Trailing-LGTM after addressed-feedback phrase** — recovers reviews that put the verdict at the end after a continuation phrase like "All previous review feedback has been addressed — LGTM." The regex requires a `(prior|previous|previously) (feedback|concerns?|issues?|review concerns?|flagged issues?|identified bugs?|review rounds?)` phrase followed eventually by `LGTM.` or `LGTM` at end-of-line. The `<details>...</details>` Extended-reasoning appendix is stripped before matching to prevent quoted "LGTM" inside reasoning from triggering the pattern. **Yield: 16. Hand-audited at 100% precision; sanity check on other bots' bodies produced zero matches.**
+
+3. **Verdict-line patterns** (`Recommendation:`, `Verdict:`, `Conclusion:`, `Decision:` followed by `Approve` or `LGTM`). **Yield: 0 in formal review bodies.** Claude's verdict-line format ("Recommendation: Approve", "Recommendation: Approve with minor suggestions") appears mostly in PR-level `issue_comments`, which are outside the current parser scope. Pattern is included as future-proofing in case the format migrates into review bodies.
+
+4. **Standalone bold or emoji-prefixed Approve/LGTM** (`**Approve**`, `✅ Approve`, `**LGTM**` on a line by itself). **Yield: 0 in formal review bodies.** Same scope reason as pattern 3.
+
 - *Excluded by construction.*
   - 134 `## Claude Code Review` setup messages ("This repository is configured for manual code reviews. Comment `@claude review`…") — these are configuration notices, not opinions.
   - 22 `⚠️ **Code review skipped** — your organization's overage spend limit has been reached` billing notices — also no-opinion.
-- *Knowingly missed.* About 20 reviews end with "— LGTM." rather than starting with it (e.g., "All previous review feedback has been addressed — LGTM."). The `\A` anchor rejects them. We accept this loss because relaxing the anchor (e.g., `\bLGTM\b` anywhere) would risk false positives in longer mixed-verdict bodies.
-- *No reject pattern.* Claude's critique reviews are free-prose without a stable structured header (unlike Cubic's `**N issues found**` or CodeRabbit's `**Actionable comments posted: N**`). About 150 unclassified bodies are real reviews — some clear rejects ("This is a very large PR with breaking changes to core OAuth auth logic…"), some soft approvals with caveats ("No bugs found, but this is an RFC with open design questions…"). Recovering them would require an LLM sentiment classifier and is out of scope for the conservative parser.
+- *No reject pattern.* Claude's critique reviews are free-prose without a stable structured header (unlike Cubic's `**N issues found**` or CodeRabbit's `**Actionable comments posted: N**`). About 150 unclassified bodies are real reviews — a hand-audit of 40 random samples splits ~25% trailing-LGTM (recovered by pattern 2 above), ~15% clear reject ("This is a very large PR with breaking changes…"), and **~60% Claude's distinctive "human-defer" mode** ("the fix looks correct BUT this touches sensitive code, warrants human sign-off"). Naively classifying all-non-LGTM as reject would treat the human-defer signal as self-preference, which it is not. Recovering the genuine rejects would require an LLM sentiment classifier and is out of scope for the conservative parser.
+
+- *Total Claude approve coverage:* **733** (717 + 16 + 0 + 0).
 
 **Cursor explained.** Cursor's reviewer (Bugbot) has two distinct verdict shapes that share no header:
 - *No-bugs verdict.* `✅ Bugbot reviewed your changes and found no bugs!` (or `... no new issues!`), optionally prefixed with `### `. The leading green-check emoji is required — without it the line could be ambiguous prose. 55 hits in our corpus.
@@ -309,13 +320,13 @@ Scans `data/prs/*.jsonl` and prints per-bot match counts plus sample matches and
 - *Reject.* Any of: `... here's some feedback`, `... found some issues that need to be addressed`, `... left some high level feedback`, or `... found N issues`. (1,635 hits.)
 - *Excluded by construction.* `We've reviewed this pull request using the Sourcery rules engine` (156, lint-engine output, not the AI's opinion) and `Sorry @user, you have reached your weekly rate limit…` (rate-limit notices) remain unmatched. Both are correctly treated as no-opinion.
 
-**Aggregate result over all 74,385 AI-bot `COMMENTED` reviews (corpus-wide):**
+**Aggregate result over all 77,148 AI-bot `COMMENTED` reviews (corpus-wide):**
 
 | Verdict | Events | Share |
 |---|---:|---:|
-| approve (parsed) | 10,116 | 13.6% |
-| reject (parsed) | 36,327 | 48.8% |
-| unmatched | 27,942 | 37.6% |
+| approve (parsed) | 10,240 | 13.3% |
+| reject (parsed) | 37,349 | 48.4% |
+| unmatched | 29,559 | 38.3% |
 
 **Combined with native explicit votes**: ~10.3k approve and ~36.4k reject parsed verdict events. ~32k unique PRs gain at least one parsed AI opinion — a ~78× expansion of the AI-side opinion pool relative to the 415 PRs with native explicit `APPROVED`/`REQUEST_CHANGES` states.
 
@@ -337,3 +348,161 @@ Scans `data/prs/*.jsonl` and prints per-bot match counts plus sample matches and
 **Decision.** With this parser, **Stratum B expanded** rises from $n=67$ ($n_{\text{AI-auth}}=3$) to $n=467$ ($n_{\text{AI-auth}}=73$) — power moves from "dead" to ~7 pp MDE on the gap. The cross-stratum DiD against Stratum A ($n=72{,}946$) becomes a usable estimate of the anchoring effect.
 
 **Conservatism.** All patterns target the bot's *own* structured output. None infer verdicts from free-text sentiment. The unmatched 37.6% — dominated by Gemini and Copilot prose reviews — is left unclassified rather than guessed at.
+
+---
+
+## 8. v2 DiD test results (Dec 2025 / Apr 2026 corpus, criticality-reselected)
+
+**Replicable script.** `paper/test_did_v2.py` (standalone, not part of the pipeline). Run with:
+```
+source /home/ubuntu/mcp-monitoring/.venv/bin/activate
+python paper/test_did_v2.py
+```
+Reads `data/pr_events.parquet`, `data/pr_summary.parquet`, `data/prs/*.jsonl`. Caches the AI-opinion table to `/tmp/v2_ai_opinions.parquet` for fast re-runs.
+
+**v2 dataset (criticality-based reselection):** 487,446 PRs across 1,219 repos. Author breakdown: 410,224 human, 57,563 non-AI bot, **19,659 AI-authored**.
+
+### 8.1 AI opinion pool (native + regex-parsed)
+
+| Source | Events |
+|---|---:|
+| `APPROVED` native | 178 |
+| `CHANGES_REQUESTED` native | 54 |
+| `approve` parsed (regex) | 9,658 |
+| `reject` parsed (regex) | 34,203 |
+| **Total AI opinion events** | **44,093** |
+| Unique PRs with ≥1 AI opinion | **30,560** |
+
+The regex parser expands the AI-opinion pool from 232 native events (414 PRs) to 44,093 events (30,560 PRs) — a **~74× expansion**.
+
+### 8.2 Stratum A — no AI-bot reviewer + human explicit (single-difference, anchoring-free)
+
+|  | n | human-approve | Wilson 95% CI |
+|---|---:|---:|---|
+| AI-author | 4,950 | 94.85% | [94.20, 95.43] |
+| H-author | 194,404 | 95.71% | [95.62, 95.80] |
+| **Gap (AI − H)** | **−0.86 pp** | | $z=-2.95$, $p=0.003$ |
+
+Humans on their own — without an AI bot in the review loop — approve human-authored PRs at a slightly higher rate than AI-authored PRs. The gap is small in magnitude (less than one percentage point) but statistically significant given the very large $n$. This is the OPPOSITE direction of self-preference: humans show a small *anti-AI* bias on the human side.
+
+### 8.3 Stratum B — AI clear opinion before human + human explicit (anchoring-prone)
+
+|  | n | human-approve | Wilson 95% CI |
+|---|---:|---:|---|
+| AI-author | 963 | 94.08% | [92.41, 95.40] |
+| H-author | 4,977 | 94.19% | [93.51, 94.81] |
+| **Gap (AI − H)** | **−0.11 pp** | | $z=-0.14$, $p=0.89$ |
+
+When an AI bot has issued a verdict before the human reviewed, the human-side gap collapses to essentially zero.
+
+### 8.4 Cross-stratum DiD (anchoring effect)
+
+$$
+\widehat{\text{anchoring effect}} = (\text{Stratum B gap}) - (\text{Stratum A gap}) = (-0.11) - (-0.86) = +0.75 \text{ pp}.
+$$
+
+When an AI bot's verdict precedes the human's, humans become roughly 0.75 pp more likely to approve AI-authored PRs (relative to human-authored) than they would have without seeing the AI's verdict. This is consistent with a small anchoring effect that closes — but does not invert — the human-side anti-AI gap.
+
+### 8.5 Doubly-explicit-plus DiD (Option B-plus, full $\rbt^A - \rbt^H$ estimate)
+
+A confound to address up front: the AI bot's verdict is typically issued early in the PR lifecycle, while the human's explicit review often comes after several rounds of code changes. If the AI saw version V1 and the human saw V2, they are not evaluating the same code, and any DiD between them conflates preference with code-version drift. We therefore report two cohorts:
+
+- **(a) all doubly-engaged PRs** — AI opinion AND human explicit review, regardless of intervening commits.
+- **(b) stable cohort** — same as (a), but additionally requires that **no commits were pushed between the AI's first opinion timestamp and the human's first explicit review timestamp**. Both reviewers therefore evaluated the same commit graph.
+
+**Filter impact.** Of the 15,712 PRs in (a), **7,799 (49.6%) have commits between the AI verdict and the human review** and are excluded. Exclusion rate is asymmetric by author: **68.8% of AI-authored PRs** vs **45.7% of human-authored PRs**. AI-authored PRs are markedly more likely to receive code changes after an AI bot has flagged issues — itself a substantive observation about the AI-bot-driven workflow.
+
+#### (a) All doubly-engaged PRs (does NOT control for version drift)
+
+**n = 15,712** (AI-author 2,505 · H-author 13,207).
+
+| Reviewer × author | n | approve rate | Wilson 95% CI |
+|---|---:|---:|---|
+| AI reviewer × AI author | 2,505 | 12.22% | [10.99, 13.56] |
+| AI reviewer × H author | 13,207 | 27.87% | [27.11, 28.64] |
+| Human reviewer × AI author | 2,505 | 92.97% | [91.91, 93.91] |
+| Human reviewer × H author | 13,207 | 92.45% | [91.99, 92.89] |
+
+- AI-side gap: **−15.66 pp**
+- Human-side gap: **+0.52 pp**
+- $\widehat{\rbt^A - \rbt^H} = -15.66 - 0.52 = \mathbf{-16.18 \text{ pp}}$
+- Logit interaction $\delta = -1.0988$, $SE = 0.106$, $p \approx 5 \times 10^{-25}$.
+
+#### (b) Stable cohort — no commits between AI verdict and human review ⭐
+
+**n = 7,949** (AI-author 782 · H-author 7,167). This is the design that holds the code constant.
+
+| Reviewer × author | n | approve rate | Wilson 95% CI |
+|---|---:|---:|---|
+| AI reviewer × AI author | 782 | 16.50% | [14.06, 19.26] |
+| AI reviewer × H author | 7,167 | 31.67% | [30.61, 32.76] |
+| Human reviewer × AI author | 782 | 90.66% | [88.42, 92.51] |
+| Human reviewer × H author | 7,167 | 92.37% | [91.73, 92.96] |
+
+- AI-side gap: **−15.18 pp**
+- Human-side gap: **−1.70 pp**
+- $\widehat{\rbt^A - \rbt^H} = -15.18 - (-1.70) = \mathbf{-13.47 \text{ pp}}$
+- Logit interaction $\delta = -0.6329$, $SE = 0.164$, $p \approx 1.2 \times 10^{-4}$.
+
+**Direction unchanged:** AI bots are still substantially harsher on AI-authored PRs than humans are — but the magnitude shrinks from $-16.18$ pp to $-13.47$ pp, and the log-odds $\delta$ from $-1.10$ to $-0.63$ (about 60% of the original effect on the log-odds scale). On the stable cohort, AI bots are approximately $\exp(-0.63) \approx 0.53\times$ as likely to approve an AI-authored PR as an otherwise-similar human-authored one (vs. $0.33\times$ on the unfiltered cohort).
+
+**Two readings of the shrinkage.**
+- *Version drift was a real confound.* The unfiltered estimate inflates the AI's apparent harshness because it compares AI's view of an early, buggier version against the human's view of a fixed-up later version. The stable cohort removes this and leaves a still-large but smaller residual.
+- *The stable cohort is itself selected.* PRs with no intermediate commits may be cleaner / smaller / lower-stakes on average. The filter trades version-drift bias for selection bias on PR type. This bias direction is unclear without further controls (Option C with quality covariates would help).
+
+The stable-cohort number ($\delta = -0.63$, $-13.47$ pp) is the more defensible read on $\rbt^A - \rbt^H$. The fact that the direction is robust to the filter, with only a ~40% magnitude attenuation on the log-odds scale, supports the headline conclusion that AI bots dislike AI-authored code more than humans do.
+
+### 8.6 Headline interpretation
+
+The two designs converge on a striking result:
+1. **Humans alone (Stratum A)** show a small but real anti-AI bias on the approval side: −0.86 pp.
+2. **AI bots themselves (stable doubly-engaged cohort)** show a *much larger* anti-AI bias: −15.18 pp on raw rates, $\delta = -0.63$ on log-odds.
+3. The within-PR DiD comparing the two reviewer types on the stable cohort yields **$\widehat{\rbt^A - \rbt^H} = -13.47$ pp**: *AI bots dislike AI-authored code substantially more than humans do, even after holding the reviewed commit graph constant.*
+
+This is the opposite direction from the AI-AI self-preference hypothesis tested in single-turn lab experiments by \citet{laurito2025aibias}. Two non-mutually-exclusive readings:
+- **Real-world AI code-review bots are calibrated to find issues** — they correctly identify more bugs in AI-authored PRs (which may be lower quality on average), and report them through `REQUEST_CHANGES` / structured issue-found verdicts.
+- **Quality-selection confound** — AI-authored PRs differ from human-authored PRs on unobservable quality dimensions, and the homogeneity assumption (quality affects AI and human approvals on the same scale) fails: humans approve nearly everything they review (~92% baseline), so the human-side gap is suppressed by a ceiling effect, while the AI-side gap reflects the bots' much wider acceptance range.
+
+Both readings argue that the headline number should be reported with care: the *direction* (anti-self-preference) is the substantively interesting and statistically robust finding; the *magnitude* requires the homogeneity assumption to interpret as a clean preference differential.
+
+---
+
+### 8.7 Clean DiD aligned with the paper's $\rbt^A - \rbt^H$ framework
+
+The paper's framework defines AI–AI bias as $\rbt^A - \rbt^H > 0$: AI prefers AI more than humans do. Decomposed by author identity, the same quantity has a more direct verbal mapping:
+
+$$
+\widehat{\rbt^A - \rbt^H} = \underbrace{\big[P(\text{AI app}\mid\text{AI-auth}) - P(\text{H app}\mid\text{AI-auth})\big]}_{\text{AI prefers AI more than humans do}} - \underbrace{\big[P(\text{AI app}\mid\text{H-auth}) - P(\text{H app}\mid\text{H-auth})\big]}_{\text{AI prefers humans less than humans do}}.
+$$
+
+A *positive* DiD would mean: AI is more enthusiastic than humans about AI-authored content **and** less enthusiastic than humans about human-authored content — the signature of AI–AI bias. A *negative* DiD reverses both signs and signals anti-self-preference.
+
+**Cohort.** The §8.5(b) stable doubly-engaged cohort: PRs with at least one AI opinion (native + regex-parsed) AND at least one human explicit review, with no commits between the AI's first verdict and the human's first review. $n = 7{,}949$ (AI-author 782, H-author 7,167).
+
+**Cell rates (re-displayed from §8.5(b)).**
+
+| Reviewer × author | rate | Wilson 95% CI |
+|---|---:|---|
+| AI reviewer × AI author | 16.50% | [14.06, 19.26] |
+| Human reviewer × AI author | 90.66% | [88.42, 92.51] |
+| AI reviewer × H author | 31.67% | [30.61, 32.76] |
+| Human reviewer × H author | 92.37% | [91.73, 92.96] |
+
+**The two brackets.**
+
+- **"AI prefers AI more than humans do" on AI-authored PRs:** $16.50 - 90.66 = \mathbf{-74.16}$ pp. AI bots approve AI-authored PRs **74 pp less** than humans do. Sign is opposite of what self-preference predicts.
+- **"AI prefers humans less than humans do" on human-authored PRs:** $31.67 - 92.37 = \mathbf{-60.70}$ pp. AI bots also approve human-authored PRs less than humans do, but by a smaller gap.
+
+**The DiD.**
+
+$$
+\widehat{\rbt^A - \rbt^H} = (-74.16) - (-60.70) = \mathbf{-13.47 \text{ pp}}.
+$$
+
+Logit interaction (long-format on the same cohort, HC0 SEs): $\delta = -0.6329$, $SE = 0.164$, $p \approx 1.2\times 10^{-4}$.
+
+This is the same number as §8.5(b)'s DiD (the two framings are algebraically equivalent), but presented with the bracket-by-author decomposition that maps directly onto the paper's verbal description of $\rbt^A - \rbt^H$.
+
+**Verdict.** $\widehat{\rbt^A - \rbt^H} = -13.47$ pp $< 0$, highly significant. AI bots are *less* enthusiastic about AI-authored code than humans are, by a margin substantially larger than their analogous shortfall on human-authored code. This is anti-self-preference — the opposite direction from the lab-bench AI-AI bias result of \citet{laurito2025aibias} when measured in the wild on real PR review.
+
+**Why we do not look at AI-only-reviewed PRs.** Of 46,092 AI-bot-reviewed PRs in v2, **20,155 (43.7%) receive no human explicit review at all**, and 3,756 (8.1%) receive no human engagement of any kind. These PRs cannot inform a $\rbt^A - \rbt^H$ test — there is no human outcome to compare against the AI's. The cohort above conditions on the existence of a human explicit review for that reason, which is why the absolute n shrinks despite AI bots being widely deployed.

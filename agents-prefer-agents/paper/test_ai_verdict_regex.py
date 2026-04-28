@@ -119,6 +119,25 @@ BOT_PATTERNS: dict[str, list[tuple[str, re.Pattern, str]]] = {
             'Claude "...prior feedback addressed - LGTM." trailing-verdict approval. '
             'Recovers ~16 reviews where LGTM comes at the end after a continuation phrase. '
             'Strip <details> blocks before matching.'),
+        # Verdict-line approval: e.g., "Recommendation: Approve",
+        # "Verdict: ✅ Approve", "Conclusion: LGTM". Yields 0 in the current
+        # corpus of formal review bodies (Claude's structured verdicts appear
+        # mostly in issue_comments), kept as future-proofing in case the format
+        # migrates into review bodies. The (Approve|LGTM) word at the end is
+        # required to keep precision high — "Recommendation: <other>" remains
+        # unmatched (often a defer or a recommendation-of-changes, not a verdict).
+        ("approve", re.compile(
+            r"(?im)^[\s>*\-#]*\*{0,2}\s*(Recommendation|Verdict|Conclusion|Decision)\s*\*{0,2}"
+            r"\s*[:\-]\s*(\*{0,2}\s*)?(✅\s*)?(Approve|LGTM)\b"),
+            'Claude verdict line: "(Recommendation|Verdict|Conclusion|Decision): (Approve|LGTM)" '
+            '(currently 0 in review bodies; future-proofing).'),
+        # Standalone bold or emoji-prefixed Approve/LGTM line (whole line = verdict).
+        # Yields 0 in the current corpus; included for completeness so the parser
+        # catches it if Claude shifts to bold-verdict format.
+        ("approve", re.compile(
+            r"(?im)^[\s>*\-]*(\*\*|✅\s*)\s*(Approve|LGTM)\s*(\*\*)?\s*[!.]?\s*$"),
+            'Claude standalone bolded or emoji-prefixed verdict line: "**Approve**", '
+            '"✅ Approve", "**LGTM**" on its own line.'),
         # No reject pattern: Claude's critique reviews are free-prose without a stable
         # structured header. ~150 unclassified bodies split roughly 60% "human-defer"
         # ("looks correct BUT human should sign off") / 25% trailing-LGTM-not-matched-here
