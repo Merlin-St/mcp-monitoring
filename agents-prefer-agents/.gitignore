@@ -11,9 +11,12 @@
 __pycache__/
 *.py[cod]
 
-# Bulk PR + repo data (regenerable via scripts/02_fetch_prs.py)
+# Bulk PR + repo data (available in S3 — see README "Bulk PR data" section)
+# s3://aisi-data-eu-west-2-prod/users/merlin-stein/agents-prefer-agents/data/
 data/prs/
 data/old_phase1/
+data/criticality/
+data/repos.top10k.json
 
 # Empty/transient sample dir
 data/sampled/
