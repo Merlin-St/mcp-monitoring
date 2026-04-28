@@ -1,0 +1,21 @@
+% Appendix D — full logit regression with controls
+
+We estimate
+\[
+    \mathrm{logit}(\text{merged in 30d}) = \alpha + \beta_1 \mathbf{1}\{\text{AI author}\} + \beta_2 \mathbf{1}\{\text{AI reviewer}\} + \beta_3 \mathbf{1}\{\text{AI author}\}\cdot\mathbf{1}\{\text{AI reviewer}\} + \gamma \cdot \mathbf{x} + \eta_\text{repo} + \eta_\text{week} + \varepsilon,
+\]
+where $\mathbf{x}$ contains $\log(1+\text{additions}+\text{deletions})$, author tenure (days since first commit to the repo), and a CI-status indicator where available. Standard errors are clustered by repository.
+
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+Term & Coef. & SE & $z$ & $p$ \\
+\midrule
+AI author & -0.113** & 0.037 & -3.07 & 2.1e-03 \\
+AI reviewer & -1.016*** & 0.021 & -48.40 & 0.0e+00 \\
+AI author $\times$ reviewer (interaction) & 0.021 & 0.060 & 0.34 & 7.3e-01 \\
+$\log(1+\mathrm{adds}+\mathrm{dels})$ & -0.103*** & 0.003 & -29.67 & 1.9e-193 \\
+\bottomrule
+\multicolumn{5}{@{}l}{\footnotesize $n=101,873$, repos=2697, pseudo-$R^2=0.037$. Cluster-robust SEs by repo. $*p<0.05,\ **p<0.01,\ ***p<0.001$.}\\
+\end{tabular}
+
+The coefficient of interest is $\beta_3$, the interaction of AI-author and AI-reviewer. It is not statistically distinguishable from zero ($\hat\beta_3=+0.021$, $p=0.73$). We read this as a null on self-preference \emph{conditional on} an approving review, even though the main-effect \texttt{AI\_reviewer} coefficient is strongly negative.{}

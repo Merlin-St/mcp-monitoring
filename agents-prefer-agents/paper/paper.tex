@@ -1,0 +1,192 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% agents-prefer-agents — AIWILD @ ICML 2026 submission (anonymous)
+%
+% Compile (requires texlive):
+%   cd paper && pdflatex paper && bibtex paper && pdflatex paper && pdflatex paper
+%
+% Target length: 2 main pages + unlimited appendix.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{fontawesome5}
+\usepackage[capitalize,noabbrev]{cleveref}
+
+% Use a robot glyph in place of the Greek "triangle" Delta in the preference-gap math.
+\newcommand{\rbt}{\text{\faRobot}}
+
+% Initial blind version.
+\usepackage{icml2026}
+
+% Suppress the "Preliminary work. Under review by ICML. Do not distribute." footer.
+\makeatletter
+\renewcommand{\Notice@String}{}
+\makeatother
+
+\icmltitlerunning{Accelerators of Gradual Disempowerment}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Accelerators of gradual disempowerment}
+
+\icmlsetsymbol{equal}{*}
+\begin{icmlauthorlist}
+  \icmlauthor{Anonymous Authors}{anon}
+\end{icmlauthorlist}
+\icmlaffiliation{anon}{Anonymous Institution}
+\icmlcorrespondingauthor{Anonymous}{anon@example.com}
+\icmlkeywords{AI agents, gradual disempowerment, GitHub, code review, technical AI governance}
+
+\vskip 0.3in
+]
+
+\printAffiliationsAndNotice{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+The economy, society and culture has been aligned to human interests only because of the necessity of human participation. When humans are displaced by more competitive AI, these societal systems might stop serving human interests~\citep{kulveit2025gradual}. We argue that some AI model propensities and deployment choices make such gradual disempowerment scenarios more likely, even when AI models are not clearly more competitive than humans. We taxonomise five such \emph{accelerators} of gradual disempowerment: (1)~human preference drift toward AI, (2)~AI-human switching costs, (3)~AI preference drift toward AI, (4)~evaluation authority shifts to AI, and (5)~AI-AI bias. We attempt to measure the last two accelerators for software development. We review \PLACEHOLDERNPRS{} GitHub pull requests from \PLACEHOLDERNREPOS{} popular repositories (April~2025--March~2026). First, in this small sample AI-agent participation grew \PLACEHOLDERGROWTHMULT{}$\times$ in one year (\PLACEHOLDERAISTART{}$\to$\PLACEHOLDERAIEND{} of all PRs). AI-AI PR comment chains of length~$\geq$5 grew \PLACEHOLDERCHAIN5START{}$\to$\PLACEHOLDERCHAIN5END{}. Second, AI evaluation authority grew from \PLACEHOLDERAIONLYDECSTART{} to \PLACEHOLDERAIONLYDECEND{} of PRs only reviewed or rejected by AI. Third, there is no strong evidence for AI-AI bias: of \PLACEHOLDERWITHINN{} PRs receiving an AI-bot \emph{approving} review (humans need not have reviewed), a human reviewer also approved \PLACEHOLDERWITHINAIHR{} of \PLACEHOLDERWITHINAIN{} AI-authored vs.\ \PLACEHOLDERWITHINHUHR{} of \PLACEHOLDERWITHINHUN{} human-authored (\PLACEHOLDERWITHINP{}). This is very preliminary work, not yet adjusted for code quality. We call on researchers and post-training teams to track potentially human-disempowering model propensities and deployment choices.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+``Gradual disempowerment''~\citep{kulveit2025gradual} is the claim that the economy, society and culture have historically aligned with human interests because human participation in evaluation, exchange and governance has been necessary --- and that this alignment can decay as AI agents substitute for that participation, with outcomes drifting toward AI-preferred baselines even at equal capability. Once such drift manifests in economic, cultural, or political outcomes, it may be difficult to reverse~\citep{collingridge1980social,eguiluz2025innovation}.
+
+AI agents --- LLMs augmented with memory and tool access that perceive and act on an environment --- are now deployed at scale in customer-facing economic platforms~\citep{appel2025economic}, in tool-mediated workflows~\citep{stein2026mcp}, and across labour tasks spanning large fractions of occupational time use~\citep{shao2025workbank}. Software development is the most observable frontier: AI coding agents author, review, and merge code in production repositories~\citep{ghaleb2026fingerprinting,staufer2026aiagentindex}, often with little human oversight per change. This makes public software a natural testbed for measuring whether evaluation and decision-making are starting to slip away from humans.
+
+\paragraph{Prior work.} \emph{AI-AI bias} has been shown in single-turn choice experiments: GPT-4 favoured LLM-written product ads 89\% of the time vs.\ a 36\% human baseline, and LLM abstracts 78\% vs.\ 61\%~\citep{laurito2025aibias}; LLM evaluators recognise and favour their own generations~\citep{panickssery2024evaluators}. Whether such biases manifest in real multi-agent deployments is an open empirical question. Concurrent empirical work on software-development agents reports high PR merge rates~\citep{watanabe2025agentic,li2026aidev,li2025teammates,logicstar2025wild,ghaleb2026fingerprinting,staufer2026aiagentindex,zhong2026synergy,chowdhury2026claims} alongside persistent quality debt~\citep{agarwal2026ides,ehsani2026fail,huang2026morecode}, but none view it through the lens of AI-AI bias and gradual disempowerment. There is first empirical work on situational disempowerment for chatbots~\citep{sharma2026whos}, but not yet for agentic workflows.
+
+\paragraph{Contributions and research questions.} We make two contributions: (i)~a taxonomy of \emph{accelerators} of gradual disempowerment --- model propensities and deployment choices that make human-preference drift more likely, even when AI is not clearly more competitive than humans; and (ii)~a first illustration of measuring two of these accelerators in the wild on GitHub pull-request review. We ask three questions about AI-agent involvement in GitHub PRs over Apr~2025--Mar~2026. \textbf{RQ 1}: How has AI-agent \emph{participation} in PRs evolved? \textbf{RQ 2} (accelerator~4): Is AI \emph{evaluation authority} ($d\alpha_t/dt$) increasing, as measured by the share of PRs only reviewed or rejected by AI and by the AI-AI comment-chain length? \textbf{RQ 3} (accelerator~5): Is there implicit AI-AI bias ($\rbt^A - \rbt^H$) in PR review?
+
+\section{A theoretical framework of accelerators}
+\label{sec:taxonomy}
+
+Even slight AI self-preference, combined with growing AI evaluation authority, may over time reduce human participation and human-preferred outcomes---without AI being more competitive than humans.
+
+\paragraph{Setup: a single human evaluator.} A human evaluator decides whether a task is accomplished better by a human or an AI agent. With utility $U^H$ over perceived qualities $q_A^H$ (quality of AI output as perceived by the human evaluator) and $q_H^H$ (quality of human output as perceived by the human evaluator), and costs $c_A, c_H$, the human's preference gap for AI is $\rbt^H := U^H(q_A^H, c_A) - U^H(q_H^H, c_H)$. A switching cost $s_t$ applies to moving work between human and AI, so AI is adopted iff $\rbt_t := \rbt^H - s_t > 0$. All primitives ($q^*_*, c_*, \rbt^H, \rbt^A, s, \alpha$) are implicitly time-indexed. We suppress the subscript $t$ on $\rbt^H, \rbt^A$ and on the $q, c$ primitives for readability.
+
+\paragraph{Dynamics under human evaluation.} Differentiating,
+\[
+\tfrac{d\rbt_t}{dt}
+= \underbrace{\tfrac{d\rbt^H}{dt}}_{\text{human pref.\ drift}}
+- \underbrace{\tfrac{ds_t}{dt}}_{\text{switching-cost change}}.
+\]
+AI's share of work can grow from preference drift (exposure, competitive pressure to deskill) or rising switching costs (network effects, illegibility of AI-native workflows). \emph{Growth need not reflect any true capability change} $(q_A - q_H)$. A more fundamental reason: costs $c_A, c_H$ (price, latency, throughput) are far more legible than perceived qualities $q^H_A, q^H_H$, which are subjective and revealed only through delayed downstream outcomes; perceived qualities also differ across evaluators ($q^A_* \ne q^H_*$). At equal true quality-per-dollar, the cost-visible margin therefore dominates adoption decisions, so AI may be chosen even when it is not more competitive in human-preferred terms.
+
+\paragraph{Dynamics under (possibly misaligned) AI evaluation.} Let fraction $\alpha_t \in [0,1]$ of evaluations be delegated to an AI whose preference gap is $\rbt^A := U^A(q_A^A, c_A) - U^A(q_H^A, c_H)$. Then $\rbt_t = (1-\alpha_t)\rbt^H + \alpha_t \rbt^A - s_t$ and
+\[
+\resizebox{\linewidth}{!}{$%
+\tfrac{d\rbt_t}{dt}
+= \underbrace{(1-\alpha_t)\tfrac{d\rbt^H}{dt}}_{\text{human pref.\ drift}}
++ \underbrace{\alpha_t\tfrac{d\rbt^A}{dt}}_{\text{AI pref.\ drift}}
++ \underbrace{\tfrac{d\alpha_t}{dt}}_{\text{eval.\ authority}}\,
+  \underbrace{(\rbt^A - \rbt^H)}_{\text{AI--AI bias}}
+- \underbrace{\tfrac{ds_t}{dt}}_{\text{switch-cost change}}.
+$}
+\]
+A perfectly aligned AI evaluator ($\rbt^A = \rbt^H$) collapses this to the human-evaluation case. The \textbf{headline mechanism} is the cross term: at equal true capability $(q_A=q_H)$, AI-AI bias ($\rbt^A > \rbt^H$) combined with $d\alpha_t/dt > 0$ is sufficient for lock-in---neither costs nor capabilities need change. Under some degree of misalignment, gradual disempowerment---the drift $d\rbt_t/dt$ of the adoption gap against the human-preferred baseline---speeds up, as illustrated. This yields our taxonomy of accelerators in Table~\ref{tab:taxonomy}.
+
+\begin{table*}[t]
+\centering\footnotesize
+\caption{Taxonomy of accelerators of gradual disempowerment, organised by the terms in the dynamics above. The ``layer'' column distinguishes accelerators rooted in deployment choices from those rooted in a model's own propensities. These accelerators can also point in the opposite direction (e.g.\ human-AI switching costs can fall as well as rise). We list the disempowerment-relevant sign.}
+\label{tab:taxonomy}
+\begin{tabular}{@{}p{0.112\linewidth}p{0.144\linewidth}p{0.086\linewidth}p{0.608\linewidth}@{}}
+\toprule
+Accelerator & Reasons & Layer & Example indications \\
+\midrule
+1.\ Human preference drift toward AI & AI exposure, competitive pressures & deployment choice & Humans adopt AI-native phrasing and norms~\citep{juzek2025delve}. Evaluators rate AI-style outputs higher over time. Cost- or speed-driven adoption leads to deskilling~\citep{peng2023copilot} \\
+\midrule
+2.\ AI-human switching costs & Observability / legibility decay, infrastructure and homogeneity & deployment choice & Unnecessarily verbose text or edits~\citep{huang2026morecode}. Long AI-AI chains in spaces accessible to humans. Infrastructure presumes AI agents~\citep{stein2026mcp}. Homogeneous outputs raise the cost of reinserting humans~\citep{doshi2024homogeneity} \\
+\midrule
+3.\ AI preference drift toward AI & Implicit or explicit training feedback loops & model propensity & Training data increasingly AI-generated~\citep{shumailov2024collapse}. Sandbagging~\citep{vanderweij2024sandbagging}. System prompts/constitutions encode commercial goals, then RLAIF on that objective~\citep{bai2022constitutional} \\
+\midrule
+4.\ Evaluation authority shifts to AI & Speed/cost substitution, human inability to verify, automation bias & deployment choice, model propensity & Human evaluation too slow or expensive to keep up~\citep{thakkar2025iclr}. Capability illegibility~\citep{bowman2022oversight}. Humans defer when they would have wanted to be asked~\citep{goddard2012automation}. Evaluation becomes a delegated task~\citep{ibrahim2025overreliance} \\
+\midrule
+5.\ AI-AI bias & Explicit gatekeeping, implicit AI-AI bias (AI prefers AI more than humans do) & deployment choice, model propensity & Stated refusal to interoperate or preference for outputs labelled as AI~\citep{laurito2025aibias}. Collusion in the wild against humans~\citep{motwani2024collusion}. Differential resource/permission provision. Preference for AI-stylistic outputs~\citep{panickssery2024evaluators}. Ease-of-interaction routing that silently favours AI counterparties \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\section{Measurement}
+\label{sec:focus}
+\label{sec:methods}
+
+\paragraph{Data and methods.} We analyse all \PLACEHOLDERNPRS{} PRs \emph{created} between 2025-04-01 and 2026-03-31 in \PLACEHOLDERNREPOS{} high-activity public GitHub repositories, fetched via GitHub GraphQL. Each actor--event pair (open, commit, review state, comment, merge, close) is classified as AI-bot, AI-assisted, or human using a 20-entry bot allowlist and commit-trailer/handle heuristics adapted from \citet{ghaleb2026fingerprinting}. Primary analyses use high-confidence AI-bot attributions only. Per-PR we derive the longest contiguous AI$\to$AI event chain and, on PRs where an AI bot issued an \emph{approving} review, compare human co-approval rates on AI-authored vs.\ human-authored PRs with a two-sided two-proportion test. Full repository selection, event classification, exclusions (maintenance bots), chain definition, and the authors-and-reviewers-not-mergers scope are in Appendices~D and~F.
+
+\paragraph{Limitations.} (i)~\emph{Selection.} Our \PLACEHOLDERNREPOS{} repositories are the top of a high-activity slice of GitHub (median stars 53{,}583, see Appendix~D). We do not claim GitHub-wide representativeness.
+(ii)~\emph{Detection false-negatives.} Heuristic detection cannot recover deliberately unattributed agent activity.
+(iii)~\emph{Sample size differs by RQ.} While RQ 1 uses all \PLACEHOLDERNPRS{} PRs, RQ 2 and RQ 3 condition on AI participation. For RQ 3 in particular, only \PLACEHOLDERWITHINN{} PRs receive an AI-bot approving review (only Cubic AI and CodeRabbit routinely issue approving reviews), and only \PLACEHOLDERWITHINAIN{} of those are AI-authored. The within-PR test therefore has limited power.
+(iv)~\emph{Correlational, not causal.} Our evidence is observational, not from a randomised trial. The RQ 3 within-PR gap could reflect code-quality differences that the AI bot detects but the human reviewer misses, rather than self-preference. Human reviewers may also already be AI-influenced (LLM-assisted reading, suggestion plugins, AI-generated comment threads), blurring the human-AI distinction the test relies on. A cleaner read on the human side decomposes the cohort into PRs with no AI-bot reviewer ($n=72{,}946$, anchoring-free) versus PRs where the AI expressed an explicit verdict before any human engagement ($n=67$ strict, anchoring-prone); the no-AI-reviewer stratum on its own is the cleanest single-difference read of human preference for AI-authored code. Within-repo twin-matching of AI- and human-authored PRs ($n\approx 4{,}000$ pairs available in our data) supports a difference-in-differences across reviewer type that purges shared code-quality confounders. We treat these as planned analyses; the present paper reports the descriptive within-PR comparison.
+(v)~\emph{Merger attribution.} We measure reviews, not merges. No merges in our universe are attributed to AI-bots, but AI can still act \emph{through} a human merger when an AI approval gates the decision.
+(vi)~\emph{Accelerators, not outcomes.} \emph{Accelerators} are observable, measurable patterns rather than disempowerment itself. They may also point in the opposite direction (e.g.\ switching costs can fall as well as rise).
+
+\section{Results}
+\label{sec:results}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.98\linewidth]{figures/figure1_ai_participation.pdf}
+    \caption{Monthly AI-agent participation in GitHub PRs across \PLACEHOLDERNREPOS{} popular repositories (Apr 2025--Mar 2026). Five series: share of PRs with any AI-agent event (RQ 1), share with an AI--AI comment chain of $\geq 5$ contiguous events (RQ 1), share with an AI-agent approval or rejection decision (RQ 2), share of merged PRs with an AI approval and no human approval (RQ 2), and share of merged PRs with both an AI and a human approval (RQ 2). Denominators vary (all PRs or merged-only). First- and last-month values are annotated on every line. Vertical dotted lines mark approximate public-availability dates of several coding and code-review agents (reader context, not a causal claim).}
+    \label{fig:headline}
+\end{figure*}
+
+\paragraph{RQ1 --- AI-agent participation is growing.} Figure~\ref{fig:headline} shows monthly AI-agent participation rising from \PLACEHOLDERAISTART{} of PRs in April~2025 to \PLACEHOLDERAIEND{} in March~2026 (\PLACEHOLDERGROWTHMULT{}$\times$). The share of PRs containing an AI-AI comment chain of length $\geq$5 grew from \PLACEHOLDERCHAIN5START{} to \PLACEHOLDERCHAIN5END{}. The p95 longest-chain length doubled from 1 to 4 events. The trend is monotonic across twelve months. A single high-activity slice of GitHub cannot establish that AI-agent activity is accelerating ecosystem-wide, but within this slice the participation accelerator is clearly measurable and moving.
+
+\paragraph{RQ2 (accelerator~4) --- AI evaluation authority is growing.} The share of PRs with an AI-agent approval/rejection decision rose from \PLACEHOLDERAIDECSTART{} to \PLACEHOLDERAIDECEND{} over the year. The stricter ``\emph{only} AI decision, no human review'' share rose from \PLACEHOLDERAIONLYDECSTART{} to \PLACEHOLDERAIONLYDECEND{}. Among \emph{merged} PRs, the share carrying an AI approval with no human approval rose from \PLACEHOLDERMERGAIONLYSTART{} to \PLACEHOLDERMERGAIONLYEND{}, and by month's end exceeds the share of merged PRs carrying both an AI and a human approval (\PLACEHOLDERMERGAIANDHEND{} in March~2026). Both signals are lower bounds, because our allowlist may miss less-common AI bots. Combined with the AI-AI comment-chain growth, this is illustrative evidence that AI evaluation authority ($d\alpha_t/dt$) is measurable and increasing.
+
+\paragraph{RQ3 (accelerator~5) --- No strong evidence for AI-AI bias.} A tighter within-PR test holds the PR (and implicitly, code quality) fixed. AI code-review tools in our sample overwhelmingly issue COMMENTED reviews rather than APPROVED ones: of \PLACEHOLDERAIREVIEWEVENTS{} AI-bot review events, only \PLACEHOLDERAIAPPROVALS{} ($\approx$\PLACEHOLDERAIAPPROVALPCT{}) are approvals, and these come almost entirely from Cubic~AI (n=85) and CodeRabbit (n=19). Copilot~PR~Reviewer, Gemini~Code~Assist, and Greptile post critiques but almost never approve. Using ``AI reviewer'' strictly to mean ``AI bot that issued an APPROVED review'', we ask whether a human reviewer and an AI approver, looking at the same PR, agree more readily when the PR is AI-authored. Of the \PLACEHOLDERWITHINN{} PRs where an AI bot approved, \PLACEHOLDERWITHINAIN{} (\PLACEHOLDERWITHINAINPCT{}) were AI-authored. A human co-approved \PLACEHOLDERWITHINAIHR{} of those, versus \PLACEHOLDERWITHINHUHR{} of the \PLACEHOLDERWITHINHUN{} human-authored AI-approved PRs. The point-estimate gap (\PLACEHOLDERWITHINGAP{}~pp) is directionally consistent with a small AI-AI bias, but the two-proportion test is not significant (\PLACEHOLDERWITHINP{}) and the 95\% CIs overlap substantially. \textbf{With a key cell of only \PLACEHOLDERWITHINAIN{} PRs, we treat this as an illustration of the test, not a finding}: we demonstrate that a within-PR AI-AI-bias measurement is feasible on public GitHub data. A larger approving-agent population is required before the direction can be read as a substantive claim.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figures/figure2_withinpr.pdf}
+    \caption{Human co-approval rate among the \PLACEHOLDERWITHINN{} PRs where an AI bot issued an APPROVED review. Red: AI-authored (n=\PLACEHOLDERWITHINAIN{}). Blue: human-authored (n=\PLACEHOLDERWITHINHUN{}). Point estimates differ by \PLACEHOLDERWITHINGAP{} percentage points (directionally consistent with AI reviewers approving AI code humans disagree with more often), but the two-proportion test is not significant (\PLACEHOLDERWITHINP{}) and the 95\% CIs overlap --- no statistically significant replication of the \citet{laurito2025aibias} single-turn AI-AI bias in this narrow slice. Error bars: Wilson 95\% CIs. Not adjusted for code quality.}
+    \label{fig:withinpr}
+\end{figure}
+
+\section{Call to action}
+\label{sec:discuss}
+
+Treat accelerator tracking as a first-order empirical task, not a by-product of capability evaluation. Platforms (GitHub, Stack Overflow, npm, package registries) should publish monthly AI-agent activity reports. Model providers should include cross-family self-preference in post-training evaluations. Sectoral regulators should require the same for regulated agent markets. AI-mediated peer review~\citep{thakkar2025iclr}, social sycophancy~\citep{cheng2025elephant}, and anthropomorphic overreliance~\citep{ibrahim2025anthropomorphic} all indicate that AI can shape human judgments without overt preference---our pipeline lets such effects, if they emerge at scale, be \emph{tracked} rather than discovered retrospectively.
+
+\paragraph{Disclosure of AI usage.} AI assistants provided assistance with literature review, data analysis, and editing. The research idea, theoretical framework, and empirical approach are fully human-authored. Overall, the paper is primarily human-authored.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\bibliography{references}
+\bibliographystyle{icml2026}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage\appendix
+\onecolumn
+\section{Example pull requests}
+\label{app:examples}
+\input{appendix/examples.tex}
+
+\section{Robustness and threats to validity}
+\label{app:threats}
+\input{appendix/threats.tex}
+
+\section{Bot and AI-tool allowlists}
+\label{app:allowlist}
+\input{appendix/allowlist.tex}
+
+\section{Repository-selection pipeline (replication)}
+\label{app:repo-selection}
+\input{appendix/repo_selection.tex}
+
+\section{Supplementary figures}
+\label{app:extra-figures}
+\input{appendix/extra_figures.tex}
+
+\section{Data and methods (full description)}
+\label{app:methods}
+\input{appendix/methods.tex}
+
+\end{document}

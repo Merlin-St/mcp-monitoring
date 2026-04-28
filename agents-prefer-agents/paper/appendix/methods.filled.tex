@@ -1,0 +1,13 @@
+% Appendix G — Data and methods, full description
+
+\paragraph{Repository universe.} Public GitHub repositories plausibly gaining $\geq$1{,}000 stars in 2025 and actively pushed within our analysis window, capped at the top 3,000{} by a recency-weighted activity score. Forks and archives are excluded. Non-goal: GitHub-wide representativeness. Full selection procedure in Appendix~D.
+
+\paragraph{PR universe.} All PRs \emph{created} between 2025-04-01 and 2026-03-31 in those repositories (225,655{} PRs), fetched via GitHub GraphQL with \texttt{orderBy:{CREATED\_AT,DESC}}. We record metadata, commits, reviews, review-thread comments, issue comments, and merge/close timeline events.
+
+\paragraph{Event-level AI classification.} Adapting \citet{ghaleb2026fingerprinting}'s heuristics to event granularity, we classify each actor--event pair as \textbf{AI-bot} (account on our 20-entry allowlist: \texttt{copilot-swe-agent[bot]}, \texttt{devin-ai-integration[bot]}, \texttt{cursor-agent}, \texttt{claude[bot]}, \texttt{coderabbitai}, \texttt{cubic-dev-ai}, \texttt{gemini-code-assist}, \texttt{copilot-pull-request-reviewer}, etc.\ -- see Appendix~C), \textbf{AI-assisted} (human account whose payload contains a \texttt{Co-Authored-By} trailer to an AI tool or a direct handle mention), or \textbf{human}. Confidence is \emph{high} when a bot account or co-author trailer matches, \emph{low} otherwise. Maintenance bots (Dependabot, Renovate, CI) are excluded. Primary analyses use high-confidence AI only.
+
+\paragraph{Chain length (RQ1).} Within a PR, order attributed events by timestamp. An \emph{AI$\to$AI chain} is a maximal contiguous subsequence of events with \texttt{actor\_type=AI-bot} at high confidence. The per-PR metric is the longest such chain. We report the monthly share of PRs with chain $\geq$1, $\geq$2, $\geq$5.
+
+\paragraph{Within-PR AI-AI bias test (RQ2).} For each PR we assign \texttt{author\_type}~$\in\{$AI,human$\}$ (AI if the PR's author login is on our allowlist OR any commit bears an AI co-author trailer). Restricting to PRs where an AI bot issued an \emph{approving} review, we test whether the human co-approval rate differs by author type with a two-sided two-proportion $z$-test (Wilson 95\% CIs per cell).
+
+\paragraph{Scope: authors and reviewers, not mergers.} We measure AI participation through authoring and reviewing, not merging. No merges in our universe are attributed to AI-bot accounts on our allowlist, so ``AI merger'' is not an informative dimension in this window. We discuss the limitations of that framing---including the fact that AI can still act \emph{through} a human merger---in §\ref{sec:focus}.

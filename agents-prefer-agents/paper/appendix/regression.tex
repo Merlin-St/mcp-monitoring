@@ -1,0 +1,11 @@
+% Appendix D — full logit regression with controls
+
+We estimate
+\[
+    \mathrm{logit}(\text{merged in 30d}) = \alpha + \beta_1 \mathbf{1}\{\text{AI author}\} + \beta_2 \mathbf{1}\{\text{AI reviewer}\} + \beta_3 \mathbf{1}\{\text{AI author}\}\cdot\mathbf{1}\{\text{AI reviewer}\} + \gamma \cdot \mathbf{x} + \eta_\text{repo} + \eta_\text{week} + \varepsilon,
+\]
+where $\mathbf{x}$ contains $\log(1+\text{additions}+\text{deletions})$, author tenure (days since first commit to the repo), and a CI-status indicator where available. Standard errors are clustered by repository.
+
+\PLACEHOLDERREGRESSIONTABLE
+
+The coefficient of interest is $\beta_3$, the interaction of AI-author and AI-reviewer. \PLACEHOLDERREGRESSIONINTERPRETATION{}

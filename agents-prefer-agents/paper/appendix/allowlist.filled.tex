@@ -1,0 +1,39 @@
+% Appendix C — AI bot allowlist and non-AI bot exclusion list
+
+Tables~\ref{tab:ai-bots} and \ref{tab:non-ai-bots} list the GitHub bot accounts we classify as AI agents versus maintenance/CI bots excluded from analysis. The allowlist is intentionally conservative. Extending it is low-risk because adding a bot only moves PRs from \texttt{human}/\texttt{non\_ai\_bot} to \texttt{AI}, making the AI$\times$AI cell larger.
+
+\begin{table}[h]
+\centering\footnotesize
+\caption{AI bot allowlist (as of April 2026).}
+\label{tab:ai-bots}
+\begin{tabular}{@{}ll@{}}
+\toprule
+Family & Account handles \\
+\midrule
+Claude Code (Anthropic) & \texttt{claude[bot]}, \texttt{anthropic-ai[bot]}, \texttt{claude-bot} \\
+GitHub Copilot & \texttt{copilot[bot]}, \texttt{github-copilot[bot]}, \texttt{copilot-swe-agent[bot]} \\
+Devin (Cognition) & \texttt{devin-ai-integration[bot]} \\
+Cursor Background Agent & \texttt{cursor-agent}, \texttt{cursor[bot]}, \texttt{cursoragent[bot]} \\
+Google Jules & \texttt{jules-ai[bot]}, \texttt{jules[bot]} \\
+Codegen.sh & \texttt{codegen-sh[bot]} \\
+OpenHands & \texttt{openhands-agent[bot]} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{table}[h]
+\centering\footnotesize
+\caption{Non-AI bot exclusions (treated neither as human nor as AI).}
+\label{tab:non-ai-bots}
+\begin{tabular}{@{}l@{}}
+\toprule
+\texttt{dependabot[bot]}, \texttt{renovate[bot]}, \texttt{snyk[bot]}, \\
+\texttt{greenkeeper[bot]}, \texttt{allcontributors[bot]}, \texttt{pre-commit-ci[bot]}, \\
+\texttt{stale[bot]}, \texttt{codecov[bot]}, \texttt{github-actions[bot]}, \\
+\texttt{mergify[bot]}, \texttt{semantic-release-bot}, \texttt{release-please[bot]}, \\
+\texttt{imgbot[bot]}, \texttt{deepsource-autofix[bot]} \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Co-author trailer patterns (case-insensitive): \texttt{Co-Authored-By: Claude}, \texttt{Co-Authored-By: Copilot}, \texttt{Co-Authored-By: ChatGPT}, \texttt{...: Devin}, \texttt{...: Aider}, \texttt{...: Cursor}, \texttt{...: Cline/Claude-dev}, \texttt{...: Roo Code}, \texttt{...: Augment}, \texttt{...: Continue}, \texttt{...: Gemini/Google AI}, \texttt{...: Windsurf}, \texttt{...: OpenHands}, \texttt{...: Jules}.
