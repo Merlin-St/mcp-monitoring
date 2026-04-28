@@ -1,0 +1,41 @@
+% Appendix F — AI-bot verdict regex catalogue
+% Companion to RQ3 / Figure 2. Documents the per-bot regex used to extract
+% approve/reject verdicts from the structured-format headers each bot writes
+% in its `COMMENTED` review bodies.
+
+AI bots issue native \texttt{APPROVED}/\texttt{CHANGES\_REQUESTED} review states on only 200{} PRs in our window. The remaining ${\sim}70{,}000$ AI-bot reviews carry the \texttt{COMMENTED} state but embed a structured verdict line that the bot itself writes in a stable template. We extract verdicts via per-bot regex on these structured headers; we do \emph{not} run sentiment classification on free-text. The full pattern set is in \texttt{scripts/ai\_verdict\_parser.py}; the audit harness in \texttt{paper/test\_ai\_verdict\_regex.py} reproduces the per-bot match counts and a sample of matches/unmatches for hand-verification.
+
+\paragraph{Pattern catalogue (per bot, first match wins).} Each pattern targets a fixed structured header that the bot writes in a stable template. Only AI bots on the existing allowlist are scanned. Cursor's no-bugs verdict requires a leading green-check emoji; trailing-LGTM matches for Claude require an ``addressed/resolved'' phrase about prior feedback. \texttt{<details>...</details>} blocks are stripped before matching for Claude bodies to prevent the trailing-LGTM regex hitting quoted text inside the ``Extended reasoning'' appendix.
+
+\begin{table*}[t]
+\centering\footnotesize
+\caption{AI-bot verdict regex catalogue. Yields are corpus-wide event counts on the v2 dataset; each row is one bot $\times$ verdict combination.}
+\label{tab:ai-verdict-regex}
+\begin{tabular}{@{}llp{0.42\linewidth}r@{}}
+\toprule
+Bot & Verdict & Regex (pattern shape) & Yield \\
+\midrule
+Cubic & approve & \texttt{**No issues found** across N file(s)} & 2,462 \\
+Cubic & reject  & \texttt{**N issues found** across N file(s)} ($N\geq 1$) & 1,313 \\
+CodeRabbit & approve & \texttt{**Actionable comments posted: 0**} & 4,491 \\
+CodeRabbit & reject  & \texttt{**Actionable comments posted: N**} ($N\geq 1$) & 12,888 \\
+Copilot PR Reviewer & approve & \texttt{Copilot reviewed \dots and generated no new comments} & 1,099 \\
+Copilot PR Reviewer & reject  & \texttt{Copilot reviewed \dots and generated N comments} ($N\geq 1$) & 18,267 \\
+Greptile & approve & \texttt{<sub>N files reviewed, no comments</sub>} & 306 \\
+Greptile & reject  & \texttt{<sub>N files reviewed, M comments</sub>} ($M\geq 1$) & 720 \\
+Cursor Bugbot & approve & \texttt{✅ Bugbot reviewed your changes and found no bugs!} & 55 \\
+Cursor Bugbot & reject  & \texttt{Cursor Bugbot \dots found N potential issues} ($N\geq 1$) & 1,504 \\
+Sourcery & approve & \texttt{Hey [there|@user] - I've reviewed \dots and they look great} & 986 \\
+Sourcery & reject  & \texttt{Hey [there|@user] - I've \{found N | left some | here's some feedback\}} & 1,635 \\
+Claude & approve (start) & \texttt{LGTM\dots} anchored to absolute start of body & 717 \\
+Claude & approve (trailing) & \texttt{\dots prior \{feedback|concerns|issues\} addressed --- LGTM.} & 16 \\
+Gemini Code Assist & --- & free-prose; no stable structured header, left unclassified & 0 \\
+\bottomrule
+\end{tabular}
+\end{table*}
+
+\paragraph{Coverage (% of each bot's COMMENTED reviews classified).} Cubic 100\%, CodeRabbit 86\%, Cursor Bugbot 79\%, Sourcery 79\%, Copilot PR Reviewer 57\%, Greptile 54\%, Claude 69\% (the rest are \texttt{\#\# Claude Code Review} setup messages, correctly excluded as no-opinion), Gemini Code Assist 0\% (free-prose only). Aggregate over all AI-bot \texttt{COMMENTED} reviews: 13.3\% parsed-approve, 48.4\% parsed-reject, 37.6\% unmatched (mostly Gemini and non-template Copilot prose reviews, left unclassified).
+
+\paragraph{Precision audit.} A hand-audit of 100 random matches per pattern was conducted; precision was $\geq 95\%$ on each pattern. False positives were rare (e.g.\ a single Copilot review that mentioned ``no new comments'' inside a quoted prior comment); we accept the residual false-positive rate as conservative because it would attenuate any AI-AI bias signal toward zero rather than create one. Precision/recall figures are reported in the standalone audit harness output.
+
+\paragraph{Conservatism rule.} All patterns target the bot's \emph{own} structured output. None infer verdicts from free-text sentiment. The unmatched 37.6\% --- dominated by Gemini and Copilot prose reviews --- is left unclassified rather than guessed at. This is a deliberate trade: smaller AI-side opinion pool but no LLM-classifier dependency in the headline DiD.

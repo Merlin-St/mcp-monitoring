@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.4.21)  28 APR 2026 10:25
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.4.21)  28 APR 2026 22:36
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -600,15 +600,17 @@ File: omlptm.fd
 LaTeX Font Info:    Font shape `OML/ptm/m/n' in size <9> not available
 (Font)              Font shape `OML/cmm/m/it' tried instead on input line 51.
 LaTeX Font Info:    Trying to load font information for U+fontawesomefree2 on i
-nput line 67.
+nput line 55.
 
 (/usr/share/texlive/texmf-dist/tex/latex/fontawesome5/ufontawesomefree2.fd)
-[1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texlive/texmf-
-dist/fonts/enc/dvips/base/8r.enc}
+Underfull \vbox (badness 8170) has occurred while \output is active []
+
+ [1{/var/lib/texmf/fonts/map/pdftex/updmap/pdftex.map}{/usr/share/texlive/texmf
+-dist/fonts/enc/dvips/base/8r.enc}
 
 
 
-]
+{/usr/share/texlive/texmf-dist/fonts/enc/dvips/fontawesome5/fa5free2.enc}]
 Underfull \hbox (badness 10000) in paragraph at lines 105--105
 []\OT1/ptm/m/n/9 (-11) deployment
  []
@@ -693,8 +695,35 @@ Overfull \hbox (11.60736pt too wide) in paragraph at lines 101--116
  [][] 
  []
 
-[2{/usr/share/texlive/texmf-dist/fonts/enc/dvips/fontawesome5/fa5free2.enc}]
-<figures/figure1_ai_participation.pdf, id=130, 469.755pt x 303.534pt>
+LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 1
+22.
+(/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1pcr.fd
+File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
+)
+Package microtype Info: Loading generic protrusion settings for font family
+(microtype)             `pcr' (encoding: OT1).
+(microtype)             For optimal results, create family-specific settings.
+(microtype)             See the microtype manual for details.
+
+Underfull \hbox (badness 2772) in paragraph at lines 122--123
+\OT1/ptm/m/it/10 (+20) ated \OT1/ptm/m/n/10 (+20) be-tween 2025-04-01 and 2026-
+03-31 in 2,929
+ []
+
+
+Underfull \hbox (badness 2221) in paragraph at lines 124--130
+ \OT1/ptm/b/n/10 (+20) Lim-i-ta-tions. \OT1/ptm/m/n/10 (+20) (i) \OT1/ptm/m/it/
+10 (+20) Se-lec-tion. \OT1/ptm/m/n/10 (+20) Our 2,929 repos-i-to-ries
+ []
+
+
+Underfull \hbox (badness 6842) in paragraph at lines 124--130
+\OT1/pcr/m/n/10 criticality[]score \OT1/ptm/m/n/10 (+20) ([][]OpenSSF Se-cur-in
+g Crit-i-cal
+ []
+
+[2]
+<figures/figure1_ai_participation.pdf, id=139, 469.755pt x 303.534pt>
 File: figures/figure1_ai_participation.pdf Graphic file (type pdf)
 <use figures/figure1_ai_participation.pdf>
 Package pdftex.def Info: figures/figure1_ai_participation.pdf  used on input li
@@ -704,27 +733,19 @@ ne 136.
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
  [3]
-<figures/figure2_withinpr.pdf, id=151, 238.49101pt x 224.037pt>
+<figures/figure2_withinpr.pdf, id=164, 505.89pt x 245.718pt>
 File: figures/figure2_withinpr.pdf Graphic file (type pdf)
 <use figures/figure2_withinpr.pdf>
 Package pdftex.def Info: figures/figure2_withinpr.pdf  used on input line 149.
-(pdftex.def)             Requested size: 234.8775pt x 220.64525pt.
+(pdftex.def)             Requested size: 234.8775pt x 114.0852pt.
 
 Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
 (./paper.filled.bbl
-LaTeX Font Info:    Trying to load font information for OT1+pcr on input line 1
-2.
- (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ot1pcr.fd
-File: ot1pcr.fd 2001/06/04 font definitions for OT1/pcr.
-)
-Package microtype Info: Loading generic protrusion settings for font family
-(microtype)             `pcr' (encoding: OT1).
-(microtype)             For optimal results, create family-specific settings.
-(microtype)             See the microtype manual for details.
+Underfull \vbox (badness 1019) has occurred while \output is active []
 
-[4 <./figures/figure1_ai_participation.pdf>]
+ [4 <./figures/figure1_ai_participation.pdf>]
 Underfull \hbox (badness 1210) in paragraph at lines 86--89
 []\OT1/ptm/m/n/10 (+20) Ghaleb, T. A.  Fin-ger-print-ing AI cod-ing agents on
  []
@@ -734,12 +755,12 @@ Underfull \hbox (badness 1281) in paragraph at lines 124--130
 \OT1/ptm/m/n/10 (+20) ``delve'' so much? Ex-plor-ing the sources of lex-i-
  []
 
-
+[5 <./figures/figure2_withinpr.pdf>]
 Underfull \hbox (badness 1077) in paragraph at lines 142--146
 \OT1/ptm/m/n/10 (+20) D., and Du-ve-naud, D.  Grad-ual dis-em-pow-er-ment:
  []
 
-[5 <./figures/figure2_withinpr.pdf>]
+
 Underfull \hbox (badness 2261) in paragraph at lines 194--201
 []\OT1/ptm/m/n/10 (+20) OpenSSF Se-cur-ing Crit-i-cal Projects Work-ing Group.
  []
@@ -828,7 +849,7 @@ ce.json \OT1/ptm/m/n/10 (+20) --- snap-shot
  []
 
 ) (./appendix/extra_figures.filled.tex
-<figures/figure2_chain_length.pdf, id=351, 238.49101pt x 195.129pt>
+<figures/figure2_chain_length.pdf, id=383, 238.49101pt x 195.129pt>
 File: figures/figure2_chain_length.pdf Graphic file (type pdf)
 <use figures/figure2_chain_length.pdf>
 Package pdftex.def Info: figures/figure2_chain_length.pdf  used on input line 7
@@ -860,7 +881,93 @@ Underfull \hbox (badness 10000) in paragraph at lines 7--8
 ubic-dev-ai\OT1/ptm/m/n/10 (+20) ,
  []
 
-[12]) [13 <./figures/figure2_chain_length.pdf>] (./paper.filled.aux)
+[12]) (./appendix/ai_verdict_regex.filled.tex [13 <./figures/figure2_chain_leng
+th.pdf>]
+Underfull \hbox (badness 10000) in paragraph at lines 19--19
+[]\OT1/pcr/m/n/9 **N issues found** across N file(s)
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 21--21
+[]\OT1/pcr/m/n/9 **Actionable comments posted: N**
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 22--22
+[]\OT1/pcr/m/n/9 Copilot reviewed ...and generated no
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 23--23
+[]\OT1/pcr/m/n/9 Copilot reviewed ...and generated N
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 24--24
+[]\OT1/pcr/m/n/9 <sub>N files reviewed, no
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 25--25
+[]\OT1/pcr/m/n/9 <sub>N files reviewed, M
+ []
+
+
+! LaTeX Error: Unicode character ✅ (U+2705)
+               not set up for use with LaTeX.
+
+See the LaTeX manual or LaTeX Companion for explanation.
+Type  H <return>  for immediate help.
+ ...                                              
+                                                  
+l.26 ... reviewed your changes and found no bugs!}
+                                                   & 55 \\
+You may provide a definition with
+\DeclareUnicodeCharacter 
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 26--26
+[] \OT1/pcr/m/n/9 Bugbot reviewed your changes and
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 27--27
+[]\OT1/pcr/m/n/9 Cursor Bugbot ...found N potential
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 28--28
+[]\OT1/pcr/m/n/9 Hey [there|@user] - I've reviewed
+ []
+
+LaTeX Font Info:    Font shape `OMS/pcr/m/n' in size <9> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 29.
+
+Underfull \hbox (badness 10000) in paragraph at lines 29--29
+[]\OT1/pcr/m/n/9 Hey [there|@user] - I've \OMS/cmsy/m/n/9 f\OT1/pcr/m/n/9 found
+ N |
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 31--31
+[]\OT1/pcr/m/n/9 ...prior \OMS/cmsy/m/n/9 f\OT1/pcr/m/n/9 feedback|concerns|iss
+ues\OMS/cmsy/m/n/9 g
+ []
+
+)
+Runaway argument?
+{Coverage (\par \paragraph {Precision audit.} A hand-audit of 100 ran\ETC.
+! File ended while scanning use of \@xdblarg.
+<inserted text> 
+                \par 
+l.194 \input{appendix/ai_verdict_regex.filled.tex}
+                                                  
+I suspect you have forgotten a `}', causing me
+to read past where you wanted me to stop.
+I'll try to recover; but if the error is serious,
+you'd better type `E' or `X' now and fix your file.
+
+(./appendix/anchoring_robustness.filled.tex [14]) [15] (./paper.filled.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
@@ -869,39 +976,45 @@ L3 programming layer <2024-01-22>
 
 LaTeX Warning: There were undefined references.
 
+
+LaTeX Warning: Label(s) may have changed. Rerun to get cross-references right.
+
 Package rerunfilecheck Info: File `paper.filled.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 20323 strings out of 476182
- 354292 string characters out of 5795595
+ 20368 strings out of 476182
+ 355268 string characters out of 5795595
  1960975 words of memory out of 5000000
- 41640 multiletter control sequences out of 15000+600000
- 597911 words of font info for 307 fonts, out of 8000000 for 9000
+ 41660 multiletter control sequences out of 15000+600000
+ 599132 words of font info for 319 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 75i,14n,79p,1644b,629s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,14n,79p,1840b,629s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/fontawesome5/FontAwesome5Fr
 ee-Solid.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex
 10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cmextra/cmex9
 .pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb><
 /usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi5.pfb></usr/sh
-are/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/tex
-live/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></usr/share/texlive/te
-xmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dis
-t/fonts/type1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/
-type1/public/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/pu
-blic/amsfonts/cm/cmr9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/ams
-fonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/
-cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy
-9.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/courier/ucrb8a.pfb></usr/s
-hare/texlive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/
-texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/font
-s/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/tim
-es/utmri8a.pfb>
-Output written on paper.filled.pdf (13 pages, 346351 bytes).
+are/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/tex
+live/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/te
+xmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></usr/share/texlive/texmf-dis
+t/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fonts
+/type1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1/p
+ublic/amsfonts/cm/cmr7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/am
+sfonts/cm/cmr9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/c
+m/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy
+6.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy7.pfb><
+/usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy9.pfb></usr/sh
+are/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm10.pfb></usr/sha
+re/texlive/texmf-dist/fonts/type1/urw/courier/ucrb8a.pfb></usr/share/texlive/te
+xmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/share/texlive/texmf-dist/font
+s/type1/urw/times/utmb8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/tim
+es/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmri8a.pfb>
+
+Output written on paper.filled.pdf (15 pages, 393130 bytes).
 PDF statistics:
- 482 PDF objects out of 1000 (max. 8388607)
- 397 compressed objects within 4 object streams
- 72 named destinations out of 1000 (max. 500000)
+ 544 PDF objects out of 1000 (max. 8388607)
+ 443 compressed objects within 5 object streams
+ 77 named destinations out of 1000 (max. 500000)
  53264 words of extra memory for PDF output out of 61914 (max. 10000000)
 
