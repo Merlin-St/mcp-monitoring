@@ -1,8 +1,11 @@
-# Override parent .gitignore (which ignores `lib/` and `logs/`) so this
-# subproject's source dirs are tracked, while still ignoring its bulk data.
+# Override parent .gitignore (which ignores `lib/`, `logs/`, and `*.log`) so
+# this subproject's source dirs and LaTeX build logs are tracked, while still
+# ignoring its bulk PR data.
 
 !lib/
 !logs/
+!paper/*.log
+!paper/appendix/*.log
 
 # Byte-compiled
 __pycache__/
@@ -12,27 +15,8 @@ __pycache__/
 data/prs/
 data/old_phase1/
 
-# OSSF criticality snapshot (114MB, regenerable via 01a_download_criticality.py)
-data/criticality/
-
 # Empty/transient sample dir
 data/sampled/
 
 # Per-script logs (verbose, regenerable)
 logs/
-
-# LaTeX compile artefacts
-paper/build/
-paper/*.aux
-paper/*.log
-paper/*.out
-paper/*.blg
-paper/*.fdb_latexmk
-paper/*.fls
-paper/appendix/*.aux
-paper/appendix/*.log
-paper/appendix/*.out
-
-# Generated archives
-paper/overleaf.zip
-paper/icml_aiwild_template.zip
