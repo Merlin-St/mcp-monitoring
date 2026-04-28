@@ -1,5 +1,6 @@
 *.json filter=lfs diff=lfs merge=lfs -text
 *.csv filter=lfs diff=lfs merge=lfs -text
+*.parquet filter=lfs diff=lfs merge=lfs -text
 data/external-usage/usage_bigquery_webresults_pypi.json.gz filter=lfs diff=lfs merge=lfs -text
 data/external-usage/*.json.gz filter=lfs diff=lfs merge=lfs -text
 data/internal-task-clusters/task_clusters_names.csv !filter !diff !merge text
