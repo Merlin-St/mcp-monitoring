@@ -101,8 +101,29 @@ BOT_PATTERNS: dict[str, list[tuple[str, re.Pattern, str]]] = {
             'not an opinion).'),
     ],
     "claude": [
+        # Approve at start of body: e.g., "LGTM — straightforward fix..."
         ("approve", re.compile(r"\ALGTM\b", re.IGNORECASE),
             'Claude "LGTM..." anchored to start of body. Excludes setup messages ("## Claude Code Review").'),
+        # Approve at end of body: e.g., "All previous feedback addressed — LGTM."
+        # Requires an "addressed/resolved" phrase about prior feedback, then LGTM at end of line.
+        # In a hand-audit of 16 corpus matches this had 100% precision; a sanity check on
+        # other bots' bodies produced zero matches, so the FP risk is negligible.
+        # NOTE: classify() strips <details>...</details> blocks before applying this
+        # pattern, since Claude's "Extended reasoning" appendix can contain "LGTM" in
+        # quoted text.
+        ("approve", re.compile(
+            r"(?im)\b(all\s+(prior|previous|previously)|prior|previous)\s+"
+            r"(feedback|concerns?|issues?|review\s+concerns?|flagged\s+issues?"
+            r"|identified\s+bugs?|review\s+rounds?)\b"
+            r"[^\n]*?[—\-,.]?\s*LGTM\.?\s*$"),
+            'Claude "...prior feedback addressed - LGTM." trailing-verdict approval. '
+            'Recovers ~16 reviews where LGTM comes at the end after a continuation phrase. '
+            'Strip <details> blocks before matching.'),
+        # No reject pattern: Claude's critique reviews are free-prose without a stable
+        # structured header. ~150 unclassified bodies split roughly 60% "human-defer"
+        # ("looks correct BUT human should sign off") / 25% trailing-LGTM-not-matched-here
+        # / 15% clear reject. Auto-classifying any of these would either pollute the
+        # reject cell with deference signals or require an LLM classifier.
     ],
     # gemini-code-assist intentionally omitted: format is free-prose, no stable
     # structured verdict line. ~7.5k events unclassified; would require an
@@ -110,12 +131,26 @@ BOT_PATTERNS: dict[str, list[tuple[str, re.Pattern, str]]] = {
 }
 
 
+_DETAILS_RE = re.compile(r"<details>.*?</details>", re.DOTALL)
+
+
+def _preprocess_for_match(login: str, body: str) -> str:
+    """Strip <details>...</details> blocks for Claude bodies so the trailing-LGTM
+    pattern matches the visible verdict line, not text inside the
+    'Extended reasoning' appendix.
+    """
+    if "claude" in login:
+        return _DETAILS_RE.sub("", body)
+    return body
+
+
 def classify(login: str, body: str) -> str | None:
     """Return 'approve', 'reject', or None."""
+    body_match = _preprocess_for_match(login, body)
     for sub, patlist in BOT_PATTERNS.items():
         if sub in login:
             for kind, cre, _desc in patlist:
-                if cre.search(body):
+                if cre.search(body_match):
                     return kind
     return None
 
