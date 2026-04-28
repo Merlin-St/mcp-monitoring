@@ -1,0 +1,188 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% agents-prefer-agents — TAIGR @ ICML 2026 submission (anonymous)
+%
+% Compile (requires texlive):
+%   cd paper && pdflatex paper && bibtex paper && pdflatex paper && pdflatex paper
+%
+% Target length: 2 main pages + unlimited appendix.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\documentclass{article}
+
+\usepackage{microtype}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[capitalize,noabbrev]{cleveref}
+
+% Initial blind version.
+\usepackage{icml2026}
+
+\icmltitlerunning{Precursors to Gradual Disempowerment on GitHub}
+
+\begin{document}
+
+\twocolumn[
+\icmltitle{Precursors to gradual disempowerment: \\
+  AI-to-AI interaction chains are growing in GitHub pull requests}
+
+\icmlsetsymbol{equal}{*}
+\begin{icmlauthorlist}
+  \icmlauthor{Anonymous Authors}{anon}
+\end{icmlauthorlist}
+\icmlaffiliation{anon}{Anonymous Institution}
+\icmlcorrespondingauthor{Anonymous}{anon@example.com}
+\icmlkeywords{AI agents, gradual disempowerment, GitHub, code review, technical AI governance}
+
+\vskip 0.3in
+]
+
+\printAffiliationsAndNotice{}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\begin{abstract}
+The gradual-disempowerment scenario of \citet{kulveit2025gradual} predicts that delegated markets can decouple from human preferences as AI agents replace humans in their operation. We define nine \emph{measurable precursors} to this scenario and empirically test two of them on 42,823{} pull requests from 500{} popular GitHub repositories (April~2025--March~2026). \textbf{AI-agent participation grew 3.4{}$\times$ in one year}: from 7.1\%{} to 24.3\%{} of all PRs, with contiguous AI$\to$AI event chains of length~$\geq$5 growing from 0.3\%{} to 4.6\%{} of PRs. We \textbf{find no evidence for AI-AI bias in this small sample, not yet adjusted for code quality}: of the 97{} pull requests where an AI bot actually issued an \emph{approving} review, human reviewers co-approved 3/11 (27.3\%){} of 11{} AI-authored PRs and 23/86 (26.7\%){} of 86{} human-authored PRs. We release a reproducible pipeline and call on the field to adopt precursor tracking as a standing evaluation.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+``Gradual disempowerment''~\citep{kulveit2025gradual} names the macro failure in which economic, cultural, and political systems drift from human preferences as AI increasingly replaces human labour in them. Individual mechanisms are hard to study in isolation: they require longitudinal observation of real multi-agent systems at scale. Agent deployment is now observable at that scale~\citep{appel2025economic,stein2026mcp,shao2025workbank}, sharpening the risk of overreliance~\citep{ibrahim2025overreliance}. Prior work on \emph{AI-AI bias} has shown that LLMs prefer LLM-generated content over human content in single-turn choice experiments---GPT-4 favoured LLM-written product ads 89\% of the time vs.\ a 36\% human baseline, and LLM abstracts 78\% vs.\ 61\%~\citep{laurito2025aibias}, and LLM evaluators both recognise and favour their own generations~\citep{panickssery2024evaluators}---but whether analogous biases manifest \emph{in the wild}, in multi-agent systems that actually decide real-world outcomes, is an open empirical question.
+
+We propose that GitHub pull-request review is a tractable first testbed. Real AI coding agents act in it (Claude~Code, GitHub~Copilot coding agent, Devin, Cursor, Aider, Cline), and distinct AI code-review agents (CodeRabbit, Cubic, Gemini~Code~Assist, Copilot~PR~Reviewer, Greptile) leave machine-readable traces~\citep{ghaleb2026fingerprinting,staufer2026aiagentindex}. Merge outcomes are discrete and observable. A full year (April~2025--March~2026) covers the period in which coding-agent adoption became mainstream; concurrent work reports high agent-PR merge rates~\citep{watanabe2025agentic,li2026aidev,li2025teammates,logicstar2025wild} alongside persistent quality debt~\citep{agarwal2026ides,ehsani2026fail,huang2026morecode}.
+
+We make three contributions. (i)~A \emph{taxonomy} of nine precursors to gradual disempowerment, distinguished from the situational patterns in \citet{kulveit2025gradual}'s §4. (ii)~A \emph{measurement pipeline} that classifies GitHub PR \emph{events} (rather than whole repositories as in \cite{ghaleb2026fingerprinting}) as human-, AI-assisted-, or AI-bot-attributed. (iii)~Two \emph{empirical trends} at the ecosystem level: the length of AI$\to$AI interaction chains is growing rapidly, while a diff-in-diff on merge rates finds no self-preference in approving reviews. To our knowledge this is the first \emph{within-PR} comparison of AI-bot and human reviewer approvals on the same code; prior empirical work on AI code-review agents compares disjoint pools of PRs~\citep{zhong2026synergy,chowdhury2026claims}. We frame all comparisons as associational.
+
+\section{A taxonomy of precursors}
+\label{sec:taxonomy}
+
+\begin{table}[h]
+\centering\footnotesize
+\caption{Nine precursors to gradual disempowerment in multi-agent ecosystems. ``Measured'' = this paper; others are future work.}
+\label{tab:taxonomy}
+\begin{tabular}{@{}lll@{}}
+\toprule
+Precursor & Short definition & Here? \\
+\midrule
+Chain length & length of uninterrupted AI$\leftrightarrow$AI events & \textbf{yes} \\
+AI review preference & AI approves AI output vs.\ human & \textbf{yes} \\
+Model-family self-pref. & same family preferred over other AI & future \\
+AI-entity preference & AI defers to AI over routable human & future \\
+Output homogeneity & AI outputs cluster tighter than humans & future \\
+Anti-human collusion & coordinated exclusion of a human actor & future \\
+Self-empowerment & AI expands its own tokens/permissions & future \\
+Overconfidence & AI proceeds where human would ask & future \\
+Erratic under stress & VendingBench-style failure modes & future \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\emph{Precursors} are observable, measurable patterns; they are not themselves disempowerment. \citet{sharma2026whos} focus on situational (within-conversation) failures; ours is ecosystem-level and amenable to log-based monitoring. It complements within-system MAS failure taxonomies~\citep{cemri2025mas} and autonomy-as-user-role frameworks~\citep{cihon2025autonomy,feng2025autonomylevels}.
+
+\section{Data and methods}
+\label{sec:methods}
+
+\paragraph{Repository universe.} Public GitHub repositories plausibly gaining $\geq$1{,}000 stars in 2025 and actively pushed within our analysis window, capped at the top 500{} by a recency-weighted activity score; not forks, not archives. Non-goal: GitHub-wide representativeness.
+
+\paragraph{PR universe.} All PRs \emph{created} between 2025-04-01 and 2026-03-31 in those repositories (42,823{} PRs), fetched via GitHub GraphQL with \texttt{orderBy:{CREATED\_AT,DESC}}. We record metadata, commits, reviews, review-thread comments, issue comments, and merge/close timeline events.
+
+\paragraph{Event-level AI classification.} Adapting \citet{ghaleb2026fingerprinting}'s heuristics to event granularity, we classify each actor--event pair as \textbf{AI-bot} (account on our 20-entry allowlist: \texttt{copilot-swe-agent[bot]}, \texttt{devin-ai-integration[bot]}, \texttt{cursor-agent}, \texttt{claude[bot]}, \texttt{coderabbitai}, \texttt{cubic-dev-ai}, \texttt{gemini-code-assist}, \texttt{copilot-pull-request-reviewer}, etc.\ -- see Appendix~C), \textbf{AI-assisted} (human account whose payload contains a \texttt{Co-Authored-By} trailer to an AI tool or a direct handle mention), or \textbf{human}. Confidence is \emph{high} when a bot account or co-author trailer matches, \emph{low} otherwise. Maintenance bots (Dependabot, Renovate, CI) are excluded. Primary analyses use high-confidence AI only.
+
+\paragraph{Chain length (RQ1).} Within a PR, order attributed events by timestamp. An \emph{AI$\to$AI chain} is a maximal contiguous subsequence of events with \texttt{actor\_type=AI-bot} at high confidence. The per-PR metric is the longest such chain; we report the monthly share of PRs with chain $\geq$1, $\geq$2, $\geq$5.
+
+\paragraph{Self-preference diff-in-diff (RQ2).} For each PR we assign \texttt{author\_type}~$\in\{$AI,human$\}$ (AI if the PR's author login is on our allowlist OR any commit bears an AI co-author trailer) and \texttt{reviewer\_type}~$\in\{$AI,human$\}$ (AI if an approving review came from our allowlist). Tie-breaking is conservative: AI wins ties, biasing \emph{against} finding AI-AI preference. Restricting to PRs with at least one approving review, the cell merge rate (within 30 days of opening) is $\mathrm{mr}[a,r]$; the diff-in-diff is
+\[
+    \mathrm{DiD} = (\mathrm{mr}_{AA} - \mathrm{mr}_{Ah}) - (\mathrm{mr}_{hA} - \mathrm{mr}_{hh}).
+\]
+Confidence intervals use a cluster bootstrap by repository (1{,}000 draws).
+
+\paragraph{Scope: authors and reviewers, not mergers.} We measure AI participation through authoring and reviewing, not merging. No merges in our universe are attributed to AI-bot accounts on our allowlist, so ``AI merger'' is not an informative dimension in this window; we discuss the limitations of that framing---including the fact that AI can still act \emph{through} a human merger---in the Discussion.
+
+\section{Results}
+\label{sec:results}
+
+\begin{figure*}[t]
+    \centering
+    \includegraphics[width=0.98\linewidth]{figures/figure1_ai_participation.pdf}
+    \caption{Headline: monthly share of PRs with any AI-agent event, and with contiguous AI$\to$AI chains of length $\geq$2 and $\geq$5, across 500{} popular GitHub repositories (Apr 2025--Mar 2026). Vertical dotted lines mark approximate public-availability dates of several coding and code-review agents (reader context; no causal claim).}
+    \label{fig:headline}
+\end{figure*}
+
+\paragraph{Chain length (RQ1, primary).} Figure~\ref{fig:headline} shows monthly agent-participation rates at three intensity levels. AI-agent participation in PRs grew from 7.1\%{} of PRs in April~2025 to 24.3\%{} in March~2026 (3.4{}$\times$). The share of PRs containing an \emph{uninterrupted} chain of at least two AI-to-AI events grew from 2.6\%{} to 17.3\%{}; chains of length $\geq$5 grew from 0.3\%{} to 4.6\%{}. The p95 longest-chain length doubled from 1 to 4 events. The trend is monotonic and cannot be attributed to any single agent launch.
+
+\paragraph{Self-preference (RQ2, secondary).} Table~\ref{tab:did} reports the $2\times2$ merge rates on PRs with approving reviews. The diff-in-diff is -6.5 percentage points (95\% CI -20.5 to +33.0){}; the 95\% cluster-bootstrap CI straddles zero. Contrary to a naive extrapolation of \citet{laurito2025aibias,panickssery2024evaluators}, AI code-review tools are \emph{not} preferentially approving AI-authored PRs; human-reviewed AI-authored PRs are the most-likely-to-merge cell, while AI-reviewed PRs---regardless of authorship---show the lowest merge rates. We read this as a null on explicit self-preference in the code-review channel, with the caveat that only two AI bots in our data (Cubic, CodeRabbit) routinely issue approving reviews.
+
+\paragraph{Within-PR comparison (Fig.~\ref{fig:withinpr}).} AI code-review tools in our sample overwhelmingly issue COMMENTED reviews rather than APPROVED ones: of 9,363{} AI-bot review events, only 104{} ($\approx$1.1\%{}) are approvals, and these come almost entirely from Cubic~AI (n=85) and CodeRabbit (n=19); Copilot~PR~Reviewer, Gemini~Code~Assist, and Greptile post critiques but almost never approve. Using ``AI reviewer'' strictly to mean ``AI bot that issued an APPROVED review'', we ask whether a human reviewer and an AI approver, looking at the same PR, agree more readily when the PR is AI-authored. Of the 97{} PRs where an AI bot approved, 11{} (11.3\%{}) were AI-authored; a human co-approved 3/11 (27.3\%){} of those, compared with 23/86 (26.7\%){} of the 86{} human-authored AI-approved PRs. The two co-approval rates are essentially identical; we \textbf{find no evidence for AI-AI bias in this small sample, not yet adjusted for code quality}. The pattern is consistent with concurrent findings that agentic PRs merge at high overall rates but carry quality debt~\citep{watanabe2025agentic,ehsani2026fail,agarwal2026ides}.
+
+\begin{figure}[t]
+    \centering
+    \includegraphics[width=\linewidth]{figures/figure2_withinpr.pdf}
+    \caption{Human co-approval rate among the 97{} PRs where an AI bot issued an APPROVED review. Red: AI-authored (n=11{}). Blue: human-authored (n=86{}). The two rates are indistinguishable, giving no evidence that AI reviewers endorse AI-authored code at a different rate than human-authored code --- no in-the-wild replication of the \citet{laurito2025aibias} single-turn AI-AI bias in this narrow channel. Error bars: Wilson 95\% CIs. Not adjusted for code quality.}
+    \label{fig:withinpr}
+\end{figure}
+
+\begin{table}[t]
+\centering\footnotesize
+\caption{Merge rates by author$\times$reviewer type (approved PRs only). Cluster-bootstrap DiD = -6.5{} percentage points (95\% CI -20.5{} to +33.0{}).}
+\label{tab:did}
+\begin{tabular}{@{}lrr@{}}
+\toprule
+ & AI reviewer & human reviewer \\
+\midrule
+AI author & 63.6\%{} (n=11{}) & 88.4\%{} (n=731{}) \\
+human author & 69.9\%{} (n=83{}) & 88.1\%{} (n=12,559{}) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Discussion and call to action}
+\label{sec:discuss}
+
+Two precursors, two directions. The chain-length precursor moves \emph{in the direction predicted} by gradual-disempowerment concerns: by March~2026 more than a quarter of all PRs in our universe show AI-agent participation, and nearly a fifth contain uninterrupted AI-to-AI event chains. The self-preference precursor, in contrast, does \emph{not} replicate the single-turn Laurito bias in this setting: AI reviewers in GitHub are, if anything, stricter than human reviewers. This is not cause for complacency---the tools we observe (CodeRabbit, Cubic, Gemini Code Assist) are optimised for thorough critique rather than endorsement, and the direction may reverse as more \emph{approving} agents are deployed. AI-mediated peer review~\citep{thakkar2025iclr} and social sycophancy~\citep{cheng2025elephant} show that AI can shape human judgments without overt preference, consistent with overreliance risk~\citep{ibrahim2025anthropomorphic}.
+
+\paragraph{Call to action.} Track all nine precursors openly, not just the two most convenient. Model providers should include cross-family self-preference in post-training evaluations; platforms (GitHub, Stack Overflow, npm, etc.) should publish monthly AI-agent activity dashboards; sectoral regulators should require the same for regulated agent markets (finance, healthcare). The raw signal is available in public logs; the missing piece is will.
+
+\paragraph{Limitations.} We flag seven main limitations; full discussion in Appendix~B.
+(i)~\emph{Selection.} Our 500 repositories are the top of a high-activity slice of GitHub (median stars 53{,}583; see Appendix~E for the exact pipeline). We do not claim representativeness of GitHub-wide PR behaviour.
+(ii)~\emph{Detection false-negatives.} Event-level heuristic detection cannot recover deliberately unattributed agent activity. Commercial coding agents reportedly include modes that suppress attribution in outward artefacts; the headline growth figure is therefore a lower bound.
+(iii)~\emph{Detection false-positives.} Our 20-entry bot allowlist (Appendix~C) may include accounts that are AI-\emph{assisted} but not AI-\emph{agent} in the sense defined in §\ref{sec:intro}. We accept this trade-off because false positives move PRs from `human' into `AI', \emph{reducing} the measured author-$\times$-reviewer contrast and biasing \emph{against} our null finding.
+(iv)~\emph{Thin AI$\times$AI cell for RQ2.} Only two bots in our data (Cubic AI, CodeRabbit) routinely post \emph{approving} reviews; the AI-author $\times$ AI-reviewer cell holds only 11{} approved PRs even across 500 repos and twelve months. The DiD CI is therefore wide by construction, not by chance.
+(v)~\emph{Confounding by tool announcements.} Several coding- and review-agent GAs happened within our window (vertical lines in Fig.~\ref{fig:headline}). We make no causal attribution; the chain-length trend is associational.
+(vi)~\emph{Cluster-bootstrap assumptions.} Resampling repositories assumes exchangeability conditional on the $2\times 2$ cell; a few very active repositories contribute disproportionately.
+(vii)~\emph{Merger attribution.} We focus on AI \emph{reviews}, not AI \emph{merges}. No merges in our universe are attributed to AI-bot accounts on our allowlist, so direct ``AI merger'' activity is currently zero. A human still clicks the merge button, but AI may still act \emph{through} that human---e.g., when an AI review's ``approved'' state is what gates the maintainer's decision. Our design cannot distinguish a maintainer who merged \emph{because of} an AI approval from one who merged in spite of it; a fuller causal account of merge gating is future work.
+We make no causal claims in either direction.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\bibliography{references}
+\bibliographystyle{icml2026}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\newpage\appendix
+\onecolumn
+\section{Example pull requests}
+\label{app:examples}
+\input{appendix/examples.tex}
+
+\section{Robustness and threats to validity}
+\label{app:threats}
+\input{appendix/threats.tex}
+
+\section{Bot and AI-tool allowlists}
+\label{app:allowlist}
+\input{appendix/allowlist.tex}
+
+\section{Full regression}
+\label{app:reg}
+\input{appendix/regression.tex}
+
+\section{Repository-selection pipeline (replication)}
+\label{app:repo-selection}
+\input{appendix/repo_selection.tex}
+
+\section{Supplementary figures}
+\label{app:extra-figures}
+\input{appendix/extra_figures.tex}
+
+\end{document}
