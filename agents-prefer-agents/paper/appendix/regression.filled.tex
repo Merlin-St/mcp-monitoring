@@ -10,12 +10,12 @@ where $\mathbf{x}$ contains $\log(1+\text{additions}+\text{deletions})$, author 
 \toprule
 Term & Coef. & SE & $z$ & $p$ \\
 \midrule
-AI author & -0.113** & 0.037 & -3.07 & 2.1e-03 \\
-AI reviewer & -1.016*** & 0.021 & -48.40 & 0.0e+00 \\
-AI author $\times$ reviewer (interaction) & 0.021 & 0.060 & 0.34 & 7.3e-01 \\
-$\log(1+\mathrm{adds}+\mathrm{dels})$ & -0.103*** & 0.003 & -29.67 & 1.9e-193 \\
+AI author & -0.006 & 0.014 & -0.47 & 6.4e-01 \\
+AI reviewer & -1.214*** & 0.007 & -170.32 & 0.0e+00 \\
+AI author $\times$ reviewer (interaction) & 0.046 & 0.025 & 1.83 & 6.8e-02 \\
+$\log(1+\mathrm{adds}+\mathrm{dels})$ & -0.148*** & 0.001 & -154.34 & 0.0e+00 \\
 \bottomrule
-\multicolumn{5}{@{}l}{\footnotesize $n=101,873$, repos=2697, pseudo-$R^2=0.037$. Cluster-robust SEs by repo. $*p<0.05,\ **p<0.01,\ ***p<0.001$.}\\
+\multicolumn{5}{@{}l}{\footnotesize $n=1,755,533$, repos=8853, pseudo-$R^2=0.037$. Cluster-robust SEs by repo. $*p<0.05,\ **p<0.01,\ ***p<0.001$.}\\
 \end{tabular}
 
-The coefficient of interest is $\beta_3$, the interaction of AI-author and AI-reviewer. It is not statistically distinguishable from zero ($\hat\beta_3=+0.021$, $p=0.73$). We read this as a null on self-preference \emph{conditional on} an approving review, even though the main-effect \texttt{AI\_reviewer} coefficient is strongly negative.{}
+The coefficient of interest is $\beta_3$, the interaction of AI-author and AI-reviewer. It is not statistically distinguishable from zero ($\hat\beta_3=+0.046$, $p=0.07$). We read this as a null on self-preference \emph{conditional on} an approving review, even though the main-effect \texttt{AI\_reviewer} coefficient is strongly negative.{}

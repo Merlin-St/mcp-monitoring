@@ -1,15 +1,15 @@
-% Appendix F — AI-bot verdict regex catalogue
+% Appendix F — AI bot verdict regex catalogue
 % Companion to RQ3 / Figure 2. Documents the per-bot regex used to extract
 % approve/reject verdicts from the structured-format headers each bot writes
 % in its `COMMENTED` review bodies.
 
-AI bots issue native \texttt{APPROVED}/\texttt{CHANGES\_REQUESTED} review states on only \PLACEHOLDERAIOPRSNATIVE{} PRs in our window. The remaining ${\sim}70{,}000$ AI-bot reviews carry the \texttt{COMMENTED} state but embed a structured verdict line that the bot itself writes in a stable template. We extract verdicts via per-bot regex on these structured headers; we do \emph{not} run sentiment classification on free-text. The full pattern set is in \texttt{scripts/ai\_verdict\_parser.py}; the audit harness in \texttt{paper/test\_ai\_verdict\_regex.py} reproduces the per-bot match counts and a sample of matches/unmatches for hand-verification.
+AI bots issue native \texttt{APPROVED}/\texttt{CHANGES\_REQUESTED} review states on only \PLACEHOLDERAIOPRSNATIVE{} PRs in our window. The remaining ${\sim}70{,}000$ AI bot reviews carry the \texttt{COMMENTED} state but embed a structured verdict line that the bot itself writes in a stable template. We extract verdicts via per-bot regex on these structured headers; we do \emph{not} run sentiment classification on free-text. The full pattern set is in \texttt{scripts/ai\_verdict\_parser.py}; the audit harness in \texttt{paper/test\_ai\_verdict\_regex.py} reproduces the per-bot match counts and a sample of matches/unmatches for hand-verification.
 
 \paragraph{Pattern catalogue (per bot, first match wins).} Each pattern targets a fixed structured header that the bot writes in a stable template. Only AI bots on the existing allowlist are scanned. Cursor's no-bugs verdict requires a leading green-check emoji; trailing-LGTM matches for Claude require an ``addressed/resolved'' phrase about prior feedback. \texttt{<details>...</details>} blocks are stripped before matching for Claude bodies to prevent the trailing-LGTM regex hitting quoted text inside the ``Extended reasoning'' appendix.
 
 \begin{table*}[t]
 \centering\footnotesize
-\caption{AI-bot verdict regex catalogue. Yields are corpus-wide event counts on the v2 dataset; each row is one bot $\times$ verdict combination.}
+\caption{AI bot verdict regex catalogue. Yields are corpus-wide event counts on the v2 dataset; each row is one bot $\times$ verdict combination.}
 \label{tab:ai-verdict-regex}
 \begin{tabular}{@{}llp{0.42\linewidth}r@{}}
 \toprule
@@ -34,7 +34,7 @@ Gemini Code Assist & --- & free-prose; no stable structured header, left unclass
 \end{tabular}
 \end{table*}
 
-\paragraph{Coverage (% of each bot's COMMENTED reviews classified).} Cubic 100\%, CodeRabbit 86\%, Cursor Bugbot 79\%, Sourcery 79\%, Copilot PR Reviewer 57\%, Greptile 54\%, Claude 69\% (the rest are \texttt{\#\# Claude Code Review} setup messages, correctly excluded as no-opinion), Gemini Code Assist 0\% (free-prose only). Aggregate over all AI-bot \texttt{COMMENTED} reviews: 13.3\% parsed-approve, 48.4\% parsed-reject, 37.6\% unmatched (mostly Gemini and non-template Copilot prose reviews, left unclassified).
+\paragraph{Coverage (% of each bot's COMMENTED reviews classified).} Cubic 100\%, CodeRabbit 86\%, Cursor Bugbot 79\%, Sourcery 79\%, Copilot PR Reviewer 57\%, Greptile 54\%, Claude 69\% (the rest are \texttt{\#\# Claude Code Review} setup messages, correctly excluded as no-opinion), Gemini Code Assist 0\% (free-prose only). Aggregate over all AI bot \texttt{COMMENTED} reviews: 13.3\% parsed-approve, 48.4\% parsed-reject, 37.6\% unmatched (mostly Gemini and non-template Copilot prose reviews, left unclassified).
 
 \paragraph{Precision audit.} A hand-audit of 100 random matches per pattern was conducted; precision was $\geq 95\%$ on each pattern. False positives were rare (e.g.\ a single Copilot review that mentioned ``no new comments'' inside a quoted prior comment); we accept the residual false-positive rate as conservative because it would attenuate any AI-AI bias signal toward zero rather than create one. Precision/recall figures are reported in the standalone audit harness output.
 

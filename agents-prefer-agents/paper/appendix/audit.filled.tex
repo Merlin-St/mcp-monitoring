@@ -10,7 +10,7 @@ The merger-detection audit (§\ref{sec:methods}) cross-checks GitHub's \texttt{m
 \toprule
 Signal & Share (\%) \\
 \midrule
-\texttt{merged\_by.type == Bot} & 6.1\% \\
+\texttt{merged\_by.type == Bot} & 5.8\% \\
 \phantom{xx}\ldots on our AI allowlist & 0.0\% \\
 \phantom{xx}\ldots unclassified bot & -- \\
 \texttt{merged\_by} agrees with timeline actor & 100.0\% \\
@@ -18,4 +18,4 @@ Signal & Share (\%) \\
 \end{tabular}
 \end{table}
 
-\textbf{Decision.} We retain \texttt{merged\_by} as a field for the merger-type column but do not use it as a dimension in the headline DiD, because fewer than 1\% of PRs in our data are merged by an AI-bot on our allowlist.{}
+\textbf{Decision.} We retain \texttt{merged\_by} as a field for the merger-type column but do not use it as a dimension in the headline DiD, because fewer than 1\% of PRs in our data are merged by an AI bot on our allowlist.{}

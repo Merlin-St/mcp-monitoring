@@ -9,9 +9,9 @@ eleven PRs. Eight are concentrated in a single repository
 (\texttt{thedotmack/claude-mem}), which is why the cell's merge rate is
 sensitive to one maintainer's behaviour. Of the eleven authors, only three
 use a bot login (\texttt{devin-ai-integration}, \texttt{copilot-swe-agent}).
-The remaining eight are human logins flagged as AI-author at high confidence
-via \texttt{Co-authored-by} commit trailers (see
-Appendix~\ref{app:allowlist}).
+The remaining eight are human logins flagged as AI-author
+via \texttt{Co-authored-by} commit trailers naming an AI tool (see
+\Cref{app:allowlist}).
 
 \begin{itemize}\itemsep0pt\parskip0pt
   \item \href{https://github.com/firecrawl/firecrawl/pull/2515}{firecrawl/firecrawl\#2515} --- merged
@@ -30,10 +30,10 @@ Appendix~\ref{app:allowlist}).
 \subsection{Longest AI$\to$AI interaction chains}
 \label{app:examples-chains}
 
-The PRs below tie for the longest contiguous run of high-confidence AI-bot
+The PRs below tie for the longest contiguous run of AI bot
 events observed in our window (chain length 13, out of a 42{,}823-PR
 sample). \emph{Chain length} counts the longest consecutive sequence of
-events by any high-confidence AI actor within one PR's time-ordered event
+events attributed to an AI actor within one PR's time-ordered event
 stream (commits, reviews, comments, timeline events). See
 Section~\ref{sec:methods}. Note that a chain can span multiple AI
 actors (e.g., a Copilot commit followed by a CodeRabbit review), and can
@@ -50,7 +50,7 @@ also consist of a single bot repeating the same action type.
 \end{itemize}
 
 \paragraph{High AI-event density (even when chain $\le 11$).}
-These PRs contain an unusually high absolute count of AI-bot events, often
+These PRs contain an unusually high absolute count of AI bot events, often
 interrupted by a single human event that caps the contiguous chain:
 \begin{itemize}\itemsep0pt\parskip0pt
   \item \href{https://github.com/vitejs/vite/pull/20468}{vitejs/vite\#20468} --- 26 AI events, chain $=11$, merged
