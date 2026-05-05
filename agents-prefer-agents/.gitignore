@@ -14,9 +14,12 @@ __pycache__/
 # Bulk PR + repo data (available in S3 — see README "Bulk PR data" section)
 # s3://aisi-data-eu-west-2-prod/users/merlin-stein/agents-prefer-agents/data/
 data/prs/
+data/prs_excluded/
+data/prs_resaturated_backup/
 data/old_phase1/
 data/criticality/
 data/repos.top10k.json
+data/repos.6000.json.bak
 
 # Empty/transient sample dir
 data/sampled/
