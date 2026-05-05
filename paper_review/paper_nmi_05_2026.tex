@@ -174,13 +174,13 @@
 %%
 \title[How are AI agents used? Evidence from 177,000 MCP ...]{How are AI agents used? Evidence from 177,000 MCP tools}
 
-\author{Merlin Stein}
+\author{Anonymous Author(s)}
 \affiliation{%
-  \institution{UK AI Security Institute, University of Oxford}
-  \country{UK}}
-\email{merlin.stein@dsit.gov.uk}
+  \institution{Affiliation withheld for anonymous review}
+  \country{}}
+\email{}
 
-\renewcommand{\shortauthors}{Author}
+\renewcommand{\shortauthors}{Anonymous}
 
 %%
 %% Abstract
@@ -259,7 +259,7 @@ We report several descriptive results:
  \textbf{A significant and growing share of AI agent tools are created with the help of AI agents}. We detect AI assistance in 28\% of MCP servers (36\% of tools). The share of new MCP servers created with AI assistance rose from 6\% (01/2025) to 62\% (02/2026), dominated by Claude Code (69\% of AI-coauthored servers) (Figure~\ref{fig:ai-created-results}).
 \end{enumerate}
 
-Section~\ref{sec:background} establishes why monitoring agent tools can anticipate risks of AI agents. Section~\ref{sec:data} describes our panel data on tools and their use. Section~\ref{sec:results} presents findings, Section~\ref{sec:discussion} discusses risk implications, and Section~\ref{sec:conclusions} concludes. Methods (Section~\ref{sec:methodology}) at the end of the paper detail classification and validation.
+Section~\ref{sec:background} establishes why monitoring agent tools can anticipate risks of AI agents. Section~\ref{sec:results} presents findings, Section~\ref{sec:discussion} discusses risk implications, and Section~\ref{sec:conclusions} concludes. Methods (Section~\ref{sec:methodology}) at the end of the paper describe the data and detail classification and validation.
 
 \section{Background}
 \label{sec:background}
@@ -339,53 +339,6 @@ In five research questions (RQs), we investigate each of the attributes to empir
 Recent studies have tracked agent usage by domain, and partly by geography, but breakdowns of agent usage by generality and direct impact are scarce. Table~\ref{tab:action_space_comparison} (Appendix~\ref{app:action-space-tables}) summarises the state of knowledge based on usage data studies of chatbots with perception tools and platforms offering agents with action tools. This includes analyses of Microsoft's Copilot chatbot equipped with search tools \citep{yang2025adoption}, Anthropic and OpenAI's chatbots with search and data analysis tools \citep{handa2025which} \citep{chatterji2025people}, OpenRouter's LLM inference and tool calling platform \citep{aubakirova2025state}, Anthropic's first-party LLM API marketed for agentic workflows \citep{handa2025which} and Perplexity's Comet agent with action tools for example to book flights \citep{yang2025adoption}.
 
 There is little direct evidence on the prominence of agents with action, reasoning or perception tooling: \citep{aubakirova2025state} report tool-calling rose to roughly 15\% of OpenRouter tokens by late 2025, while \citep{kasirzadeh2025characterizing,staufer20262025aiagentindex,casper2025agent} characterise agentic systems but not the direct-impact split of usage. Evidence on which environments agents access -- and whether those environments are constrained or unconstrained -- is similarly thin: \citep{yang2025adoption} list the most-visited domains of the Comet web agent without indicating the scope of permissible actions, and \citep{pan2025measuring} report 68\% of practitioners deploy agents restrictively, with no more than ten steps before human intervention. Existing studies thus capture usage patterns and development practices but not the evolving ecosystem of tools available to AI agents. These gaps motivate our approach to study the publicly available agent tool ecosystem via MCP servers; tool monitoring complements platform studies and practitioner interviews with visibility into the action space of AI agents and where agent usage may be concentrating. Appendix~\ref{app:action-space-tables} provides the cross-study comparison table and additional context on domain, practitioner, and worldwide-usage findings.
-
-\section{Data}
-\label{sec:data}
-
-\subsection{Identification of MCP servers via Online Repositories}
-\label{sec:online-repos}
-\begin{figure}[htbp]
-\centering
-\includegraphics[width=\textwidth]{output/images/media/dataoverviewchartnew.png}
-\caption{\textbf{Monitoring 177k MCP tools}. \textbf{Panel~A} illustrates how we curate and classify 177k MCP tools from GitHub and Smithery using a human-validated LLM judge, along O*NET \citep{onetonlineONETOnLine} and US CAISI \citep{CAISI2025} taxonomies into generality (general-/narrow-purpose), direct impact (action/perception/reasoning), and task domain (Sections~\ref{sec:data} and~\ref{sec:methodology}). $\kappa$ is Fleiss' kappa across 14 expert validators ($n=100$ each; Appendix~\ref{app:validation}).
-\textbf{Panel~B} shows cumulative MCP tools over time: all tools (black) by creation date and AI-coauthored tools (blue), by the month of first labelled AI evidence in an MCP repository (Method \& results in Sections ~\ref{sec:ai-detection-method} \& ~\ref{sec:ai-created-results}).
-\textbf{Panel~C} shows cumulative tools by O*NET task domain. `Other' (dashed) aggregates remaining domains (Method \& results in Sections ~\ref{sec:topic-modelling} \& ~\ref{sec:res-task-domains}).
-\textbf{Panel~D} shows monthly aggregate downloads of MCP server tools, proxying usage. Dots are monthly totals for all servers (black) and AI-coauthored servers (blue); downloads are attributed to the AI-coauthored series only from the date of first detected AI evidence. Lines show exponential fits $y = A\,e^{kt}$ (Nov~2024--Feb~2026). Legend reports the doubling time $\ln 2 / k$. Shading shows 95\% bootstrap confidence intervals.
-\textbf{Panel~E} shows the share of monthly downloads by the type of tools, specifically the set of actions a tool allows an agent to take ('action space'). Dots are monthly shares. ``Action tools'' (light pink) denotes all tools classified as \emph{action}. Three subcategories cross-classify action tools by generality (``general-purpose,'' red) and O*NET occupational-impact stakes (``medium-stakes'' 50--75, dark red; ``high-stakes'' 75--100, black, on the 0--100 O*NET impact-of-decisions scale). Subcategory shares do not sum to the action total as dimensions are independent. Lines show WLS fits: asymptotic convergence for action and medium-stakes (95\% error-propagation CI), and poly-convergence for general-purpose and high-stakes (95\% bootstrap CI). Method \& results in Sections ~\ref{sec:direct-impact}, ~\ref{sec:generality}, ~\ref{sec:res-directimpact} \&  ~\ref{sec:res-generality}.}
-\label{fig:methodology}
-\end{figure}
-
-Developers have been publishing MCP servers since November 2024 (when the protocol was released). Most are published on GitHub or on bespoke MCP registries. We identify MCP servers through 3 main data sources:
-
-\begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\item
- \textbf{GitHub.} We searched for repositories with at least 1 star whose name, description, readme or tags include the string `mcp server' (n = 16,956 MCP servers in the final dataset).
-\item
- \textbf{Smithery MCP registry} (n = 2,437 in the final dataset). We chose Smithery due to its permissive registry API and size, compared to other registries. For example, the official MCP registry is an order of magnitude smaller compared to Smithery, as of 02/2026 \citep{modelcontextprotocolOfficialRegistry}.
-\item
- \textbf{MCP server lists on GitHub.} To ensure coverage of prominent MCP servers and identify `official' servers, we include servers on two popular MCP server lists: The official MCP repository \citep{githubGitHubModelcontextprotocolservers} (n = 841 in the final dataset), the most starred list `awesome MCP servers' \citep{archiveGitHubPunkpeyeawesomemcpservers} (n = 781 in the final dataset). All 1,366 of these also appear in source 1 or source 2.
-\end{enumerate}
-
-After deduplication and filtering out servers with 0 stars, we used an LLM (Claude Sonnet 4.5) to verify each entry was a valid MCP server rather than documentation or unrelated code. In addition, we only include servers with clearly defined tools in README files or descriptions. This process reduced the initial dataset from 73,338 potential servers to 19,388 verified servers. On these verified servers, we identified a total of 177,436 distinct agent tools as our final dataset.
-
-We track the evolution of the MCP ecosystem by noting each server's creation date. Rather than analyzing only the latest February 2026 snapshot, we capture historical server versions: for servers created before October 2025, we collect READMEs and tools on 1 October 2025; for newer servers, we collect them on 1 February 2026. This approach, however, means that we do not track the changes of individual MCP servers.
-
-\subsection{Identification of Official servers}
-\label{sec:official-servers}
-To verify that our analysis translates to AI agents integrated in production systems, we identified a subset of \textquotesingle Official\textquotesingle{} servers published by legally registered commercial entities, as marked on the MCP server lists, like PayPal, Stripe, Google or GitHub, providing 8,469 of 177k total tools. However, official servers are relatively more popular -- they comprise 45M of 78M total MCP server downloads on PyPI and NPM.
-
-Official servers are built by the owners of the environments, like providers of APIs, for servers with narrow-purpose tools to access constrained environments. There are also official servers with general-purpose tools to access unconstrained environments, like Microsoft's official playwright server for web browsing, where the environments are not owned by the server creators. The official servers subset is representative of approximately 20\% of the UK AI sector, measured by AI-specific revenue produced by the entities creating these servers (The entities produce \textgreater3B GBP UK AI-specific revenue as of 2024, 10\% of entities with revenue data, \citep{undefinedArtificialIntelligence}). We confirm our findings with the subset of official servers (see Data availability).
-
-\subsection{Usage of MCP servers}
-\label{sec:usage-mcp}
-
-To estimate how popular MCP servers are, we tracked monthly download statistics (2024-11 to 2026-02) for the subset of MCP servers hosted on the Node Package Manager (NPM) and Python Package Index (PyPI) registries, which are the default for making local MCPs available. Figure \ref{fig:methodology} shows the data. We collect all usage data on March 1, 2026. We match 3,854 of 19,388 MCP servers (with 42,498 of 177,436 MCP tools) to download data. Package downloads serve as a proxy for ecosystem interest rather than a direct measure of runtime execution. This metric counts installation events (e.g., initialising an agent environment) rather than individual tool calls. Furthermore, it excludes private mirrors, cached installations, and usage via direct source code \citep{npmjsBlogArchive}. Consequently, our analysis focuses on relative usage trends and distribution shifts rather than absolute execution counts. A typical included use is the addition of an MCP server to a coding agent on a new virtual machine, e.g.: \texttt{claude mcp add playwright npx \textquotesingle\@playwright/mcp\@latest\textquotesingle{}} (NPM) or \texttt{uv tool install arxiv-mcp-server} (PyPI)
-
-A typical non-included use is the addition of pre-mirrored MCP servers to chatbots, like adding a pre-verified connector to claude.ai. In addition, there might be remotely hosted servers or routine local workflows which do not require downloads, which are not included here. Thus, usage distributions should not be overinterpreted; the data might mostly indicate which tools are piloted most by developers rather than tools deployed in routine production workflows.
-
-To assess ecological validity of download counts, we use Smithery use count data available as aggregates for uses of MCP servers made available via the Smithery CLI or OAuth (including remotely hosted servers), across 01-08/2025, see Appendix~\ref{app:topdown-domains}. We find that our sample is slightly biased towards developers (e.g. IT tools make up 90\% of PyPI/NPM MCP downloads vs. 80\% of MCP uses on Smithery).
 
 \section{Results}
 \label{sec:results}
@@ -553,6 +506,51 @@ MCP repositories are just one way in which developers distribute tools for AI ag
 \section{Methods}
 \label{sec:methodology}
 
+\subsection{Identification of MCP servers via Online Repositories}
+\label{sec:online-repos}
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{output/images/media/dataoverviewchartnew.png}
+\caption{\textbf{Monitoring 177k MCP tools}. \textbf{Panel~A} illustrates how we curate and classify 177k MCP tools from GitHub and Smithery using a human-validated LLM judge, along O*NET \citep{onetonlineONETOnLine} and US CAISI \citep{CAISI2025} taxonomies into generality (general-/narrow-purpose), direct impact (action/perception/reasoning), and task domain (Methods, Section~\ref{sec:methodology}). $\kappa$ is Fleiss' kappa across 14 expert validators ($n=100$ each; Appendix~\ref{app:validation}).
+\textbf{Panel~B} shows cumulative MCP tools over time: all tools (black) by creation date and AI-coauthored tools (blue), by the month of first labelled AI evidence in an MCP repository (Method \& results in Sections ~\ref{sec:ai-detection-method} \& ~\ref{sec:ai-created-results}).
+\textbf{Panel~C} shows cumulative tools by O*NET task domain. `Other' (dashed) aggregates remaining domains (Method \& results in Sections ~\ref{sec:topic-modelling} \& ~\ref{sec:res-task-domains}).
+\textbf{Panel~D} shows monthly aggregate downloads of MCP server tools, proxying usage. Dots are monthly totals for all servers (black) and AI-coauthored servers (blue); downloads are attributed to the AI-coauthored series only from the date of first detected AI evidence. Lines show exponential fits $y = A\,e^{kt}$ (Nov~2024--Feb~2026). Legend reports the doubling time $\ln 2 / k$. Shading shows 95\% bootstrap confidence intervals.
+\textbf{Panel~E} shows the share of monthly downloads by the type of tools, specifically the set of actions a tool allows an agent to take ('action space'). Dots are monthly shares. ``Action tools'' (light pink) denotes all tools classified as \emph{action}. Three subcategories cross-classify action tools by generality (``general-purpose,'' red) and O*NET occupational-impact stakes (``medium-stakes'' 50--75, dark red; ``high-stakes'' 75--100, black, on the 0--100 O*NET impact-of-decisions scale). Subcategory shares do not sum to the action total as dimensions are independent. Lines show WLS fits: asymptotic convergence for action and medium-stakes (95\% error-propagation CI), and poly-convergence for general-purpose and high-stakes (95\% bootstrap CI). Method \& results in Sections ~\ref{sec:direct-impact}, ~\ref{sec:generality}, ~\ref{sec:res-directimpact} \&  ~\ref{sec:res-generality}.}
+\label{fig:methodology}
+\end{figure}
+
+Developers have been publishing MCP servers since November 2024 (when the protocol was released). Most are published on GitHub or on bespoke MCP registries. We identify MCP servers through 3 main data sources:
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\item
+ \textbf{GitHub.} We searched for repositories with at least 1 star whose name, description, readme or tags include the string `mcp server' (n = 16,956 MCP servers in the final dataset).
+\item
+ \textbf{Smithery MCP registry} (n = 2,437 in the final dataset). We chose Smithery due to its permissive registry API and size, compared to other registries. For example, the official MCP registry is an order of magnitude smaller compared to Smithery, as of 02/2026 \citep{modelcontextprotocolOfficialRegistry}.
+\item
+ \textbf{MCP server lists on GitHub.} To ensure coverage of prominent MCP servers and identify `official' servers, we include servers on two popular MCP server lists: The official MCP repository \citep{githubGitHubModelcontextprotocolservers} (n = 841 in the final dataset), the most starred list `awesome MCP servers' \citep{archiveGitHubPunkpeyeawesomemcpservers} (n = 781 in the final dataset). All 1,366 of these also appear in source 1 or source 2.
+\end{enumerate}
+
+After deduplication and filtering out servers with 0 stars, we used an LLM (Claude Sonnet 4.5) to verify each entry was a valid MCP server rather than documentation or unrelated code. In addition, we only include servers with clearly defined tools in README files or descriptions. This process reduced the initial dataset from 73,338 potential servers to 19,388 verified servers. On these verified servers, we identified a total of 177,436 distinct agent tools as our final dataset.
+
+We track the evolution of the MCP ecosystem by noting each server's creation date. Rather than analyzing only the latest February 2026 snapshot, we capture historical server versions: for servers created before October 2025, we collect READMEs and tools on 1 October 2025; for newer servers, we collect them on 1 February 2026. This approach, however, means that we do not track the changes of individual MCP servers.
+
+\subsection{Identification of Official servers}
+\label{sec:official-servers}
+To verify that our analysis translates to AI agents integrated in production systems, we identified a subset of \textquotesingle Official\textquotesingle{} servers published by legally registered commercial entities, as marked on the MCP server lists, like PayPal, Stripe, Google or GitHub, providing 8,469 of 177k total tools. However, official servers are relatively more popular -- they comprise 45M of 78M total MCP server downloads on PyPI and NPM.
+
+Official servers are built by the owners of the environments, like providers of APIs, for servers with narrow-purpose tools to access constrained environments. There are also official servers with general-purpose tools to access unconstrained environments, like Microsoft's official playwright server for web browsing, where the environments are not owned by the server creators. The official servers subset is representative of approximately 20\% of the UK AI sector, measured by AI-specific revenue produced by the entities creating these servers (The entities produce \textgreater3B GBP UK AI-specific revenue as of 2024, 10\% of entities with revenue data, \citep{undefinedArtificialIntelligence}). We confirm our findings with the subset of official servers (see Data availability).
+
+\subsection{Usage of MCP servers}
+\label{sec:usage-mcp}
+
+To estimate how popular MCP servers are, we tracked monthly download statistics (2024-11 to 2026-02) for the subset of MCP servers hosted on the Node Package Manager (NPM) and Python Package Index (PyPI) registries, which are the default for making local MCPs available. Figure \ref{fig:methodology} shows the data. We collect all usage data on March 1, 2026. We match 3,854 of 19,388 MCP servers (with 42,498 of 177,436 MCP tools) to download data. Package downloads serve as a proxy for ecosystem interest rather than a direct measure of runtime execution. This metric counts installation events (e.g., initialising an agent environment) rather than individual tool calls. Furthermore, it excludes private mirrors, cached installations, and usage via direct source code \citep{npmjsBlogArchive}. Consequently, our analysis focuses on relative usage trends and distribution shifts rather than absolute execution counts. A typical included use is the addition of an MCP server to a coding agent on a new virtual machine, e.g.: \texttt{claude mcp add playwright npx \textquotesingle\@playwright/mcp\@latest\textquotesingle{}} (NPM) or \texttt{uv tool install arxiv-mcp-server} (PyPI)
+
+A typical non-included use is the addition of pre-mirrored MCP servers to chatbots, like adding a pre-verified connector to claude.ai. In addition, there might be remotely hosted servers or routine local workflows which do not require downloads, which are not included here. Thus, usage distributions should not be overinterpreted; the data might mostly indicate which tools are piloted most by developers rather than tools deployed in routine production workflows.
+
+To assess ecological validity of download counts, we use Smithery use count data available as aggregates for uses of MCP servers made available via the Smithery CLI or OAuth (including remotely hosted servers), across 01-08/2025, see Appendix~\ref{app:topdown-domains}. We find that our sample is slightly biased towards developers (e.g. IT tools make up 90\% of PyPI/NPM MCP downloads vs. 80\% of MCP uses on Smithery).
+
+
 \subsection{Assessing width of use across tasks}
 \label{sec:topic-modelling}
 
@@ -638,17 +636,17 @@ We identify AI-created MCP servers through four categories of evidence in each r
 
 \section*{Acknowledgements}
 
-For careful review, thank you to Alan Chan, Stephen Casper, Elliot Jones, Toby Pilditch, Shahar Avin, Catherine Fist, Kimberly Mai, Roxana Radu, Georgiana Gilgallon, Karina Kumar, Mahmoud Ghanem and Neil Perry. Thank you to Chris Summerfield and Andrew Strait who provided extensive advice throughout the project. Thanks for initial brainstorming go to J.J. Allaire, Kola Ayonrinde, Sid Black and the Societal Resilience team at UK AISI. This agent tool monitor has been part of an ongoing collaboration between the UK AI Security Institute and the Bank of England \citep{bankofenglandBankEnglands}. Thank you to the joint work with Elliot Jones and Andrew Walters (Bank of England), as well as Rosco Hunter and Ture Hinrichsen (AISI) to make the monitor useful for governmental foresight on agent deployments.
+Acknowledgements (including reviewer names, institutional collaborators, and funding) are omitted for anonymous review and will be added in the camera-ready version.
 
 Beyond the mentioned use of LLMs for classification, the authors used Claude Code and Claude Opus 4.5 and 4.6 for coding, minor edits, and formatting.
 
 \section*{Data availability}
 
-The dataset of 177,436 MCP tools curated for this study is available from the corresponding author (merlin.stein@bsg.ox.ac.uk) on reasonable request. Public release of the full dataset is constrained by upstream licensing: PyPI metadata is distributed under the CC-BY 4.0 licence, but a substantial fraction of the GitHub repositories from which we collect README content do not carry an explicit licence, which prevents us from redistributing their text. Aggregate statistics, per-server classifications, and the list of public repository URLs covered by the analysis can be shared with referees during review and with other researchers post-publication on request.
+The dataset of 177,436 MCP tools curated for this study is available from the corresponding author on reasonable request. Public release of the full dataset is constrained by upstream licensing: PyPI metadata is distributed under the CC-BY 4.0 licence, but a substantial fraction of the GitHub repositories from which we collect README content do not carry an explicit licence, which prevents us from redistributing their text. Aggregate statistics, per-server classifications, and the list of public repository URLs covered by the analysis can be shared with referees during review and with other researchers post-publication on request.
 
 \section*{Code availability}
 
-Code for replicating the analyses reported in this paper is available from the corresponding author on reasonable request. We do not yet make the codebase public to allow further consolidation; classification prompts (Appendix~\ref{app:prompts}) and methodology (Methods, Section~\ref{sec:methodology}) are documented in sufficient detail to permit independent re-implementation.
+Code for replicating the analyses will be made available. Classification prompts are in Appendix~\ref{app:prompts}.
 
 %%
 %% Bibliography - placed before Appendix per ACM style
