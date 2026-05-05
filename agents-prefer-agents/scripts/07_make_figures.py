@@ -364,26 +364,47 @@ def _render_two_panel_didfig(
         treat = p["treat_cell"]
 
         # Points with CI lines for the two reviewer rates (black only).
-        for xi, cell in [(x_ref, ref), (x_treat, treat)]:
+        # When the two dots are close in y, stagger the inline rate label
+        # vertically (one above, one below) to avoid overlap.
+        rates_close = abs(ref["rate"] - treat["rate"]) < 0.06
+        for xi, cell, is_lower in [
+            (x_ref, ref, ref["rate"] <= treat["rate"]),
+            (x_treat, treat, treat["rate"] < ref["rate"]),
+        ]:
             ax.errorbar(
                 xi, cell["rate"],
                 yerr=[[cell["rate"] - cell["ci_lo"]], [cell["ci_hi"] - cell["rate"]]],
                 fmt="o", color="black", ecolor="black", capsize=4, lw=1.0, ms=6,
                 mec="black", mfc="black", mew=0.6,
             )
-            ax.text(xi + 0.12, cell["rate"], f"{100*cell['rate']:.1f}%",
-                    ha="left", va="center", fontsize=8, color="black",
+            if rates_close:
+                # Stagger above/below the dot.
+                dy = -0.025 if is_lower else 0.025
+                va = "top" if is_lower else "bottom"
+            else:
+                dy, va = 0, "center"
+            ax.text(xi + 0.12, cell["rate"] + dy, f"{100*cell['rate']:.1f}%",
+                    ha="left", va=va, fontsize=8, color="black",
                     fontweight="bold")
 
         # Small bar showing the bracket (gap): white fill, black edge.
         gap_top = max(ref["rate"], treat["rate"])
         gap_bot = min(ref["rate"], treat["rate"])
-        ax.bar(x_gap, gap_top - gap_bot, bottom=gap_bot, width=bar_w,
+        gap_height = gap_top - gap_bot
+        ax.bar(x_gap, gap_height, bottom=gap_bot, width=bar_w,
                color="white", edgecolor="black", lw=0.8)
-        ax.text(x_gap, (gap_top + gap_bot) / 2,
-                f"{p['gap_pp']:+.1f}\npp",
-                ha="center", va="center", fontsize=8, fontweight="bold",
-                color="black")
+        # Place gap label inside the bar if it's tall enough; otherwise above
+        # the bar to avoid cramped/overflowing text.
+        if gap_height >= 0.06:
+            ax.text(x_gap, (gap_top + gap_bot) / 2,
+                    f"{p['gap_pp']:+.1f}\npp",
+                    ha="center", va="center", fontsize=8, fontweight="bold",
+                    color="black")
+        else:
+            ax.text(x_gap, gap_top + 0.025,
+                    f"{p['gap_pp']:+.1f} pp",
+                    ha="center", va="bottom", fontsize=8, fontweight="bold",
+                    color="black")
 
         ax.set_xticks([x_ref, x_treat, x_gap])
         ax.set_xticklabels([ref_xtick, treat_xtick, r"$\Delta$"], fontsize=8.5)
@@ -406,16 +427,45 @@ def _render_two_panel_didfig(
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
 
-    # Right: DiD bar (solid black) anchored at y=0, height = |did_pp|/100.
+    # Right: DiD bar positioned at the height of the gap. The two AI-reviewer
+    # rates (= bottoms of bracket A and bracket B) define the bar's vertical
+    # range; the dashed horizontal lines from the side panels indicate the
+    # alignment.
     ci_lo, ci_hi = _did_ci_pp(panels)
-    bar_h = abs(did_pp) / 100.0
-    axD.bar(0, bar_h, width=0.5, color="black", edgecolor="black", lw=0.5)
-    axD.text(0, bar_h / 2, f"{did_pp:+.2f}\npp",
-             ha="center", va="center", fontsize=8.5, fontweight="bold",
-             color="white")
+    a_A = panels[0]["treat_cell"]["rate"]
+    a_B = panels[1]["treat_cell"]["rate"]
+    bar_bot = min(a_A, a_B)
+    bar_top = max(a_A, a_B)
+
+    # Dashed horizontal guide lines across the side panels.
+    for ax in (axA, axB):
+        ax.axhline(a_A, ls=(0, (4, 3)), color="black", lw=0.6, alpha=0.55,
+                   zorder=0)
+        ax.axhline(a_B, ls=(0, (4, 3)), color="black", lw=0.6, alpha=0.55,
+                   zorder=0)
+
+    # In the DiD column, draw the dashed lines only from the left edge up to
+    # the DiD bar's left edge so they don't cut through the bar.
+    bar_w = 0.5
+    bar_left_x = 0 - bar_w / 2
+    xlim_lo, xlim_hi = -0.6, 0.6
+    xmax_dash = (bar_left_x - xlim_lo) / (xlim_hi - xlim_lo)
+    axD.axhline(a_A, xmin=0, xmax=xmax_dash, ls=(0, (4, 3)),
+                color="black", lw=0.6, alpha=0.55)
+    axD.axhline(a_B, xmin=0, xmax=xmax_dash, ls=(0, (4, 3)),
+                color="black", lw=0.6, alpha=0.55)
+
+    axD.bar(0, bar_top - bar_bot, bottom=bar_bot, width=bar_w,
+            color="black", edgecolor="black", lw=0.5)
+    # The signed DiD value goes in the xlabel below the bar (set later).
+    # Inside the bar, only show the magnitude when there is room.
+    if (bar_top - bar_bot) >= 0.06:
+        axD.text(0, (bar_bot + bar_top) / 2, f"{did_pp:+.2f}\npp",
+                 ha="center", va="center", fontsize=8.5, fontweight="bold",
+                 color="white")
     axD.set_xticks([0])
     axD.set_xticklabels([did_xlabel], fontsize=9)
-    axD.set_xlim(-0.6, 0.6)
+    axD.set_xlim(xlim_lo, xlim_hi)
     axD.set_xlabel(
         f"{did_pp:+.2f} pp\n[95% CI: {ci_lo:+.2f}, {ci_hi:+.2f}]",
         fontsize=8, labelpad=8,

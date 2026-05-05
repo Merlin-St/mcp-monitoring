@@ -1,4 +1,4 @@
-\begin{thebibliography}{31}
+\begin{thebibliography}{39}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -72,6 +72,16 @@ Doshi, A.~R. and Hauser, O.~P.
 \newblock \emph{Science Advances}, 10\penalty0 (28):\penalty0 eadn5290, 2024.
 \newblock \doi{10.1126/sciadv.adn5290}.
 
+\bibitem[Edelman et~al.(2025)Edelman, Zhi-Xuan, Lowe, Klingefjord,
+  Wang-Mascianica, Franklin, Kearns, Hain, Sarkar, Bakker, Barez, Duvenaud,
+  Foerster, Gabriel, et~al.]{edelman2025fullstack}
+Edelman, J., Zhi-Xuan, T., Lowe, R., Klingefjord, O., Wang-Mascianica, V.,
+  Franklin, M., Kearns, R.~O., Hain, E., Sarkar, A., Bakker, M., Barez, F.,
+  Duvenaud, D., Foerster, J., Gabriel, I., et~al.
+\newblock Full-stack alignment: Co-aligning {AI} and institutions with thick
+  models of value, 2025.
+\newblock URL \url{https://arxiv.org/abs/2512.03399}.
+
 \bibitem[Ehsani et~al.(2026)Ehsani, Pathak, Rawal, {Al Mujahid}, Imran, and
   Chatterjee]{ehsani2026fail}
 Ehsani, R., Pathak, S., Rawal, S., {Al Mujahid}, A., Imran, M.~M., and
@@ -109,6 +119,11 @@ Huang, H., Jaisri, P., Shimizu, S., Chen, L., Nakashima, S., and
   sentiment towards {AI}-generated pull requests, 2026.
 \newblock URL \url{https://arxiv.org/abs/2601.21276}.
 
+\bibitem[Hume(1757)]{hume1757taste}
+Hume, D.
+\newblock \emph{Of the Standard of Taste}.
+\newblock A.\ Millar, London, 1757.
+
 \bibitem[Ibrahim et~al.(2025)Ibrahim, Collins, Kim, Reuel, Lamparth, Feng,
   Ahmad, Soni, {El Kattan}, Stein, Swaroop, Sucholutsky, Strait, Liao, and
   Bhatt]{ibrahim2025overreliance}
@@ -118,6 +133,15 @@ Ibrahim, L., Collins, K.~M., Kim, S. S.~Y., Reuel, A., Lamparth, M., Feng, K.,
 \newblock Measuring and mitigating overreliance is necessary for building
   human-compatible {AI}, 2025.
 \newblock URL \url{https://arxiv.org/abs/2509.08010}.
+
+\bibitem[Jakesch et~al.(2023)Jakesch, Bhat, Buschek, Zalmanson, and
+  Naaman]{jakesch2023cowriting}
+Jakesch, M., Bhat, A., Buschek, D., Zalmanson, L., and Naaman, M.
+\newblock Co-writing with opinionated language models affects users' views.
+\newblock In \emph{Proceedings of the 2023 CHI Conference on Human Factors in
+  Computing Systems}, 2023.
+\newblock \doi{10.1145/3544548.3581196}.
+\newblock URL \url{https://doi.org/10.1145/3544548.3581196}.
 
 \bibitem[Juzek \& Ward(2025)Juzek and Ward]{juzek2025delve}
 Juzek, T.~S. and Ward, Z.~B.
@@ -165,6 +189,13 @@ Munaiah, N., Kroh, S., Cabrey, C., and Nagappan, M.
   3219--3253, 2017.
 \newblock \doi{10.1007/s10664-017-9512-6}.
 
+\bibitem[Nanda(2025)]{nanda2025researchtaste}
+Nanda, N.
+\newblock My research process: Understanding and cultivating research taste.
+\newblock AI Alignment Forum, 2025.
+\newblock URL
+  \url{https://www.alignmentforum.org/posts/Ldrss6o3tiKT6NdMm/my-research-process-understanding-and-cultivating-research}.
+
 \bibitem[{OpenSSF Securing Critical Projects Working
   Group}(2024)]{ossf-criticality}
 {OpenSSF Securing Critical Projects Working Group}.
@@ -187,12 +218,28 @@ Pombal, J., Rei, R., and Martins, A. F.~T.
   models, 2026.
 \newblock URL \url{https://arxiv.org/abs/2604.06996}.
 
-\bibitem[Sharma et~al.(2026)Sharma, McCain, Douglas, and
-  Duvenaud]{sharma2026whos}
-Sharma, M., McCain, M., Douglas, R., and Duvenaud, D.
-\newblock Who's in charge? disempowerment patterns in real-world {LLM} usage,
-  2026.
-\newblock URL \url{https://arxiv.org/abs/2601.19062}.
+\bibitem[Qiu et~al.(2024)]{qiu2024progressgym}
+Qiu, T. et~al.
+\newblock {ProgressGym}: Alignment with a millennium of moral progress.
+\newblock In \emph{Advances in Neural Information Processing Systems 37
+  (NeurIPS), Datasets and Benchmarks Track}, 2024.
+\newblock URL \url{https://arxiv.org/abs/2406.20087}.
+
+\bibitem[Qiu et~al.(2025)Qiu, He, Chugh, and Kleiman-Weiner]{qiu2025lockin}
+Qiu, T.~A., He, Z., Chugh, T., and Kleiman-Weiner, M.
+\newblock The lock-in hypothesis: Stagnation by algorithm, 2025.
+\newblock URL \url{https://arxiv.org/abs/2506.06166}.
+
+\bibitem[Rastogi et~al.(2022)Rastogi, Zhang, Wei, Varshney, Dhurandhar, and
+  Tomsett]{rastogi2022deciding}
+Rastogi, C., Zhang, Y., Wei, D., Varshney, K.~R., Dhurandhar, A., and Tomsett,
+  R.
+\newblock Deciding fast and slow: The role of cognitive biases in {AI}-assisted
+  decision-making.
+\newblock \emph{Proceedings of the ACM on Human-Computer Interaction (CSCW)},
+  6:\penalty0 1--22, 2022.
+\newblock \doi{10.1145/3512930}.
+\newblock URL \url{https://arxiv.org/abs/2010.07938}.
 
 \bibitem[Shumailov et~al.(2024)Shumailov, Shumaylov, Zhao, Papernot, Anderson,
   and Gal]{shumailov2024collapse}
@@ -213,6 +260,18 @@ Thakkar, N., Yuksekgonul, M., Silberg, J., Garg, A., Peng, N., Sha, F., Yu, R.,
 \newblock Can {LLM} feedback enhance review quality? a randomized study of
   20{K} reviews at {ICLR} 2025, 2025.
 \newblock URL \url{https://arxiv.org/abs/2504.09737}.
+
+\bibitem[Toma{\v{s}}ev et~al.(2026)Toma{\v{s}}ev, Franklin, and
+  Osindero]{tomasev2026delegation}
+Toma{\v{s}}ev, N., Franklin, M., and Osindero, S.
+\newblock Intelligent {AI} delegation, 2026.
+\newblock URL \url{https://arxiv.org/abs/2602.11865}.
+
+\bibitem[Tversky \& Kahneman(1974)Tversky and Kahneman]{tversky1974judgment}
+Tversky, A. and Kahneman, D.
+\newblock Judgment under uncertainty: Heuristics and biases.
+\newblock \emph{Science}, 185\penalty0 (4157):\penalty0 1124--1131, 1974.
+\newblock \doi{10.1126/science.185.4157.1124}.
 
 \bibitem[van~der Weij et~al.(2024)van~der Weij, Hofst{\"a}tter, Jaffe, Brown,
   and Ward]{vanderweij2024sandbagging}
