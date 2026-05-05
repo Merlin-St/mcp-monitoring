@@ -86,7 +86,10 @@ class TestClassifyPR:
         assert s["author_confidence"] == "high"
 
     def test_human_author_with_coauthor_commit(self):
-        # Co-Authored-By trailer in commit message should mark PR as AI.
+        # Co-Authored-By trailer in an at-open commit message should mark
+        # the PR as AI authored. Authored-at must be within the
+        # AT_OPEN_SKEW_SECONDS window of created_at, otherwise the commit is
+        # treated as review-cycle and ignored for authorship.
         pr = _empty_pr(
             commits=[
                 {
@@ -94,7 +97,7 @@ class TestClassifyPR:
                     "message": "fix something\n\nCo-Authored-By: Claude <ai@x>\n",
                     "author_login": "alice",
                     "committer_login": "alice",
-                    "authored_at": "2025-04-15T11:00:00Z",
+                    "authored_at": "2025-04-15T10:00:00Z",
                 }
             ],
         )

@@ -32,9 +32,9 @@ class TestLongestChain:
         ) == 3
 
     def test_multiple_ai_types(self):
-        # Loose set includes AI-assisted.
-        types = ["AI-bot", "AI-assisted", "AI-bot", "human", "AI-bot", "AI-bot"]
-        assert longest_chain(types, {"AI-bot", "AI-assisted"}) == 3
+        # Loose set includes AI-powered.
+        types = ["AI-bot", "AI-powered", "AI-bot", "human", "AI-bot", "AI-bot"]
+        assert longest_chain(types, {"AI-bot", "AI-powered"}) == 3
         assert longest_chain(types, {"AI-bot"}) == 2
 
     def test_non_ai_bot_breaks_chain(self):

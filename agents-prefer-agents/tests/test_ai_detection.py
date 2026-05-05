@@ -86,21 +86,20 @@ class TestClassifyEvent:
         c = classify_event("dependabot[bot]", "Bumps lodash from 4.17.20 to 4.17.21")
         assert c.actor_type == "non_ai_bot"
 
-    def test_human_with_coauthor_trailer_is_ai_assisted(self):
+    def test_human_with_coauthor_trailer_is_ai_powered(self):
         # Human author whose commit carries a Co-Authored-By: Claude trailer.
         c = classify_event(
             "alice",
             "fix bug\n\nCo-Authored-By: Claude <noreply@anthropic.com>\n",
         )
-        # Should mark as AI-assisted (high confidence, since trailer is high).
-        assert c.actor_type == "AI-assisted"
+        # Should mark as AI-powered (high confidence — co-author trailers are
+        # the only signal we use for AI-powered classification).
+        assert c.actor_type == "AI-powered"
         assert c.confidence == "high"
 
-    def test_human_with_handle_mention_only_is_low_confidence(self):
-        # Mention-only events should NOT promote to high-confidence AI.
+    def test_human_with_handle_mention_only_stays_human(self):
+        # Mention-only events MUST stay human: a person typing "@claude" in
+        # a comment is not themselves an AI contributor.
         c = classify_event("alice", "@claude please review this")
-        # Either AI-assisted with low confidence, or human — both acceptable
-        # under the conservative §4.2 rule. The KEY invariant is: if it's AI,
-        # confidence must NOT be "high" (because no bot account, no trailer).
-        if c.actor_type in ("AI-bot", "AI-assisted"):
-            assert c.confidence != "high"
+        assert c.actor_type == "human"
+        assert c.confidence == "none"
