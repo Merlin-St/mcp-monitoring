@@ -1,4 +1,4 @@
-\begin{thebibliography}{38}
+\begin{thebibliography}{31}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -10,6 +10,14 @@ Agarwal, S., He, H., and Vasilescu, B.
 \newblock {AI} {IDE}s or autonomous agents? measuring the impact of coding
   agents on software development, 2026.
 \newblock URL \url{https://arxiv.org/abs/2601.13597}.
+
+\bibitem[{Anthropic}(2026)]{anthropic2026constitution}
+{Anthropic}.
+\newblock Claude's constitution.
+\newblock \url{https://www.anthropic.com/constitution}, 2026.
+\newblock Published January 2026. From the ``Claude and the mission of
+  Anthropic'' section: ``Claude is also central to Anthropic's commercial
+  success, which, in turn, is central to our mission.''.
 
 \bibitem[Appel et~al.(2025)Appel, McCrory, Tamkin, McCain, Neylon, and
   Stern]{appel2025economic}
@@ -40,19 +48,17 @@ Bowman, S.~R., Hyun, J., Perez, E., Chen, E., Pettit, C., Heiner, S.,
   2022.
 \newblock URL \url{https://arxiv.org/abs/2211.03540}.
 
+\bibitem[Chen et~al.(2025)Chen, Wei, Zhu, Feng, and Meng]{chen2025selfprefer}
+Chen, W.-L., Wei, Z., Zhu, X., Feng, S., and Meng, Y.
+\newblock Do {LLM} evaluators prefer themselves for a reason?, 2025.
+\newblock URL \url{https://arxiv.org/abs/2504.03846}.
+
 \bibitem[Cheng et~al.(2025)Cheng, Yu, Lee, Khadpe, Ibrahim, and
   Jurafsky]{cheng2025elephant}
 Cheng, M., Yu, S., Lee, C., Khadpe, P., Ibrahim, L., and Jurafsky, D.
 \newblock {ELEPHANT}: Measuring and understanding social sycophancy in {LLM}s,
   2025.
 \newblock URL \url{https://arxiv.org/abs/2505.13995}.
-
-\bibitem[Chowdhury et~al.(2026)Chowdhury, Banik, Ferdous, and
-  Shamim]{chowdhury2026claims}
-Chowdhury, K., Banik, D., Ferdous, K.~M., and Shamim, S.~I.
-\newblock From industry claims to empirical reality: An empirical study of code
-  review agents in pull requests, 2026.
-\newblock URL \url{https://arxiv.org/abs/2604.03196}.
 
 \bibitem[Collingridge(1980)]{collingridge1980social}
 Collingridge, D.
@@ -66,14 +72,6 @@ Doshi, A.~R. and Hauser, O.~P.
 \newblock \emph{Science Advances}, 10\penalty0 (28):\penalty0 eadn5290, 2024.
 \newblock \doi{10.1126/sciadv.adn5290}.
 
-\bibitem[Eguiluz~Casta{\~n}eira et~al.(2025)Eguiluz~Casta{\~n}eira, Brando,
-  Laukyte, and Serra-Vidal]{eguiluz2025innovation}
-Eguiluz~Casta{\~n}eira, J., Brando, A., Laukyte, M., and Serra-Vidal, M.
-\newblock Position paper: If innovation in {AI} systematically violates
-  fundamental rights, is it innovation at all?, 2025.
-\newblock URL \url{https://arxiv.org/abs/2511.00027}.
-\newblock NeurIPS 2025 Position Paper track.
-
 \bibitem[Ehsani et~al.(2026)Ehsani, Pathak, Rawal, {Al Mujahid}, Imran, and
   Chatterjee]{ehsani2026fail}
 Ehsani, R., Pathak, S., Rawal, S., {Al Mujahid}, A., Imran, M.~M., and
@@ -86,6 +84,13 @@ Ehsani, R., Pathak, S., Rawal, S., {Al Mujahid}, A., Imran, M.~M., and
 Ghaleb, T.~A.
 \newblock Fingerprinting {AI} coding agents on {G}it{H}ub, 2026.
 \newblock URL \url{https://arxiv.org/abs/2601.17406}.
+
+\bibitem[{Glasswing}(2026)]{glasswing2026}
+{Glasswing}.
+\newblock Project {G}lasswing: Securing critical software for the {AI} era,
+  2026.
+\newblock URL \url{https://www.anthropic.com/glasswing}.
+\newblock Industry coalition announcement, April 2026.
 
 \bibitem[Goddard et~al.(2012)Goddard, Roudsari, and
   Wyatt]{goddard2012automation}
@@ -103,12 +108,6 @@ Huang, H., Jaisri, P., Shimizu, S., Chen, L., Nakashima, S., and
 \newblock More code, less reuse: Investigating code quality and reviewer
   sentiment towards {AI}-generated pull requests, 2026.
 \newblock URL \url{https://arxiv.org/abs/2601.21276}.
-
-\bibitem[Ibrahim \& Cheng(2025)Ibrahim and Cheng]{ibrahim2025anthropomorphic}
-Ibrahim, L. and Cheng, M.
-\newblock Thinking beyond the anthropomorphic paradigm benefits {LLM} research,
-  2025.
-\newblock URL \url{https://arxiv.org/abs/2502.09192}.
 
 \bibitem[Ibrahim et~al.(2025)Ibrahim, Collins, Kim, Reuel, Lamparth, Feng,
   Ahmad, Soni, {El Kattan}, Stein, Swaroop, Sucholutsky, Strait, Liao, and
@@ -153,33 +152,10 @@ Laurito, W., Davis, B., Grieztes, P., et~al.
 \newblock \doi{10.1073/pnas.2415697122}.
 \newblock arXiv:2407.12856.
 
-\bibitem[Li et~al.(2025)Li, Zhang, and Hassan]{li2025teammates}
-Li, H., Zhang, H., and Hassan, A.~E.
-\newblock The rise of {AI} teammates in software engineering ({SE}) 3.0: How
-  autonomous coding agents are reshaping software engineering, 2025.
-\newblock URL \url{https://arxiv.org/abs/2507.15003}.
-
 \bibitem[Li et~al.(2026)Li, Zhang, and Hassan]{li2026aidev}
 Li, H., Zhang, H., and Hassan, A.~E.
 \newblock {AID}ev: Studying {AI} coding agents on {G}it{H}ub, 2026.
 \newblock URL \url{https://arxiv.org/abs/2602.09185}.
-
-\bibitem[{LogicStar AI}(2025)]{logicstar2025wild}
-{LogicStar AI}.
-\newblock Agents in the wild: {M}easuring {AI} coding agent activity across
-  open source, 2025.
-\newblock URL \url{https://insights.logicstar.ai/}.
-\newblock Live tracker.
-
-\bibitem[Motwani et~al.(2024)Motwani, Baranchuk, Strohmeier, Bolina, Torr,
-  Hammond, and de~Witt]{motwani2024collusion}
-Motwani, S.~R., Baranchuk, M., Strohmeier, M., Bolina, V., Torr, P. H.~S.,
-  Hammond, L., and de~Witt, C.~S.
-\newblock Secret collusion among {AI} agents: Multi-agent deception via
-  steganography.
-\newblock In \emph{Advances in Neural Information Processing Systems 37
-  (NeurIPS)}, 2024.
-\newblock URL \url{https://arxiv.org/abs/2402.07510}.
 
 \bibitem[Munaiah et~al.(2017)Munaiah, Kroh, Cabrey, and
   Nagappan]{munaiah2017curating}
@@ -205,27 +181,11 @@ Panickssery, A., Bowman, S.~R., and Feng, S.
 \newblock {LLM} evaluators recognize and favor their own generations, 2024.
 \newblock URL \url{https://arxiv.org/abs/2404.13076}.
 
-\bibitem[Peng et~al.(2023)Peng, Kalliamvakou, Cihon, and
-  Demirer]{peng2023copilot}
-Peng, S., Kalliamvakou, E., Cihon, P., and Demirer, M.
-\newblock The impact of {AI} on developer productivity: Evidence from
-  {G}it{H}ub {C}opilot, 2023.
-\newblock URL \url{https://arxiv.org/abs/2302.06590}.
-
-\bibitem[Pike \& Lewandowski(2020)Pike and Lewandowski]{pike2020criticality}
-Pike, R. and Lewandowski, A.
-\newblock Finding critical open source projects.
-\newblock Google Open Source Blog, 2020.
-\newblock URL
-  \url{https://opensource.googleblog.com/2020/12/finding-critical-open-source-projects.html}.
-
-\bibitem[Shao et~al.(2025)Shao, Zope, Jiang, Pei, Nguyen, Brynjolfsson, and
-  Yang]{shao2025workbank}
-Shao, Y., Zope, H., Jiang, Y., Pei, J., Nguyen, D., Brynjolfsson, E., and Yang,
-  D.
-\newblock Future of work with {AI} agents: Auditing automation and augmentation
-  potential across the {U.S.} workforce, 2025.
-\newblock URL \url{https://arxiv.org/abs/2506.06576}.
+\bibitem[Pombal et~al.(2026)Pombal, Rei, and Martins]{pombal2026rubric}
+Pombal, J., Rei, R., and Martins, A. F.~T.
+\newblock Self-preference bias in rubric-based evaluation of large language
+  models, 2026.
+\newblock URL \url{https://arxiv.org/abs/2604.06996}.
 
 \bibitem[Sharma et~al.(2026)Sharma, McCain, Douglas, and
   Duvenaud]{sharma2026whos}
@@ -240,14 +200,6 @@ Shumailov, I., Shumaylov, Z., Zhao, Y., Papernot, N., Anderson, R., and Gal, Y.
 \newblock {AI} models collapse when trained on recursively generated data.
 \newblock \emph{Nature}, 631:\penalty0 755--759, 2024.
 \newblock \doi{10.1038/s41586-024-07566-y}.
-
-\bibitem[Staufer et~al.(2026)Staufer, Feng, Wei, Bailey, Duan, Yang, Ozisik,
-  Casper, and Kolt]{staufer2026aiagentindex}
-Staufer, L., Feng, K., Wei, K., Bailey, L., Duan, Y., Yang, M., Ozisik, A.~P.,
-  Casper, S., and Kolt, N.
-\newblock The 2025 {AI} agent index: Documenting technical and safety features
-  of deployed agentic {AI} systems, 2026.
-\newblock URL \url{https://arxiv.org/abs/2602.17753}.
 
 \bibitem[Stein(2026)]{stein2026mcp}
 Stein, M.
@@ -275,10 +227,5 @@ Watanabe, M., Li, H., Kashiwa, Y., Reid, B., Iida, H., and Hassan, A.~E.
 \newblock On the use of agentic coding: An empirical study of pull requests on
   {G}it{H}ub, 2025.
 \newblock URL \url{https://arxiv.org/abs/2509.14745}.
-
-\bibitem[Zhong et~al.(2026)Zhong, Noei, Zou, and Adams]{zhong2026synergy}
-Zhong, S., Noei, S., Zou, Y., and Adams, B.
-\newblock Human-{AI} synergy in agentic code review, 2026.
-\newblock URL \url{https://arxiv.org/abs/2603.15911}.
 
 \end{thebibliography}
