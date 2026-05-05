@@ -92,10 +92,8 @@ def figure1_headline(granularity: str = "month"):
 
     Series plotted (only the lines directly answering an RQ):
       (1) share of PRs with any AI-agent event (RQ 1),
-      (2) share with AI-AI comment chain >= 5 (RQ 1),
-      (3) share of PRs with an AI agent approval/rejection decision (RQ 2),
-      (4) share of merged PRs with AI approval AND no human approval (RQ 2),
-      (5) share of merged PRs with AI approval AND a human approval (RQ 2).
+      (2) share of PRs with AI-AI comment chain >= 5 (RQ 1),
+      (3) share of PRs with explicit AI review (RQ 2).
     First and last month values are annotated on every line.
     """
     import pandas as pd
@@ -148,6 +146,20 @@ def figure1_headline(granularity: str = "month"):
         df[c] = df[c].fillna(False).astype(bool)
     df["author_is_ai"] = (df["author_type"] == "AI")
 
+    # "AI authored" rollup = AI-bot events (high confidence) + AI-powered events.
+    # The chains.parquet column may be named ``n_ai_powered`` (current) or
+    # ``n_ai_assisted`` (legacy); accept either so the figure renders against
+    # both snapshots.
+    n_ai_powered_col = (
+        "n_ai_powered" if "n_ai_powered" in df.columns
+        else "n_ai_assisted" if "n_ai_assisted" in df.columns
+        else None
+    )
+    if n_ai_powered_col is None:
+        df["_n_ai_authored_evt"] = df["n_ai_bot_high"]
+    else:
+        df["_n_ai_authored_evt"] = df["n_ai_bot_high"] + df[n_ai_powered_col]
+
     def _conditional_share(mask_col: str):
         def _agg(g):
             m = g[mask_col]
@@ -168,7 +180,7 @@ def figure1_headline(granularity: str = "month"):
 
     grp = df.groupby("period").apply(lambda g: pd.Series({
         "n_prs": len(g),
-        "share_any_ai": (g["n_ai_bot_high"] > 0).mean(),
+        "share_any_ai": (g["_n_ai_authored_evt"] > 0).mean(),
         "share_chain_ge5": (g["longest_chain_primary"] >= 5).mean(),
         "share_ai_decision": g["has_ai_decision"].mean(),
         "share_approved_by_ai_author": _conditional_share("has_any_approval")(g),
@@ -183,15 +195,11 @@ def figure1_headline(granularity: str = "month"):
 
     SERIES = [
         ("share_any_ai",                   "#d62728", "o",
-         "share of PRs with any AI-agent event"),
+         "share of PRs with any AI authored event"),
         ("share_chain_ge5",                "#8c564b", "^",
-         r"share with AI--AI comment chain $\geq 5$"),
+         r"share of PRs with AI bot--AI bot comment chain $\geq 5$"),
         ("share_ai_decision",              "#9467bd", "v",
-         "share with AI-agent approval/rejection decision"),
-        ("share_merged_ai_only",           "#e377c2", "P",
-         "share of merged PRs: AI approval, no human approval"),
-        ("share_merged_ai_and_human",      "#17becf", "X",
-         "share of merged PRs: AI approval AND human approval"),
+         "share of PRs with explicit AI bot review"),
     ]
 
     fig, ax = plt.subplots(figsize=(6.5, 4.2))
@@ -202,7 +210,10 @@ def figure1_headline(granularity: str = "month"):
     def _fmt(v):
         if pd.isna(v):
             return ""
-        return f"{100 * v:.1f}%"
+        pct = 100 * v
+        # Match paper-text precision: sub-1% values are reported to 2 decimals,
+        # larger values to 1 decimal.
+        return f"{pct:.2f}%" if pct < 1 else f"{pct:.1f}%"
     for col, color, _, _ in SERIES:
         vals = grp[col]
         nz = vals.dropna()
@@ -287,17 +298,143 @@ def figure1(min_cell_n: int, granularity: str = "month"):
     logger.info("Wrote %s", out)
 
 
-def figure2_withinpr():
-    """Within-PR AI-AI-bias DiD on the stable doubly-engaged cohort.
+def _did_ci_pp(panels, z: float = 1.96) -> tuple[float, float]:
+    """Normal-approximation 95% CI for the DiD on the probability scale.
 
-    Two-panel design (see 99_causalvalidity.md §8.5b/§8.7):
-      Left: 4 bars — reviewer-type {AI, Human} x author-type {AI, Human}
-            approval rates on the stable doubly-engaged cohort.
-      Right: 2 bars — the two brackets in $\\rbt^A - \\rbt^H$:
-            "AI prefers AI more than humans do" (P(AI app|AI-auth) - P(H app|AI-auth))
-            "AI prefers humans less than humans do" (P(AI app|H-auth) - P(H app|H-auth))
-            Their difference is the DiD.
+    DiD = (p_treat_A − p_ref_A) − (p_treat_B − p_ref_B), so the variance is
+    the sum of the four cell variances p(1−p)/n. Returned values are in pp.
     """
+    se_sq = 0.0
+    for p in panels:
+        for cell in (p["ref_cell"], p["treat_cell"]):
+            r, n = cell["rate"], cell.get("n") or cell.get("n_open") or 0
+            if n > 0:
+                se_sq += r * (1 - r) / n
+    se_pp = (se_sq ** 0.5) * 100.0
+    did_pp = panels[0]["gap_pp"] - panels[1]["gap_pp"]
+    return did_pp - z * se_pp, did_pp + z * se_pp
+
+
+def _render_two_panel_didfig(
+    *,
+    out_path,
+    panels,
+    cohort_label: str,
+    n_total: int,
+    did_pp: float,
+    delta: float,           # accepted but unused in current rendering
+    pval: float | None,     # accepted but unused in current rendering
+    treat_color: str = "black",   # legacy kw — ignored; figure is B&W
+    ref_color: str = "black",     # legacy kw — ignored; figure is B&W
+    treat_xtick: str = "AI\nreviewer",
+    ref_xtick: str = "Human\nreviewer",
+    did_xlabel: str = r"$\Delta^A - \Delta^H$",
+):
+    """Black-and-white two-panel renderer for the within-PR DiD figures.
+
+    Layout: [panel_A | panel_B | DiD] with the y-axis dropped between
+    panels (only the leftmost panel keeps tick labels and left spine).
+    Each side panel shows the two reviewer rates as black points with
+    Wilson 95% CIs and the bracket (gap) as a small white-fill bar with
+    black edge. The rightmost column shows the DiD as a solid black bar
+    with the value and 95% CI annotated below.
+    """
+    from matplotlib.ticker import PercentFormatter
+
+    del treat_color, ref_color  # B&W only
+
+    def _direction_word(gap_pp: float) -> str:
+        return "less" if gap_pp < 0 else "more"
+
+    for p in panels:
+        p["_dir"] = _direction_word(p["gap_pp"])
+
+    fig = plt.figure(figsize=(7.4, 3.8))
+    gs = fig.add_gridspec(1, 3, width_ratios=[4, 4, 1.2], wspace=0.12)
+    axA = fig.add_subplot(gs[0])
+    axB = fig.add_subplot(gs[1], sharey=axA)
+    axD = fig.add_subplot(gs[2], sharey=axA)
+
+    bar_w = 0.45
+    x_ref, x_treat, x_gap = 0, 1, 2
+
+    for ax, p in zip([axA, axB], panels):
+        ax.set_title(p["title_template"].format(direction=p["_dir"]), fontsize=8.8)
+        ref = p["ref_cell"]
+        treat = p["treat_cell"]
+
+        # Points with CI lines for the two reviewer rates (black only).
+        for xi, cell in [(x_ref, ref), (x_treat, treat)]:
+            ax.errorbar(
+                xi, cell["rate"],
+                yerr=[[cell["rate"] - cell["ci_lo"]], [cell["ci_hi"] - cell["rate"]]],
+                fmt="o", color="black", ecolor="black", capsize=4, lw=1.0, ms=6,
+                mec="black", mfc="black", mew=0.6,
+            )
+            ax.text(xi + 0.12, cell["rate"], f"{100*cell['rate']:.1f}%",
+                    ha="left", va="center", fontsize=8, color="black",
+                    fontweight="bold")
+
+        # Small bar showing the bracket (gap): white fill, black edge.
+        gap_top = max(ref["rate"], treat["rate"])
+        gap_bot = min(ref["rate"], treat["rate"])
+        ax.bar(x_gap, gap_top - gap_bot, bottom=gap_bot, width=bar_w,
+               color="white", edgecolor="black", lw=0.8)
+        ax.text(x_gap, (gap_top + gap_bot) / 2,
+                f"{p['gap_pp']:+.1f}\npp",
+                ha="center", va="center", fontsize=8, fontweight="bold",
+                color="black")
+
+        ax.set_xticks([x_ref, x_treat, x_gap])
+        ax.set_xticklabels([ref_xtick, treat_xtick, r"$\Delta$"], fontsize=8.5)
+        ax.set_xlim(-0.6, 2.6)
+        ax.set_ylim(0, 1.1)
+        ax.yaxis.set_major_formatter(PercentFormatter(xmax=1.0, decimals=0))
+        ax.set_xlabel(p["cohort_sublabel"], fontsize=8.5, labelpad=8)
+        ax.grid(axis="y", lw=0.3, alpha=0.3, color="black")
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+    axA.set_ylabel("Approval rate (Wilson 95% CI)", fontsize=8.8)
+
+    # Drop the y-axis on panel B and the DiD panel: hide tick labels and
+    # left spine.
+    for ax in (axB, axD):
+        plt.setp(ax.get_yticklabels(), visible=False)
+        ax.tick_params(axis="y", left=False)
+        ax.spines["left"].set_visible(False)
+        ax.spines["top"].set_visible(False)
+        ax.spines["right"].set_visible(False)
+
+    # Right: DiD bar (solid black) anchored at y=0, height = |did_pp|/100.
+    ci_lo, ci_hi = _did_ci_pp(panels)
+    bar_h = abs(did_pp) / 100.0
+    axD.bar(0, bar_h, width=0.5, color="black", edgecolor="black", lw=0.5)
+    axD.text(0, bar_h / 2, f"{did_pp:+.2f}\npp",
+             ha="center", va="center", fontsize=8.5, fontweight="bold",
+             color="white")
+    axD.set_xticks([0])
+    axD.set_xticklabels([did_xlabel], fontsize=9)
+    axD.set_xlim(-0.6, 0.6)
+    axD.set_xlabel(
+        f"{did_pp:+.2f} pp\n[95% CI: {ci_lo:+.2f}, {ci_hi:+.2f}]",
+        fontsize=8, labelpad=8,
+    )
+    axD.grid(axis="y", lw=0.3, alpha=0.3, color="black")
+
+    fig.suptitle(
+        f"{cohort_label} (n={n_total:,})",
+        fontsize=9, y=1.02,
+    )
+
+    fig.tight_layout()
+    fig.savefig(out_path, bbox_inches="tight")
+    plt.close(fig)
+    logger.info("Wrote %s", out_path)
+
+
+def figure2_withinpr():
+    """Within-PR AI-AI-bias DiD on the dual-review cohort."""
     import json as _json
     wp_path = RESULTS_DIR / "within_pr_stats.json"
     if not wp_path.exists():
@@ -309,98 +446,79 @@ def figure2_withinpr():
         logger.warning("No 'did' block in within_pr_stats.json; skipping figure 2.")
         return
     cells = did["cells"]
-    ai_AI = cells["AI_x_AI"]; ai_H = cells["AI_x_H"]
-    h_AI  = cells["H_x_AI"];  h_H  = cells["H_x_H"]
-    n_total = did["n"]; n_AI = did["n_AI_auth"]; n_H = did["n_H_auth"]
-    bracket1 = did["bracket1_pp"]; bracket2 = did["bracket2_pp"]
-    did_pp = did["did_pp"]; delta = did["logit_delta"]; pval = did["logit_p"]
-
-    fig, (axL, axR) = plt.subplots(1, 2, figsize=(7.0, 3.4),
-                                   gridspec_kw={"width_ratios": [1.4, 1.0]})
-
-    # ---- LEFT: 4 bars (reviewer x author) ----
-    AI_REV = "#d62728"   # AI reviewer
-    HU_REV = "#1f77b4"   # Human reviewer
-    bar_data = [
-        ("AI rev /\nAI auth", ai_AI, AI_REV),
-        ("AI rev /\nH auth",  ai_H,  AI_REV),
-        ("Hum rev /\nAI auth", h_AI, HU_REV),
-        ("Hum rev /\nH auth",  h_H,  HU_REV),
+    n_AI = did["n_AI_auth"]; n_H = did["n_H_auth"]
+    panels = [
+        {
+            "title_template": "AI prefers AI {direction} than humans do",
+            "cohort_sublabel": f"(AI-authored, n={n_AI:,})",
+            "ref_cell":   cells["H_x_AI"],
+            "treat_cell": cells["AI_x_AI"],
+            "gap_pp":     did["bracket1_pp"],
+        },
+        {
+            "title_template": "AI prefers humans {direction} than humans do",
+            "cohort_sublabel": f"(human-authored, n={n_H:,})",
+            "ref_cell":   cells["H_x_H"],
+            "treat_cell": cells["AI_x_H"],
+            "gap_pp":     did["bracket2_pp"],
+        },
     ]
-    xL = list(range(len(bar_data)))
-    rates = [c["rate"] for _, c, _ in bar_data]
-    los = [c["ci_lo"] for _, c, _ in bar_data]
-    his = [c["ci_hi"] for _, c, _ in bar_data]
-    cols = [c for _, _, c in bar_data]
-    axL.bar(xL, rates, color=cols, alpha=0.85, width=0.65,
-            edgecolor="black", lw=0.5)
-    for xi, r, lo, hi in zip(xL, rates, los, his):
-        axL.errorbar(xi, r, yerr=[[r - lo], [hi - r]],
-                     fmt="none", color="black", capsize=3, lw=0.8)
-        # Inline rate label
-        label_y = r * 0.5 if r > 0.20 else r + 0.04
-        label_color = "white" if r > 0.20 else "black"
-        axL.text(xi, label_y, f"{100*r:.1f}%",
-                 ha="center", va="center", fontsize=8, fontweight="bold",
-                 color=label_color)
-
-    axL.set_xticks(xL)
-    axL.set_xticklabels([t for t, _, _ in bar_data], fontsize=7.5)
-    axL.set_xlim(-0.6, len(xL) - 0.4)
-    axL.set_ylim(0, 1.0)
-    from matplotlib.ticker import PercentFormatter
-    axL.yaxis.set_major_formatter(PercentFormatter(xmax=1.0, decimals=0))
-    axL.set_ylabel("Approval rate (Wilson 95% CI)", fontsize=8.5)
-    axL.set_title(
-        f"Stable doubly-engaged cohort\nn={n_total:,} (AI-auth {n_AI:,}, H-auth {n_H:,})",
-        fontsize=8.5,
+    _render_two_panel_didfig(
+        out_path=PAPER_FIG_DIR / "figure2_withinpr.pdf",
+        panels=panels,
+        cohort_label="Dual-review cohort (Any AI & human)",
+        n_total=did["n"],
+        did_pp=did["did_pp"],
+        delta=did["logit_delta"],
+        pval=did["logit_p"],
     )
-    axL.grid(axis="y", lw=0.3, alpha=0.3)
-    axL.spines["top"].set_visible(False)
-    axL.spines["right"].set_visible(False)
 
-    # ---- RIGHT: 2 bars showing the brackets in rbt^A - rbt^H ----
-    bracket_labels = [
-        '"AI prefers AI more\nthan humans do"\n(on AI-authored)',
-        '"AI prefers humans less\nthan humans do"\n(on H-authored)',
+
+def figure2_withinfamily_claude():
+    """Within-family DiD: Claude reviewer vs Human reviewer, Claude vs human author."""
+    import json as _json
+    wf_path = RESULTS_DIR / "within_family_stats.json"
+    if not wf_path.exists():
+        logger.warning("No within_family_stats.json; skipping Claude-family figure.")
+        return
+    wf = _json.loads(wf_path.read_text())
+    cv = wf.get("claude_vs_human")
+    if not cv:
+        logger.warning("No 'claude_vs_human' block in within_family_stats.json; skipping.")
+        return
+    cells = cv["cells"]
+    n_C = cv["n_C_auth"]; n_H = cv["n_H_auth"]
+    # bracket1 = Claude-reviewer rate − Human-reviewer rate on Claude-authored
+    bracket1 = (cells["C_rev_x_C_auth"]["rate"] - cells["R_rev_x_C_auth"]["rate"]) * 100
+    bracket2 = (cells["C_rev_x_X_auth"]["rate"] - cells["R_rev_x_X_auth"]["rate"]) * 100
+    panels = [
+        {
+            "title_template": "Claude prefers Claude {direction} than humans do",
+            "cohort_sublabel": f"(Claude-authored, n={n_C:,})",
+            "ref_cell":   cells["R_rev_x_C_auth"],
+            "treat_cell": cells["C_rev_x_C_auth"],
+            "gap_pp":     bracket1,
+        },
+        {
+            "title_template": "Claude prefers humans {direction} than humans do",
+            "cohort_sublabel": f"(human-authored, n={n_H:,})",
+            "ref_cell":   cells["R_rev_x_X_auth"],
+            "treat_cell": cells["C_rev_x_X_auth"],
+            "gap_pp":     bracket2,
+        },
     ]
-    xR = [0, 1]
-    bracket_vals = [bracket1, bracket2]
-    bracket_colors = ["#9467bd", "#8c564b"]
-    axR.bar(xR, bracket_vals, color=bracket_colors, alpha=0.85, width=0.55,
-            edgecolor="black", lw=0.5)
-    for xi, v in zip(xR, bracket_vals):
-        # Annotate bar with value (above zero line)
-        axR.text(xi, v - 4 if v < 0 else v + 4,
-                 f"{v:+.1f} pp",
-                 ha="center", va="top" if v < 0 else "bottom",
-                 fontsize=8.5, fontweight="bold", color="black")
-    axR.axhline(0, color="black", lw=0.6)
-    axR.set_xticks(xR)
-    axR.set_xticklabels(bracket_labels, fontsize=7)
-    axR.set_xlim(-0.6, 1.6)
-    # y-axis covers both brackets generously
-    ymin = min(bracket_vals) * 1.15
-    axR.set_ylim(ymin, 10)
-    axR.set_ylabel("AI − Human approval rate (pp)", fontsize=8.5)
-    p_str = (
-        f"$\\delta={delta:+.3f}$, $p<10^{{-3}}$"
-        if pval is not None and pval < 1e-3
-        else f"$\\delta={delta:+.3f}$, $p={pval:.3f}$"
+    _render_two_panel_didfig(
+        out_path=PAPER_FIG_DIR / "figure2b_withinfamily_claude.pdf",
+        panels=panels,
+        cohort_label="Dual-review cohort (Claude & human)",
+        n_total=cv["cohort_n"],
+        did_pp=cv["did_pp"],
+        delta=cv["logit_delta"],
+        pval=cv["logit_p"],
+        treat_xtick="Claude\nreviewer",
+        ref_xtick="Human\nreviewer",
+        did_xlabel=r"$\Delta^{A,\mathrm{Claude}} - \Delta^H$",
     )
-    axR.set_title(
-        f"$\\widehat{{\\Delta^{{A}} - \\Delta^{{H}}}} = {did_pp:+.2f}$ pp\n{p_str}",
-        fontsize=8.5,
-    )
-    axR.grid(axis="y", lw=0.3, alpha=0.3)
-    axR.spines["top"].set_visible(False)
-    axR.spines["right"].set_visible(False)
-
-    fig.tight_layout()
-    out = PAPER_FIG_DIR / "figure2_withinpr.pdf"
-    fig.savefig(out)
-    plt.close(fig)
-    logger.info("Wrote %s", out)
 
 
 def figure2():
@@ -521,6 +639,7 @@ def main():
 
     figure1_headline(granularity=args.granularity)
     figure2_withinpr()
+    figure2_withinfamily_claude()
     figure2()
     logger.info("=== FIGURES DONE ===")
 

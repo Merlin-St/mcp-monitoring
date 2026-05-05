@@ -3,21 +3,35 @@
 Reads data/prs/*.jsonl produced by 02_fetch_prs.py; emits:
   - data/pr_events.parquet : one row per event (commit, review, review_comment,
     issue_comment, merge, close, ready_for_review, head_ref_force_pushed, etc.)
+    Each event has actor_type ∈ {AI-bot, AI-powered, human, non_ai_bot}.
   - data/pr_summary.parquet: one row per PR with author_type / reviewer_type /
     merger_type chosen per 99_instruction.md §5.2.
 
+Three-way event taxonomy (per CLAUDE convention):
+- ``AI-bot``     — actor login on AI-bot allowlist (excludes maintenance bots).
+- ``AI-powered`` — human login but payload carries a ``Co-Authored-By`` AI
+  trailer.
+- ``human``      — none of the above (may include silent AI support).
+
+PR-level rollups (``author_type`` / ``reviewer_type``) collapse AI-bot +
+AI-powered into a single ``AI`` cell — the paper calls this "AI authored".
+
 Decision rules (from 99_instruction.md §5.2):
-- author_type ∈ {human, AI}: AI if PR author account is AI-bot, OR any PR
-  commit has a Co-Authored-By trailer to an AI tool, OR the PR author login
-  is AI-bot. (Both human-assisted-by-AI and AI-bot collapse to AI for the
-  headline; AI-assisted tracked separately for robustness runs.)
+- author_type ∈ {human, AI}: AI if the PR author login is an AI bot, OR any
+  commit present at PR open time is authored by an AI bot, OR the PR body or
+  any at-open commit message contains a Co-Authored-By trailer to an AI tool.
+  Commits authored after the PR was opened are excluded — those reflect AI
+  participation triggered during review, not original authorship.
 - reviewer_type ∈ {human, AI}: dominant actor on the approving review;
   fallback to most-active reviewer by event count; skip "no reviews".
 - merger_type ∈ {human, AI, none}: from merged_by + timeline MergedEvent
   actor; "none" if not merged.
 
-Confidence: ``high`` if bot account or co-author trailer; ``low`` if handle-
-mention-only. Primary analysis uses high-only.
+An event qualifies as AI evidence only when the actor's login is on our
+allowlist or its payload carries a Co-Authored-By trailer naming an AI tool.
+Handle/name mentions in free text are not used to flag a PR as AI-authored,
+since a human typing "@claude" in a comment does not make the human an AI
+contributor.
 """
 
 from __future__ import annotations
@@ -67,14 +81,13 @@ def classify_role(logins_and_texts: list[tuple[str, str]]) -> tuple[str, str, st
     (reviewers, mergers, ...), return (type, family, confidence).
     - type in {"AI", "human", "none"}
     - family: best-guess
-    - confidence: "high" if any high-confidence AI hit; "low" if only low-conf;
+    - confidence: "high" if any AI hit (bot account or co-author trailer);
                   "none" for human.
 
-    Primary classification (for the headline figure) tags as AI ONLY when there
-    is at least one high-confidence AI signal: a bot account on our allowlist,
-    OR a Co-Authored-By trailer. Handle-mention-only (low confidence) events
-    stay as "human" — a human who writes "@claude fix this" in a review body
-    is not themselves an AI reviewer.
+    "AI" here is the rolled-up cell ("AI authored" = AI-bot + AI-powered).
+    Handle/name mentions in free text are not treated as AI evidence — a
+    human who writes "@claude fix this" in a review body is not themselves
+    an AI reviewer.
     """
     if not logins_and_texts:
         return ("none", "none", "none")
@@ -83,34 +96,56 @@ def classify_role(logins_and_texts: list[tuple[str, str]]) -> tuple[str, str, st
     real = [c for c in classes if c.actor_type != "non_ai_bot"]
     if not real:
         return ("none", "none", "none")
-    # Count HIGH-confidence AI signals only (bot account OR co-author trailer).
-    ai_high = [c for c in real if c.actor_type in ("AI-bot", "AI-assisted") and c.confidence == "high"]
-    ai_low = [c for c in real if c.actor_type in ("AI-bot", "AI-assisted") and c.confidence != "high"]
-    human_count = sum(1 for c in real if c.actor_type == "human") + len(ai_low)
-    if ai_high and len(ai_high) >= max(human_count, 1) - (human_count // 2):
-        # Tie-breaking: AI wins when ai_high is >= half of non-high events (§5.2
+    # Count AI signals: bot account OR co-author trailer (both are confidence=high
+    # after dropping the handle-mention path).
+    ai_hits = [c for c in real if c.actor_type in ("AI-bot", "AI-powered")]
+    human_count = sum(1 for c in real if c.actor_type == "human")
+    if ai_hits and len(ai_hits) >= max(human_count, 1) - (human_count // 2):
+        # Tie-breaking: AI wins when ai_hits is >= half of human events (§5.2
         # conservative — biases *against* finding AI-AI self-preference).
-        fam_counts = Counter(c.ai_family for c in ai_high if c.ai_family != "none")
+        fam_counts = Counter(c.ai_family for c in ai_hits if c.ai_family != "none")
         family = fam_counts.most_common(1)[0][0] if fam_counts else "unknown-ai"
         return ("AI", family, "high")
-    if ai_high:
-        # Some AI presence but dominated by humans.
-        return ("human", "none", "none")
     return ("human", "none", "none")
+
+
+# Restrict to commits present when the PR was opened. Commits authored after
+# the PR's `created_at` reflect AI activity triggered during review (e.g.
+# author asks AI to address review feedback), not original authorship. A
+# 5-minute skew window absorbs clock drift between author machine and GitHub.
+AT_OPEN_SKEW_SECONDS = 300
+
+
+def _commit_at_open(commit: dict, pr_open_ts) -> bool:
+    """True if commit was authored at-or-before PR open (with 5-min skew).
+
+    Falls back to including the commit when timestamps cannot be parsed —
+    keeps the classifier conservative when data is missing rather than
+    silently dropping evidence.
+    """
+    if pr_open_ts is None:
+        return True
+    ts = parse_datetime_safe(commit.get("authored_at", "") or "")
+    if ts is None:
+        return True
+    return (ts - pr_open_ts).total_seconds() <= AT_OPEN_SKEW_SECONDS
 
 
 def classify_pr(pr: dict) -> dict:
     """Return a per-PR summary row."""
     # --- AUTHOR ---
     author_login = pr.get("author_login", "")
-    # Aggregate all commits' messages for trailer scan.
-    commit_text = "\n".join(c.get("message", "") for c in pr.get("commits", []))
+    pr_open_ts = parse_datetime_safe(pr.get("created_at", "") or "")
+    all_commits = pr.get("commits", []) or []
+    atopen_commits = [c for c in all_commits if _commit_at_open(c, pr_open_ts)]
+    # Aggregate at-open commits' messages for trailer scan.
+    commit_text = "\n".join(c.get("message", "") for c in atopen_commits)
     body_text = pr.get("body", "") or ""
     author_cls = classify_event(author_login, body_text + "\n" + commit_text)
 
-    # If any commit is authored by an AI bot, treat the PR as AI-authored.
+    # If any at-open commit is authored by an AI bot, treat the PR as AI-authored.
     commit_authors = []
-    for c in pr.get("commits", []):
+    for c in atopen_commits:
         login = c.get("author_login", "") or c.get("committer_login", "")
         commit_authors.append((login, c.get("message", "") or ""))
     commit_classes = [classify_event(l, t) for l, t in commit_authors]

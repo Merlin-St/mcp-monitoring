@@ -3,12 +3,13 @@
 Primary definition (99_instruction.md §5.1):
 - Within one PR, order attributed events by timestamp.
 - An AI→AI chain is a maximal contiguous subsequence of events classified
-  ``AI-bot`` (``AI-assisted`` excluded from the primary definition).
+  ``AI-bot`` (``AI-powered`` excluded from the primary definition because
+  chains are about successive bot turns, not authorship attribution).
 - Per-PR metric: longest AI→AI chain length.
 - Per-week aggregate: mean, median, p95 over PRs open in the week.
 
-Robustness run (toggle via --include-ai-assisted): treat ``AI-assisted`` as
-also satisfying "AI" in the chain.
+Robustness run (toggle via --include-ai-powered): treat ``AI-powered`` as
+also satisfying "AI" in the chain (this is the "AI authored" rollup).
 
 Outputs:
   - data/chains.parquet   one row per PR (pr_key, longest_chain, n_events, ...)
@@ -91,7 +92,13 @@ def longest_chain_per_group(
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--include-ai-assisted", action="store_true")
+    # Older invocations may pass --include-ai-assisted; accept both names.
+    parser.add_argument(
+        "--include-ai-powered",
+        "--include-ai-assisted",
+        dest="include_ai_powered",
+        action="store_true",
+    )
     args = parser.parse_args()
 
     events_path = DATA_DIR / "pr_events.parquet"
@@ -104,8 +111,8 @@ def main():
     summary = pd.read_parquet(summary_path)
 
     ai_set: set[str] = {"AI-bot"}
-    if args.include_ai_assisted:
-        ai_set.add("AI-assisted")
+    if args.include_ai_powered:
+        ai_set.add("AI-powered")
 
     # Primary analysis also requires confidence=high for the ai-set events
     # (filter low-confidence handle-mention-only).
@@ -121,7 +128,7 @@ def main():
     # All per-group counts via groupby.agg + sum (avoids slicing each group).
     is_ai_bot = events["actor_type"].eq("AI-bot")
     is_high = events["confidence"].eq("high")
-    is_ai_assisted = events["actor_type"].eq("AI-assisted")
+    is_ai_powered = events["actor_type"].eq("AI-powered")
     is_human = events["actor_type"].eq("human")
     is_non_ai_bot = events["actor_type"].eq("non_ai_bot")
     counts = pd.DataFrame({
@@ -129,7 +136,7 @@ def main():
         "number": events["number"],
         "n_events": 1,
         "n_ai_bot_high": (is_ai_bot & is_high).astype(np.int64),
-        "n_ai_assisted": is_ai_assisted.astype(np.int64),
+        "n_ai_powered": is_ai_powered.astype(np.int64),
         "n_human": is_human.astype(np.int64),
         "n_non_ai_bot": is_non_ai_bot.astype(np.int64),
     }).groupby(["repo", "number"], sort=False, as_index=False).sum()
@@ -147,8 +154,8 @@ def main():
     is_ai_high_arr = events["_is_ai_high"].to_numpy()
     longest_primary = longest_chain_per_group(is_ai_high_arr, group_change)
 
-    # Loose chain: AI-bot OR AI-assisted (any confidence).
-    is_ai_loose_arr = events["actor_type"].isin({"AI-bot", "AI-assisted"}).to_numpy()
+    # Loose chain: AI-bot OR AI-powered (= "AI authored" rollup).
+    is_ai_loose_arr = events["actor_type"].isin({"AI-bot", "AI-powered"}).to_numpy()
     longest_loose = longest_chain_per_group(is_ai_loose_arr, group_change)
 
     # The order of groups in `counts` (groupby sort=False) matches the order
@@ -214,7 +221,7 @@ def main():
         "chain_overall_mean": float(chains["longest_chain_primary"].mean()),
         "chain_overall_p95": float(np.percentile(chains["longest_chain_primary"], 95)),
         "chain_overall_max": int(chains["longest_chain_primary"].max()),
-        "include_ai_assisted": bool(args.include_ai_assisted),
+        "include_ai_powered": bool(args.include_ai_powered),
         "generated_at": utils.now_iso(),
     }
     with open(RESULTS_DIR / "chain_stats.json", "w") as f:

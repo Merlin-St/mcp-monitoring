@@ -169,7 +169,7 @@ def main():
         lines.append(f"  - `{t or '(empty)'}`: {n} ({pct(n, len(sample))})")
     lines += [
         "",
-        "- When `merged_by` is on our AI-bot allowlist, family breakdown:",
+        "- When `merged_by` is on our AI bot allowlist, family breakdown:",
     ]
     for fam, n in mb_ai_family.most_common():
         lines.append(f"  - `{fam}`: {n}")

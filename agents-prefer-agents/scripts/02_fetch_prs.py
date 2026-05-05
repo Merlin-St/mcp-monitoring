@@ -6,7 +6,7 @@ a single round trip per 50-PR page. This reduces the ~5 REST endpoints per
 PR to ~1 GraphQL call per 50 PRs.
 
 Window: [2025-04-01, 2026-03-31] by PR updated_at (inclusive).
-Cap: 2000 PRs per repo, subsampled uniformly by week if more.
+Cap: 10000 PRs per repo, subsampled uniformly by week if more.
 
 Checkpointing: writes one ``data/prs/{owner}__{repo}.jsonl`` per repo, plus
 ``data/prs/_done.json`` tracking which repos are complete. Re-running skips
@@ -97,7 +97,7 @@ query($owner:String!, $name:String!, $cursor:String) {
         changedFiles
         author { login __typename }
         mergedBy { login __typename }
-        commits(first:12) {
+        commits(first:30) {
           totalCount
           nodes {
             commit {
@@ -413,7 +413,7 @@ async def fetch_repo_prs(
     first_kept_page = 0  # index of first page where at least one PR was kept
     empty_pages_streak = 0
     MAX_EMPTY_PAGES_STREAK = 25  # allow walking through post-window newest PRs (up to 750 post-window PRs)
-    MAX_PAGES = 50  # hard cap per repo (1500 raw PRs)
+    MAX_PAGES = 350  # hard cap per repo (~10500 raw PRs); early-exit on out-of-window keeps cost zero for normal repos
     LOW_YIELD_PAGES = 20  # after this many *post-first-kept* pages, require density
     LOW_YIELD_MIN_RATIO = 0.20
     while pages < MAX_PAGES:
@@ -664,7 +664,7 @@ async def main_async(args):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=0, help="Process only first N repos (debug).")
-    parser.add_argument("--max-prs-per-repo", type=int, default=2000)
+    parser.add_argument("--max-prs-per-repo", type=int, default=10000)
     parser.add_argument("--concurrency", type=int, default=4, help="Max concurrent GraphQL HTTP requests.")
     parser.add_argument("--repo-concurrency", type=int, default=3, help="Repos processed in parallel.")
     parser.add_argument("--min-interval", type=float, default=0.9,

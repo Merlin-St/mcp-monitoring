@@ -19,6 +19,9 @@ python scripts/05_compute_chains.py
 echo "=== Phase 6a: within-PR approval comparison (two-sided z-test) ==="
 python scripts/06c_within_pr.py
 
+echo "=== Phase 6a-bis: within-family Claude DiD (RQ3b) ==="
+python scripts/06d_within_family_claude.py
+
 echo "=== Phase 6b: figures ==="
 python scripts/07_make_figures.py --all --granularity month --min-cell-n 3
 

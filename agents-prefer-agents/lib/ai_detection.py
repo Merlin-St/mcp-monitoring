@@ -4,14 +4,18 @@ Ported from ``scripts/data-classification-aicreatedmcp/detect_ai_created.py``.
 The MCP pipeline classifies a *repository*; this module classifies a single
 GitHub *event* (commit, PR body, review body, review comment, issue comment).
 
-Design:
-- Four evidence channels (co-author trailer, AI config file, bot account,
-  handle mention), each yielding a per-tool hit count.
-- ``classify_actor(login, event_text)`` returns an ``ActorClassification``
-  describing whether the actor is ``AI-bot`` / ``AI-assisted`` / ``human``,
-  plus the most-likely AI family and a high/medium/low confidence tag.
-- Primary analysis uses ``confidence == "high"`` only (bot account OR
-  co-author trailer). See 99_instruction.md §4.2.
+Three-way taxonomy (per CLAUDE/paper convention):
+- **AI-bot**: actor login is on our AI-bot allowlist (excludes maintenance
+  bots like Dependabot/Renovate/CI).
+- **AI-powered**: actor login is human, but the event payload carries a
+  ``Co-Authored-By:`` trailer naming an AI tool.
+- **human**: none of the above (may include silent AI support that left no
+  trailer or bot login).
+
+``AI-bot + AI-powered`` together are referred to as **AI authored** in the
+paper. Handle/name mentions in free text (e.g. ``@claude please fix``) are
+not used to flag an event as AI — a human typing ``@claude`` is not
+themselves an AI contributor.
 
 This module is intentionally dependency-free beyond ``re`` so it can be
 re-used inside async pipelines without adding to the import graph.
@@ -301,11 +305,21 @@ for n in NON_AI_BOTS:
 # ---------------------------------------------------------------------------
 @dataclass
 class ActorClassification:
-    """Result of classifying one event (commit / PR body / review / comment)."""
+    """Result of classifying one event (commit / PR body / review / comment).
 
-    actor_type: str  # "AI-bot" | "AI-assisted" | "human" | "non_ai_bot"
+    ``actor_type`` values:
+      - ``AI-bot``: login is on the AI-bot allowlist.
+      - ``AI-powered``: login is human, but payload carries a ``Co-Authored-By``
+        trailer naming an AI tool.
+      - ``human``: neither of the above.
+      - ``non_ai_bot``: maintenance bot (Dependabot/Renovate/CI/etc.) — kept
+        as a separate label so downstream code can drop these events from the
+        AI-vs-human comparison rather than misclassifying them as human.
+    """
+
+    actor_type: str  # "AI-bot" | "AI-powered" | "human" | "non_ai_bot"
     ai_family: str = "none"  # claude|copilot|devin|cursor|aider|cline|...|none
-    confidence: str = "none"  # high | medium | low | none
+    confidence: str = "none"  # high | none (no medium/low after dropping handle-mention path)
     reasons: list[str] = field(default_factory=list)
     # For auditing. Each tool -> hit count.
     coauthor_hits: dict[str, int] = field(default_factory=dict)
@@ -414,12 +428,12 @@ def classify_event(
             bot_login_family=login_family,
         )
 
-    # login is "human" — decide whether to upgrade to AI-assisted.
+    # login is "human" — decide whether to upgrade to AI-powered.
     if coauthor_hits:
         reasons.append("co_authored_by")
         ai_family = max(coauthor_hits, key=coauthor_hits.get)
         return ActorClassification(
-            actor_type="AI-assisted",
+            actor_type="AI-powered",
             ai_family=ai_family,
             confidence="high",
             reasons=reasons,
@@ -427,25 +441,16 @@ def classify_event(
             handle_hits=handle_hits,
         )
 
-    if handle_hits:
-        reasons.append("ai_handle_mentions")
-        ai_family = max(handle_hits, key=handle_hits.get)
-        return ActorClassification(
-            actor_type="AI-assisted",
-            ai_family=ai_family,
-            confidence="low",
-            reasons=reasons,
-            coauthor_hits=coauthor_hits,
-            handle_hits=handle_hits,
-        )
-
+    # Handle/name mentions in free text (e.g. "@claude please fix") are NOT
+    # treated as evidence that the actor is AI: a human typing @claude is
+    # not themselves an AI contributor. We retain the hit dict for auditing.
     return ActorClassification(
         actor_type="human",
         ai_family="none",
         confidence="none",
         reasons=[],
         coauthor_hits={},
-        handle_hits={},
+        handle_hits=handle_hits,
     )
 
 

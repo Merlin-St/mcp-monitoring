@@ -36,12 +36,12 @@ HAND_LABEL_CSV = DATA_DIR / "hand_labels.csv"
 
 def draw_sample(seed: int = 42, per_stratum: int = 25) -> list[dict]:
     """Draw 4×per_stratum stratified PRs (author-human, author-AI-bot,
-    author-AI-assisted, approving-review) from all PRs."""
+    author-AI-powered, approving-review) from all PRs."""
     prs_path = DATA_DIR / "prs"
     rng = random.Random(seed)
     strata: dict[str, list[dict]] = {
         "author_AI_bot": [],
-        "author_AI_assisted": [],
+        "author_AI_powered": [],
         "author_human": [],
         "review_AI": [],
     }
@@ -66,13 +66,13 @@ def draw_sample(seed: int = 42, per_stratum: int = 25) -> list[dict]:
                 if author_cls.actor_type == "AI-bot" or any_bot_commit:
                     strata["author_AI_bot"].append(pr)
                 elif coauthor_trailer:
-                    strata["author_AI_assisted"].append(pr)
+                    strata["author_AI_powered"].append(pr)
                 else:
                     strata["author_human"].append(pr)
                 for r in pr.get("reviews", []):
                     if (r.get("state") or "").upper() == "APPROVED":
                         rev_cls = classify_event(r.get("author_login", ""), r.get("body", "") or "")
-                        if rev_cls.actor_type in ("AI-bot", "AI-assisted"):
+                        if rev_cls.actor_type in ("AI-bot", "AI-powered"):
                             strata["review_AI"].append({**pr, "_sample_reason": "review"})
                         break
 
@@ -88,7 +88,7 @@ def draw_sample(seed: int = 42, per_stratum: int = 25) -> list[dict]:
                 "pred_author_type": classify_event(it.get("author_login", ""), it.get("body", "") or "").actor_type,
                 "pred_author_family": classify_event(it.get("author_login", ""), it.get("body", "") or "").ai_family,
                 "pr_url": f"https://github.com/{it.get('repo','')}/pull/{it.get('number',0)}",
-                "hand_label_author_type": "",  # fill me: human / AI-bot / AI-assisted / non_ai_bot
+                "hand_label_author_type": "",  # fill me: human / AI-bot / AI-powered / non_ai_bot
                 "notes": "",
             })
     return sample

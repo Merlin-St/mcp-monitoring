@@ -63,7 +63,8 @@ def main():
         subs[r"\PLACEHOLDERSNAPSHOTROWS"] = _num(p1.get("candidates_loaded", 0))
         subs[r"\PLACEHOLDERSCOREDROWS"] = _num(p1.get("candidates_loaded", 0))
         subs[r"\PLACEHOLDERCANDCAP"] = _num(p1.get("candidate_cap", 0))
-        subs[r"\PLACEHOLDERFINALCAP"] = _num(p1.get("final_cap", 0))
+        # Prefer the post-truncation analytic universe size when set by 01b_select_active10k.py.
+        subs[r"\PLACEHOLDERFINALCAP"] = _num(p1.get("final_repo_count") or p1.get("final_cap") or 0)
         enrich_ok = (p1.get("enrichment_status_counts") or {}).get("ok", 0)
         subs[r"\PLACEHOLDERENRICHOK"] = _num(enrich_ok)
         # After-activity-filter count = candidate_cap - non_ok_status drops - activity drops.
@@ -115,14 +116,17 @@ def main():
         cnts = json.loads(counts_path.read_text())
         in_window = sorted(int(v.get("total_in_window", 0)) for v in cnts.values())
         n = len(in_window)
-        cap = max((int(v.get("written", 0)) for v in cnts.values()), default=pr_cap_default)
-        # Infer cap as the most common "written" value (since saturated repos all sit at cap).
-        from collections import Counter
-        written_counts = Counter(int(v.get("written", 0)) for v in cnts.values())
-        if written_counts:
-            inferred_cap = written_counts.most_common(1)[0][0]
-            if inferred_cap > 0:
-                cap = inferred_cap
+        # Prefer an explicit configured cap when set in phase1_stats; otherwise fall back to
+        # inferring from the data (max written, then mode of written values).
+        cap = p1.get("pr_cap")
+        if not cap:
+            cap = max((int(v.get("written", 0)) for v in cnts.values()), default=pr_cap_default)
+            from collections import Counter
+            written_counts = Counter(int(v.get("written", 0)) for v in cnts.values())
+            if written_counts:
+                inferred_cap = written_counts.most_common(1)[0][0]
+                if inferred_cap > 0:
+                    cap = inferred_cap
         sat_n = sum(1 for v in cnts.values() if v.get("saturated_at_cap"))
         total = sum(in_window)
         mean_ = (total / n) if n else 0
@@ -200,24 +204,58 @@ def main():
                 "merged_ai_and_h_apr": ("merged_ai_and_h_apr", "mean"),
             }
 
+        # "AI authored" rollup = AI-bot OR AI-powered events. Build a per-PR
+        # indicator on the chains DataFrame so the monthly aggregate matches
+        # the figure 1 series (also AI-bot OR AI-powered). The chains schema
+        # may name the AI-powered count column ``n_ai_powered`` (current) or
+        # ``n_ai_assisted`` (legacy).
+        n_ai_powered_col = (
+            "n_ai_powered" if "n_ai_powered" in chains.columns
+            else "n_ai_assisted" if "n_ai_assisted" in chains.columns
+            else None
+        )
+        if n_ai_powered_col is None:
+            chains["_n_ai_authored_evt"] = chains["n_ai_bot_high"]
+        else:
+            chains["_n_ai_authored_evt"] = chains["n_ai_bot_high"] + chains[n_ai_powered_col]
+
         monthly = chains.groupby("month").agg(
             n=("number", "count"),
-            any_ai=("n_ai_bot_high", lambda s: (s > 0).mean()),
+            any_ai=("_n_ai_authored_evt", lambda s: (s > 0).mean()),
             chain2=("longest_chain_primary", lambda s: (s >= 2).mean()),
             chain5=("longest_chain_primary", lambda s: (s >= 5).mean()),
+            chainp95=("longest_chain_primary", lambda s: float(s.quantile(0.95))),
             **extra_aggs,
         ).sort_index()
         if len(monthly) >= 2:
             start = monthly.iloc[0]
             end = monthly.iloc[-1]
+            # Compute multipliers from the *displayed-rounded* percentages so
+            # the (X×) growth factor is arithmetically consistent with the
+            # "Y% → Z%" numbers a reader sees. _pct() rounds to 1 decimal.
+            def _disp_pct(v: float) -> float:
+                return round(float(v) * 100.0, 1)
+            ai_s_disp = _disp_pct(start["any_ai"])
+            ai_e_disp = _disp_pct(end["any_ai"])
+            ch5_s_disp = _disp_pct(start["chain5"])
+            ch5_e_disp = _disp_pct(end["chain5"])
             subs[r"\PLACEHOLDERAISTART"] = _pct(float(start["any_ai"]))
             subs[r"\PLACEHOLDERAIEND"] = _pct(float(end["any_ai"]))
             subs[r"\PLACEHOLDERCHAIN2START"] = _pct(float(start["chain2"]))
             subs[r"\PLACEHOLDERCHAIN2END"] = _pct(float(end["chain2"]))
             subs[r"\PLACEHOLDERCHAIN5START"] = _pct(float(start["chain5"]))
             subs[r"\PLACEHOLDERCHAIN5END"] = _pct(float(end["chain5"]))
-            mult = float(end["any_ai"]) / max(float(start["any_ai"]), 1e-6)
+            mult = ai_e_disp / max(ai_s_disp, 1e-6)
             subs[r"\PLACEHOLDERGROWTHMULT"] = f"{mult:.1f}"
+            chain5_mult = ch5_e_disp / max(ch5_s_disp, 1e-6)
+            subs[r"\PLACEHOLDERCHAIN5MULT"] = f"{chain5_mult:.1f}"
+            # p95 chain length (start/end + ratio).
+            p95_s = int(round(float(start["chainp95"])))
+            p95_e = int(round(float(end["chainp95"])))
+            subs[r"\PLACEHOLDERP95CHAINSTART"] = str(p95_s)
+            subs[r"\PLACEHOLDERP95CHAINEND"] = str(p95_e)
+            subs[r"\PLACEHOLDERP95CHAINMULT"] = (f"{(p95_e/max(p95_s,1)):.1f}"
+                                                 if p95_s > 0 else "--")
             if "ai_only_dec" in monthly.columns:
                 subs[r"\PLACEHOLDERAIONLYDECSTART"] = _pct(float(start["ai_only_dec"]), 2)
                 subs[r"\PLACEHOLDERAIONLYDECEND"]   = _pct(float(end["ai_only_dec"]),   2)
@@ -272,10 +310,10 @@ def main():
     subs[r"\PLACEHOLDERAUDITDECISION"] = (
         "We retain \\texttt{merged\\_by} as a field for the merger-type column but do "
         "not use it as a dimension in the headline DiD, because fewer than 1\\% of PRs in our "
-        "data are merged by an AI-bot on our allowlist."
+        "data are merged by an AI bot on our allowlist."
     )
     subs[r"\PLACEHOLDERAUDITDECISIONSHORT"] = (
-        "merger attribution is reliable but AI-bot mergers are essentially absent in this sample"
+        "merger attribution is reliable but AI bot mergers are essentially absent in this sample"
     )
     if audit_md.exists():
         text = audit_md.read_text()
@@ -306,6 +344,8 @@ def main():
         r"\PLACEHOLDERDIDDROPHPCT": "--",
         r"\PLACEHOLDERDIDB1": "--",
         r"\PLACEHOLDERDIDB2": "--",
+        r"\PLACEHOLDERDIDB1ABS": "--",
+        r"\PLACEHOLDERDIDB2ABS": "--",
         r"\PLACEHOLDERDIDPP": "--",
         r"\PLACEHOLDERDIDDELTA": "--",
         r"\PLACEHOLDERDIDSE": "--",
@@ -378,6 +418,13 @@ def main():
                 v = did.get(src)
                 if v is not None:
                     defaults[key] = f"{v:+.2f}"
+            for key, src in [
+                (r"\PLACEHOLDERDIDB1ABS", "bracket1_pp"),
+                (r"\PLACEHOLDERDIDB2ABS", "bracket2_pp"),
+            ]:
+                v = did.get(src)
+                if v is not None:
+                    defaults[key] = f"{abs(v):.2f}"
             d = did.get("logit_delta")
             se = did.get("logit_se")
             p = did.get("logit_p")
@@ -389,10 +436,10 @@ def main():
                 # LaTeX-friendly p-value formatting; placeholder is the whole
                 # math segment including the leading "p" so callers write
                 # "(...; \PLACEHOLDERDIDPVAL)" rather than wrapping in $$.
-                if p < 1e-3:
-                    defaults[r"\PLACEHOLDERDIDPVAL"] = "$p<10^{-3}$"
+                if p < 1e-4:
+                    defaults[r"\PLACEHOLDERDIDPVAL"] = "$p<0.0001$"
                 else:
-                    defaults[r"\PLACEHOLDERDIDPVAL"] = f"$p={p:.3f}$"
+                    defaults[r"\PLACEHOLDERDIDPVAL"] = f"$p={p:.4f}$"
             # Cell rates as percentages.
             cells = did.get("cells", {})
             for cell_key, ph in [
@@ -475,6 +522,59 @@ def main():
             defaults[r"\PLACEHOLDERWITHINHUHR"] = _frac(hu)
 
     for k, v in defaults.items():
+        subs[k] = v
+
+    # Within-family Claude DiD (RQ3b) from 06d_within_family_claude.py.
+    fam_defaults = {
+        r"\PLACEHOLDERRQ3BCNFOR": "--",
+        r"\PLACEHOLDERRQ3BCAUTHOR": "--",
+        r"\PLACEHOLDERRQ3BHAUTHOR": "--",
+        r"\PLACEHOLDERRQ3BCRCA": "--",   # Claude rev × Claude auth approve rate
+        r"\PLACEHOLDERRQ3BCRHA": "--",   # Claude rev × Human auth approve rate
+        r"\PLACEHOLDERRQ3BHRCA": "--",   # Human  rev × Claude auth approve rate
+        r"\PLACEHOLDERRQ3BHRHA": "--",   # Human  rev × Human auth approve rate
+        r"\PLACEHOLDERRQ3BCGAP": "--",
+        r"\PLACEHOLDERRQ3BHGAP": "--",
+        r"\PLACEHOLDERRQ3BDIDPP": "--",
+        r"\PLACEHOLDERRQ3BDIDDELTA": "--",
+        r"\PLACEHOLDERRQ3BDIDPVAL": "--",
+    }
+    fam_path = RESULTS_DIR / "within_family_stats.json"
+    if fam_path.exists():
+        fam = json.loads(fam_path.read_text())
+        cvh = fam.get("claude_vs_human", {})
+        cells = cvh.get("cells", {})
+        if cvh:
+            fam_defaults[r"\PLACEHOLDERRQ3BCNFOR"] = _num(cvh.get("cohort_n", 0))
+            fam_defaults[r"\PLACEHOLDERRQ3BCAUTHOR"] = _num(cvh.get("n_C_auth", 0))
+            fam_defaults[r"\PLACEHOLDERRQ3BHAUTHOR"] = _num(cvh.get("n_H_auth", 0))
+            for key, ph in [
+                ("C_rev_x_C_auth", r"\PLACEHOLDERRQ3BCRCA"),
+                ("C_rev_x_X_auth", r"\PLACEHOLDERRQ3BCRHA"),
+                ("R_rev_x_C_auth", r"\PLACEHOLDERRQ3BHRCA"),
+                ("R_rev_x_X_auth", r"\PLACEHOLDERRQ3BHRHA"),
+            ]:
+                rate = cells.get(key, {}).get("rate")
+                if rate is not None:
+                    fam_defaults[ph] = f"{100*rate:.2f}\\%"
+            for key, ph in [
+                ("claude_gap_pp", r"\PLACEHOLDERRQ3BCGAP"),
+                ("ref_gap_pp",    r"\PLACEHOLDERRQ3BHGAP"),
+                ("did_pp",        r"\PLACEHOLDERRQ3BDIDPP"),
+            ]:
+                v = cvh.get(key)
+                if v is not None:
+                    fam_defaults[ph] = f"{v:+.2f}"
+            d = cvh.get("logit_delta")
+            if d is not None and not (isinstance(d, float) and (d != d)):
+                fam_defaults[r"\PLACEHOLDERRQ3BDIDDELTA"] = f"{d:+.3f}"
+            p = cvh.get("logit_p")
+            if p is not None and not (isinstance(p, float) and (p != p)):
+                if p < 1e-4:
+                    fam_defaults[r"\PLACEHOLDERRQ3BDIDPVAL"] = "$p<0.0001$"
+                else:
+                    fam_defaults[r"\PLACEHOLDERRQ3BDIDPVAL"] = f"$p={p:.4f}$"
+    for k, v in fam_defaults.items():
         subs[k] = v
 
     # Regression results from 06b_regression.py if present.

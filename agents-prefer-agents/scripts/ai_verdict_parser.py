@@ -106,6 +106,12 @@ BOT_PATTERNS: dict[str, list[tuple[str, re.Pattern, str]]] = {
         ("approve", re.compile(
             r"(?im)^[\s>*\-]*(\*\*|✅\s*)\s*(Approve|LGTM)\s*(\*\*)?\s*[!.]?\s*$"),
             'Claude standalone bold/emoji verdict line'),
+        ("reject", re.compile(
+            r"(?im)^[\s>*\-#]*\*{0,2}\s*(Recommendation|Verdict|Decision|Conclusion)\s*\*{0,2}"
+            r"\s*[:\-]\s*(\*{0,2}\s*)?(❌\s*|🚫\s*|⚠️\s*)?"
+            r"(Reject|Request[\s-]?changes?|Changes\s+(requested|required|needed)"
+            r"|Do\s*not\s*merge|DO\s*NOT\s*MERGE|Block(\s*merge)?|Needs\s+work)\b"),
+            'Claude verdict line "(Recommendation|Verdict|...): (Reject|Request changes|Do not merge|Block merge|...)"'),
     ],
     # gemini-code-assist intentionally omitted: free-prose, no stable header.
 }
@@ -131,11 +137,30 @@ def classify(login: str, body: str) -> str | None:
     return None
 
 
+# Claude posts its formal review verdict as a PR-thread issue_comment (the
+# Claude Code Action runs a comment on the PR thread, not via GitHub's Review
+# API). Other bots in the allowlist post their verdicts as `reviews`, so we
+# only widen the scan to issue_comments for Claude's known logins to avoid
+# scope creep / false positives on other bots' chat-style issue comments.
+CLAUDE_ISSUE_COMMENT_LOGINS = {
+    "claude", "anthropic-ai", "anthropic-code-agent", "claude-bot",
+    "claude[bot]", "anthropic-ai[bot]",
+}
+
+
 def parse_ai_opinions(prs_dir: Path, repos: set[str] | None = None) -> pd.DataFrame:
     """Scan `prs_dir/*.jsonl` and return one row per AI-bot opinion event.
 
     Columns: repo, number, t (datetime), kind ∈ {approve_native, reject_native,
     approve_parsed, reject_parsed}, bot.
+
+    Sources scanned:
+      - Every bot in AI_BOTS_SUBS: review events (states APPROVED /
+        CHANGES_REQUESTED native, or COMMENTED bodies parsed by classify()).
+      - Claude only (CLAUDE_ISSUE_COMMENT_LOGINS): also issue_comments on the PR
+        thread. Claude's verdict-line format ("**Recommendation**: Approve" /
+        "**Recommendation**: Request changes") is posted there because the
+        Claude Code Action runs as a comment, not via the Review API.
 
     If `repos` is given, only files matching those repos (after the
     `owner__name` -> `owner/name` convention) are scanned.
@@ -170,6 +195,19 @@ def parse_ai_opinions(prs_dir: Path, repos: set[str] | None = None) -> pd.DataFr
                             kind = "reject_parsed"
                     if kind:
                         rows.append((repo, num, ts, kind, login))
+                # Claude's verdict-line opinions live in issue_comments.
+                for c in d.get("issue_comments", []):
+                    login = (c.get("author_login") or "").lower()
+                    if login not in CLAUDE_ISSUE_COMMENT_LOGINS:
+                        continue
+                    body = (c.get("body") or "").strip()
+                    if not body:
+                        continue
+                    v = classify(login, body)
+                    if v == "approve":
+                        rows.append((repo, num, c.get("created_at"), "approve_parsed", login))
+                    elif v == "reject":
+                        rows.append((repo, num, c.get("created_at"), "reject_parsed", login))
     df = pd.DataFrame(rows, columns=["repo", "number", "t", "kind", "bot"])
     if not df.empty:
         df["t"] = pd.to_datetime(df.t)
