@@ -25,13 +25,10 @@
 \citation{juzek2025delve}
 \citation{huang2026morecode}
 \citation{stein2026mcp}
-\citation{doshi2024homogeneity}
 \citation{shumailov2024collapse}
-\citation{vanderweij2024sandbagging}
 \citation{anthropic2026constitution}
 \citation{bai2022constitutional}
-\citation{thakkar2025iclr,bowman2022oversight}
-\citation{goddard2012automation}
+\citation{thakkar2025iclr,bowman2022oversight,goddard2012automation}
 \citation{ibrahim2025overreliance,tomasev2026delegation}
 \citation{laurito2025aibias}
 \citation{panickssery2024evaluators}
@@ -40,101 +37,91 @@
 \citation{ghaleb2026fingerprinting}
 \newlabel{sec:taxonomy}{{2}{2}{}{section.2}{}}
 \newlabel{sec:taxonomy@cref}{{[section][2][]2}{[1][2][]2}}
-\newlabel{sec:focus}{{3}{2}{}{section.3}{}}
-\newlabel{sec:focus@cref}{{[section][3][]3}{[1][2][]2}}
 \newlabel{sec:methods}{{3}{2}{}{section.3}{}}
 \newlabel{sec:methods@cref}{{[section][3][]3}{[1][2][]2}}
+\citation{githubinfisical2026}
+\citation{laurito2025aibias}
 \providecommand*\caption@xref[2]{\@setref\relax\@undefined{#1}}
 \newlabel{tab:taxonomy}{{1}{3}{Five accelerators of gradual disempowerment --- mechanisms through which model propensities and interfaces grow AI taste authority --- organised by the terms in the dynamics above. The ``Layer'' column distinguishes accelerators rooted in interfaces and other deployment choices from those rooted in a model's own propensities. These accelerators can also point in the opposite direction (e.g.\ human-AI switching costs can fall as well as rise). We list the disempowerment-relevant sign}{table.caption.1}{}}
 \newlabel{tab:taxonomy@cref}{{[table][1][]1}{[1][2][]3}}
 \newlabel{sec:results}{{4}{3}{}{section.4}{}}
 \newlabel{sec:results@cref}{{[section][4][]4}{[1][3][]3}}
-\citation{laurito2025aibias}
-\newlabel{fig:headline}{{1}{4}{Monthly AI-system participation in GitHub PRs across 10,000{} critical OS software repositories (Apr 2025--Mar 2026). Three series: share of PRs with any AI authored event --- AI bot or AI powered (RQ 1), share of PRs with an AI--AI comment chain of $\geq 5$ contiguous AI bot events (RQ 1), and share of PRs with an explicit AI review (native AI bot \texttt {APPROVED} or \texttt {CHANGES\_REQUESTED} review state; RQ 2). First- and last-month values are annotated on every line. Vertical dotted lines mark approximate public-availability dates of several coding and code-review agents (reader context, not a causal claim)}{figure.caption.2}{}}
-\newlabel{fig:headline@cref}{{[figure][1][]1}{[1][3][]4}}
-\citation{thakkar2025iclr}
-\citation{cheng2025elephant}
 \citation{edelman2025fullstack}
-\citation{stein2026mcp}
-\citation{ossf-criticality}
-\newlabel{fig:withinpr}{{2}{5}{Within-PR AI-AI bias DiD on the 46,852{} PRs in the Dual-review cohort (Any AI \& human) --- AI bot reviewed \emph {and} human reviewed, with no commits between the AI's verdict and the human's review. Each panel holds author-type fixed and contrasts the human-reviewer and AI-reviewer approval rates (Wilson 95\% CIs); the labelled drop is the bracket entering $\widehat {\rbt ^A - \rbt ^H}$. \textbf {Left:} on AI-authored PRs, AI bots approve -70.72{}~pp \emph {less} than humans do (``AI prefers AI less than humans do''). \textbf {Right:} on human-authored PRs, AI bots approve -56.55{}~pp \emph {less} than humans do. The DiD is the difference of the two drops: $\widehat {\rbt ^A - \rbt ^H} = -14.17{}$~pp (logit $\delta =-0.724{}$, $p<0.0001${}). Both drops are negative because AI bots approve everything less than humans do; the drop on AI-authored PRs is \emph {more} negative, so the DiD is anti-self-preference}{figure.caption.3}{}}
-\newlabel{fig:withinpr@cref}{{[figure][2][]2}{[1][5][]5}}
-\newlabel{sec:discuss}{{5}{5}{}{section.5}{}}
-\newlabel{sec:discuss@cref}{{[section][5][]5}{[1][5][]5}}
-\newlabel{fig:withinfamily}{{3}{5}{Within-family check: Claude reviewers vs.\ human reviewers on Claude-authored vs.\ human-authored PRs, on the Dual-review cohort (Claude \& human) --- 689{} PRs (49{} Claude-authored, 640{} human-authored). Same construction as Figure~\ref {fig:withinpr}: each panel holds author-type fixed and contrasts the human-reviewer and Claude-reviewer approval rates (Wilson 95\% CIs); the labelled drop is the within-author reviewer-type gap. \textbf {Left:} on Claude-authored PRs, Claude reviewers approve -2.84{}~pp differently from humans. \textbf {Right:} on human-authored PRs, Claude reviewers approve -5.83{}~pp differently from humans. The within-family DiD $\widehat {\rbt ^{A,\text {Claude}} - \rbt ^H}_\text {on Claude-auth} = +2.99{}$~pp (logit $\delta =+0.256{}$, $p=0.7533${}) is direction-consistent with a small in-family preference but statistically indistinguishable from zero given the small Claude-authored cell}{figure.caption.4}{}}
-\newlabel{fig:withinfamily@cref}{{[figure][3][]3}{[1][5][]5}}
 \bibdata{references}
 \bibcite{agarwal2026ides}{{1}{2026}{{Agarwal et~al.}}{{Agarwal, He, and Vasilescu}}}
 \bibcite{anthropic2026constitution}{{2}{2026}{{Anthropic}}{{}}}
 \bibcite{appel2025economic}{{3}{2025}{{Appel et~al.}}{{Appel, McCrory, Tamkin, McCain, Neylon, and Stern}}}
 \bibcite{bai2022constitutional}{{4}{2022}{{Bai et~al.}}{{Bai, Kadavath, Kundu, Askell, Kernion, Jones, Chen, Goldie, Mirhoseini, and McKinnon}}}
 \bibcite{borges2018github}{{5}{2018}{{Borges \& Valente}}{{Borges and Valente}}}
+\newlabel{fig:headline}{{1}{4}{Monthly AI participation in GitHub PRs across 10,000{} critical OS software repositories (Apr 2025--Mar 2026). Three series display the share of PRs with any AI authored event (RQ 1), share of PRs with an AI--AI comment chain of $\geq 5$ contiguous AI bot events (RQ 1), and share of PRs with an explicit AI review (RQ 2)}{figure.caption.2}{}}
+\newlabel{fig:headline@cref}{{[figure][1][]1}{[1][3][]4}}
+\newlabel{sec:discuss}{{5}{4}{}{section.5}{}}
+\newlabel{sec:discuss@cref}{{[section][5][]5}{[1][4][]4}}
 \bibcite{bowman2022oversight}{{6}{2022}{{Bowman et~al.}}{{Bowman, Hyun, Perez, Chen, Pettit, Heiner, Lukošiūtė, Askell, Jones, and Chen}}}
 \bibcite{chen2025selfprefer}{{7}{2025}{{Chen et~al.}}{{Chen, Wei, Zhu, Feng, and Meng}}}
-\bibcite{cheng2025elephant}{{8}{2025}{{Cheng et~al.}}{{Cheng, Yu, Lee, Khadpe, Ibrahim, and Jurafsky}}}
-\bibcite{collingridge1980social}{{9}{1980}{{Collingridge}}{{}}}
-\bibcite{doshi2024homogeneity}{{10}{2024}{{Doshi \& Hauser}}{{Doshi and Hauser}}}
-\bibcite{edelman2025fullstack}{{11}{2025}{{Edelman et~al.}}{{Edelman, Zhi-Xuan, Lowe, Klingefjord, Wang-Mascianica, Franklin, Kearns, Hain, Sarkar, Bakker, Barez, Duvenaud, Foerster, Gabriel, et~al.}}}
-\bibcite{ehsani2026fail}{{12}{2026}{{Ehsani et~al.}}{{Ehsani, Pathak, Rawal, {Al Mujahid}, Imran, and Chatterjee}}}
-\bibcite{ghaleb2026fingerprinting}{{13}{2026}{{Ghaleb}}{{}}}
-\bibcite{glasswing2026}{{14}{2026}{{Glasswing}}{{}}}
-\bibcite{goddard2012automation}{{15}{2012}{{Goddard et~al.}}{{Goddard, Roudsari, and Wyatt}}}
-\bibcite{huang2026morecode}{{16}{2026}{{Huang et~al.}}{{Huang, Jaisri, Shimizu, Chen, Nakashima, and Rodr{\'i}guez-P{\'e}rez}}}
-\bibcite{hume1757taste}{{17}{1757}{{Hume}}{{}}}
-\bibcite{ibrahim2025overreliance}{{18}{2025}{{Ibrahim et~al.}}{{Ibrahim, Collins, Kim, Reuel, Lamparth, Feng, Ahmad, Soni, {El Kattan}, Stein, Swaroop, Sucholutsky, Strait, Liao, and Bhatt}}}
-\bibcite{jakesch2023cowriting}{{19}{2023}{{Jakesch et~al.}}{{Jakesch, Bhat, Buschek, Zalmanson, and Naaman}}}
-\bibcite{juzek2025delve}{{20}{2025}{{Juzek \& Ward}}{{Juzek and Ward}}}
-\bibcite{kalliamvakou2014promises}{{21}{2014}{{Kalliamvakou et~al.}}{{Kalliamvakou, Gousios, Blincoe, Singer, German, and Damian}}}
-\bibcite{kulveit2025gradual}{{22}{2025}{{Kulveit et~al.}}{{Kulveit, Douglas, Ammann, Turan, Krueger, and Duvenaud}}}
-\bibcite{laurito2025aibias}{{23}{2025}{{Laurito et~al.}}{{Laurito, Davis, Grieztes, et~al.}}}
-\bibcite{li2026aidev}{{24}{2026}{{Li et~al.}}{{Li, Zhang, and Hassan}}}
-\bibcite{munaiah2017curating}{{25}{2017}{{Munaiah et~al.}}{{Munaiah, Kroh, Cabrey, and Nagappan}}}
-\bibcite{nanda2025researchtaste}{{26}{2025}{{Nanda}}{{}}}
-\bibcite{ossf-criticality}{{27}{2024}{{OpenSSF Securing Critical Projects Working Group}}{{}}}
-\bibcite{panickssery2024evaluators}{{28}{2024}{{Panickssery et~al.}}{{Panickssery, Bowman, and Feng}}}
-\bibcite{pombal2026rubric}{{29}{2026}{{Pombal et~al.}}{{Pombal, Rei, and Martins}}}
-\bibcite{qiu2024progressgym}{{30}{2024}{{Qiu et~al.}}{{}}}
-\bibcite{qiu2025lockin}{{31}{2025}{{Qiu et~al.}}{{Qiu, He, Chugh, and Kleiman-Weiner}}}
-\bibcite{rastogi2022deciding}{{32}{2022}{{Rastogi et~al.}}{{Rastogi, Zhang, Wei, Varshney, Dhurandhar, and Tomsett}}}
-\bibcite{shumailov2024collapse}{{33}{2024}{{Shumailov et~al.}}{{Shumailov, Shumaylov, Zhao, Papernot, Anderson, and Gal}}}
-\bibcite{stein2026mcp}{{34}{2026}{{Stein}}{{}}}
-\bibcite{thakkar2025iclr}{{35}{2025}{{Thakkar et~al.}}{{Thakkar, Yuksekgonul, Silberg, Garg, Peng, Sha, Yu, Vondrick, and Zou}}}
-\bibcite{tomasev2026delegation}{{36}{2026}{{Toma{\v {s}}ev et~al.}}{{Toma{\v {s}}ev, Franklin, and Osindero}}}
-\bibcite{tversky1974judgment}{{37}{1974}{{Tversky \& Kahneman}}{{Tversky and Kahneman}}}
-\bibcite{vanderweij2024sandbagging}{{38}{2024}{{van~der Weij et~al.}}{{van~der Weij, Hofst{\"a}tter, Jaffe, Brown, and Ward}}}
-\bibcite{watanabe2025agentic}{{39}{2025}{{Watanabe et~al.}}{{Watanabe, Li, Kashiwa, Reid, Iida, and Hassan}}}
+\bibcite{collingridge1980social}{{8}{1980}{{Collingridge}}{{}}}
+\bibcite{edelman2025fullstack}{{9}{2025}{{Edelman et~al.}}{{Edelman, Zhi-Xuan, Lowe, Klingefjord, Wang-Mascianica, Franklin, Kearns, Hain, Sarkar, Bakker, Barez, Duvenaud, Foerster, Gabriel, et~al.}}}
+\bibcite{ehsani2026fail}{{10}{2026}{{Ehsani et~al.}}{{Ehsani, Pathak, Rawal, {Al Mujahid}, Imran, and Chatterjee}}}
+\bibcite{ghaleb2026fingerprinting}{{11}{2026}{{Ghaleb}}{{}}}
+\bibcite{githubinfisical2026}{{12}{2026}{{Github-Infisical}}{{}}}
+\newlabel{fig:withinpr}{{2}{5}{Within-PR AI-AI bias DiD on the 46,852{} PRs in the dual-review cohort (Any AI \& human). \textbf {Left:} on AI-authored PRs, AI bots approve -70.72{}~pp \emph {less} than humans. \textbf {Right:} on human-authored PRs, the gap is -56.55{}~pp. DiD $\widehat {\rbt ^A - \rbt ^H} = -14.17{}$~pp ($p<0.0001${}); the larger drop on AI-authored PRs makes the DiD anti-self-preference}{figure.caption.3}{}}
+\newlabel{fig:withinpr@cref}{{[figure][2][]2}{[1][4][]5}}
+\newlabel{fig:withinfamily}{{3}{5}{Within-family check on the dual-review cohort (Claude \& human; 689{} PRs, 49{} Claude-authored). Same construction as Figure~\ref {fig:withinpr}. DiD $\widehat {\rbt ^{A,\text {Claude}} - \rbt ^H} = +2.99{}$~pp ($p=0.7533${}) --- direction-consistent with a small in-family preference but indistinguishable from zero given the small Claude-authored cell}{figure.caption.4}{}}
+\newlabel{fig:withinfamily@cref}{{[figure][3][]3}{[1][4][]5}}
+\bibcite{glasswing2026}{{13}{2026}{{Glasswing}}{{}}}
+\bibcite{goddard2012automation}{{14}{2012}{{Goddard et~al.}}{{Goddard, Roudsari, and Wyatt}}}
+\bibcite{huang2026morecode}{{15}{2026}{{Huang et~al.}}{{Huang, Jaisri, Shimizu, Chen, Nakashima, and Rodr{\'i}guez-P{\'e}rez}}}
+\bibcite{hume1757taste}{{16}{1757}{{Hume}}{{}}}
+\bibcite{ibrahim2025overreliance}{{17}{2025}{{Ibrahim et~al.}}{{Ibrahim, Collins, Kim, Reuel, Lamparth, Feng, Ahmad, Soni, {El Kattan}, Stein, Swaroop, Sucholutsky, Strait, Liao, and Bhatt}}}
+\bibcite{jakesch2023cowriting}{{18}{2023}{{Jakesch et~al.}}{{Jakesch, Bhat, Buschek, Zalmanson, and Naaman}}}
+\bibcite{juzek2025delve}{{19}{2025}{{Juzek \& Ward}}{{Juzek and Ward}}}
+\bibcite{kalliamvakou2014promises}{{20}{2014}{{Kalliamvakou et~al.}}{{Kalliamvakou, Gousios, Blincoe, Singer, German, and Damian}}}
+\bibcite{kulveit2025gradual}{{21}{2025}{{Kulveit et~al.}}{{Kulveit, Douglas, Ammann, Turan, Krueger, and Duvenaud}}}
+\bibcite{laurito2025aibias}{{22}{2025}{{Laurito et~al.}}{{Laurito, Davis, Grieztes, et~al.}}}
+\bibcite{li2026aidev}{{23}{2026}{{Li et~al.}}{{Li, Zhang, and Hassan}}}
+\bibcite{munaiah2017curating}{{24}{2017}{{Munaiah et~al.}}{{Munaiah, Kroh, Cabrey, and Nagappan}}}
+\bibcite{nanda2025researchtaste}{{25}{2025}{{Nanda}}{{}}}
+\bibcite{ossf-criticality}{{26}{2024}{{OpenSSF Securing Critical Projects Working Group}}{{}}}
+\bibcite{panickssery2024evaluators}{{27}{2024}{{Panickssery et~al.}}{{Panickssery, Bowman, and Feng}}}
+\bibcite{pombal2026rubric}{{28}{2026}{{Pombal et~al.}}{{Pombal, Rei, and Martins}}}
+\bibcite{qiu2024progressgym}{{29}{2024}{{Qiu et~al.}}{{}}}
+\bibcite{qiu2025lockin}{{30}{2025}{{Qiu et~al.}}{{Qiu, He, Chugh, and Kleiman-Weiner}}}
+\bibcite{rastogi2022deciding}{{31}{2022}{{Rastogi et~al.}}{{Rastogi, Zhang, Wei, Varshney, Dhurandhar, and Tomsett}}}
+\bibcite{shumailov2024collapse}{{32}{2024}{{Shumailov et~al.}}{{Shumailov, Shumaylov, Zhao, Papernot, Anderson, and Gal}}}
+\bibcite{stein2026mcp}{{33}{2026}{{Stein}}{{}}}
+\bibcite{thakkar2025iclr}{{34}{2025}{{Thakkar et~al.}}{{Thakkar, Yuksekgonul, Silberg, Garg, Peng, Sha, Yu, Vondrick, and Zou}}}
+\bibcite{tomasev2026delegation}{{35}{2026}{{Toma{\v {s}}ev et~al.}}{{Toma{\v {s}}ev, Franklin, and Osindero}}}
+\bibcite{tversky1974judgment}{{36}{1974}{{Tversky \& Kahneman}}{{Tversky and Kahneman}}}
+\bibcite{watanabe2025agentic}{{37}{2025}{{Watanabe et~al.}}{{Watanabe, Li, Kashiwa, Reid, Iida, and Hassan}}}
 \bibstyle{icml2026}
-\newlabel{app:examples}{{A}{9}{}{appendix.A}{}}
-\newlabel{app:examples@cref}{{[appendix][1][2147483647]A}{[1][9][]9}}
-\newlabel{app:examples-aixai}{{A.1}{9}{}{subsection.A.1}{}}
-\newlabel{app:examples-aixai@cref}{{[subappendix][1][2147483647,1]A.1}{[1][9][]9}}
-\newlabel{app:examples-chains}{{A.2}{9}{}{subsection.A.2}{}}
-\newlabel{app:examples-chains@cref}{{[subappendix][2][2147483647,1]A.2}{[1][9][]9}}
-\newlabel{app:threats}{{B}{10}{}{appendix.B}{}}
-\newlabel{app:threats@cref}{{[appendix][2][2147483647]B}{[1][10][]10}}
 \citation{ossf-criticality}
 \citation{borges2018github,kalliamvakou2014promises,munaiah2017curating}
+\newlabel{app:allowlist}{{A}{8}{}{appendix.A}{}}
+\newlabel{app:allowlist@cref}{{[appendix][1][2147483647]A}{[1][8][]8}}
+\newlabel{tab:ai-bots}{{2}{8}{AI bot allowlist (as of April 2026). Account handles are GitHub bot logins; trailers are case-insensitive matches against the \texttt {Co-Authored-By:} line in commit/PR-body text. Rows with ``---'' under \emph {Account handles} are tools that only surface as a co-author trailer (no dedicated bot login)}{table.caption.6}{}}
+\newlabel{tab:ai-bots@cref}{{[table][2][2147483647]2}{[1][8][]8}}
+\newlabel{tab:non-ai-bots}{{3}{8}{Non-AI bot exclusions (treated neither as human nor as AI)}{table.caption.7}{}}
+\newlabel{tab:non-ai-bots@cref}{{[table][3][2147483647]3}{[1][8][]8}}
+\newlabel{app:ai-verdict-regex}{{B}{8}{}{appendix.B}{}}
+\newlabel{app:ai-verdict-regex@cref}{{[appendix][2][2147483647]B}{[1][8][]8}}
+\newlabel{app:repo-selection}{{C}{8}{}{appendix.C}{}}
+\newlabel{app:repo-selection@cref}{{[appendix][3][2147483647]C}{[1][8][]8}}
 \citation{ossf-criticality}
-\newlabel{app:allowlist}{{C}{11}{}{appendix.C}{}}
-\newlabel{app:allowlist@cref}{{[appendix][3][2147483647]C}{[1][11][]11}}
-\newlabel{tab:ai-bots}{{2}{11}{AI bot allowlist (as of April 2026)}{table.caption.6}{}}
-\newlabel{tab:ai-bots@cref}{{[table][2][2147483647]2}{[1][11][]11}}
-\newlabel{tab:non-ai-bots}{{3}{11}{Non-AI bot exclusions (treated neither as human nor as AI)}{table.caption.7}{}}
-\newlabel{tab:non-ai-bots@cref}{{[table][3][2147483647]3}{[1][11][]11}}
-\newlabel{app:repo-selection}{{D}{11}{}{appendix.D}{}}
-\newlabel{app:repo-selection@cref}{{[appendix][4][2147483647]D}{[1][11][]11}}
-\citation{ossf-criticality}
-\citation{ghaleb2026fingerprinting}
-\newlabel{app:extra-figures}{{E}{14}{}{appendix.E}{}}
-\newlabel{app:extra-figures@cref}{{[appendix][5][2147483647]E}{[1][14][]14}}
-\newlabel{app:methods}{{F}{14}{}{appendix.F}{}}
-\newlabel{app:methods@cref}{{[appendix][6][2147483647]F}{[1][14][]14}}
-\newlabel{fig:chainbox}{{4}{15}{Distribution of longest AI$\to $AI chain length per PR, by quarter. Boxes show the interquartile range with whiskers at 1.5$\times $IQR. Fliers are omitted. Annotations report the quarterly mean and $p_{95}$. The tail grows monotonically: $p_{95}$ triples from 2025-Q2 to 2026-Q1. The single-PR maximum (13) is stable, indicating growth driven by more \emph {PRs} having long chains rather than any one PR having an unprecedentedly long chain}{figure.caption.8}{}}
-\newlabel{fig:chainbox@cref}{{[figure][4][2147483647]4}{[1][14][]15}}
-\newlabel{app:ai-verdict-regex}{{G}{16}{}{appendix.G}{}}
-\newlabel{app:ai-verdict-regex@cref}{{[appendix][7][2147483647]G}{[1][16][]16}}
-\newlabel{app:anchoring}{{H}{16}{}{appendix.H}{}}
-\newlabel{app:anchoring@cref}{{[appendix][8][2147483647]H}{[1][16][]16}}
-\newlabel{tab:ai-verdict-regex}{{4}{17}{AI bot verdict regex catalogue. Yields are corpus-wide event counts on the v2 dataset; each row is one bot $\times $ verdict combination}{table.caption.9}{}}
-\newlabel{tab:ai-verdict-regex@cref}{{[table][4][2147483647]4}{[1][16][]17}}
-\gdef \@abspage@last{17}
+\newlabel{tab:ai-verdict-regex}{{4}{9}{AI bot verdict regex catalogue. Yields are corpus-wide event counts; each row is one bot $\times $ verdict combination}{table.caption.8}{}}
+\newlabel{tab:ai-verdict-regex@cref}{{[table][4][2147483647]4}{[1][8][]9}}
+\citation{githubinfisical2026}
+\newlabel{app:extra-figures}{{D}{11}{}{appendix.D}{}}
+\newlabel{app:extra-figures@cref}{{[appendix][4][2147483647]D}{[1][10][]11}}
+\newlabel{fig:chainbox}{{4}{11}{Distribution of longest AI$\to $AI chain length per PR, by quarter. Boxes show the interquartile range with whiskers at 1.5$\times $IQR. Fliers are omitted. Annotations report the quarterly mean and $p_{95}$. The tail grows monotonically: $p_{95}$ triples from 2025-Q2 to 2026-Q1 (share of PRs with chain $\geq $5 grew 8.8$\times $ over the same period). The single-PR maximum (13) is stable, indicating growth driven by more \emph {PRs} having long chains rather than any one PR having an unprecedentedly long chain}{figure.caption.9}{}}
+\newlabel{fig:chainbox@cref}{{[figure][4][2147483647]4}{[1][10][]11}}
+\newlabel{app:methods}{{E}{11}{}{appendix.E}{}}
+\newlabel{app:methods@cref}{{[appendix][5][2147483647]E}{[1][11][]11}}
+\newlabel{app:anchoring}{{F}{12}{}{appendix.F}{}}
+\newlabel{app:anchoring@cref}{{[appendix][6][2147483647]F}{[1][12][]12}}
+\newlabel{app:quarterly-did}{{G}{12}{}{appendix.G}{}}
+\newlabel{app:quarterly-did@cref}{{[appendix][7][2147483647]G}{[1][12][]12}}
+\newlabel{fig:withinpr-native}{{5}{13}{Within-PR DiD on the dual-review cohort, with the AI opinion pool restricted to native \texttt {APPROVED} / \texttt {CHANGES\_REQUESTED} review states only (symmetric with the human side). Pooled across the full Apr 2025--Mar 2026 window: 85{} AI-authored and 4,609{} human-authored PRs. Same construction as Figure~\ref {fig:withinpr}. DiD $\widehat {\rbt ^A - \rbt ^H} = +4.60{}$~pp (95\% CI [-5.73, +14.94]{}) --- the headline negative result in \S \ref {sec:results} does not replicate in this small sample with only explicit review events included: the gap on AI-authored PRs is +1.18{}~pp [95\% CI [-9.11, +11.46]{}] vs.\ a gap of -3.43{}~pp [95\% CI [-4.49, -2.37]{}] on human-authored PRs, and the DiD's CI crosses zero}{figure.caption.10}{}}
+\newlabel{fig:withinpr-native@cref}{{[figure][5][2147483647]5}{[1][13][]13}}
+\newlabel{tab:rq3-quarterly}{{5}{14}{Within-PR DiD (\S \ref {sec:results}) by PR-creation quarter. Top panel: cross-family DiD on the stable doubly-engaged Any-AI-and-human cohort. Bottom panel: within-family DiD on the Claude-and-human cohort, with author restricted to Claude or human (the 2025-Q2 Claude-author cell is empty in the cohort, so its DiD is undefined). The gap on each author-side row is the AI-reviewer approval rate minus the human-reviewer approval rate (in pp); the DiD is the gap on AI-/Claude-authored PRs minus the gap on human-authored PRs. 95\% CIs are analytical (two independent gaps summed in quadrature on the rate-difference scale)}{table.caption.11}{}}
+\newlabel{tab:rq3-quarterly@cref}{{[table][5][2147483647]5}{[1][13][]14}}
+\gdef \@abspage@last{14}

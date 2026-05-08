@@ -1,4 +1,4 @@
-\begin{thebibliography}{39}
+\begin{thebibliography}{37}
 \providecommand{\natexlab}[1]{#1}
 \providecommand{\url}[1]{\texttt{#1}}
 \expandafter\ifx\csname urlstyle\endcsname\relax
@@ -53,24 +53,10 @@ Chen, W.-L., Wei, Z., Zhu, X., Feng, S., and Meng, Y.
 \newblock Do {LLM} evaluators prefer themselves for a reason?, 2025.
 \newblock URL \url{https://arxiv.org/abs/2504.03846}.
 
-\bibitem[Cheng et~al.(2025)Cheng, Yu, Lee, Khadpe, Ibrahim, and
-  Jurafsky]{cheng2025elephant}
-Cheng, M., Yu, S., Lee, C., Khadpe, P., Ibrahim, L., and Jurafsky, D.
-\newblock {ELEPHANT}: Measuring and understanding social sycophancy in {LLM}s,
-  2025.
-\newblock URL \url{https://arxiv.org/abs/2505.13995}.
-
 \bibitem[Collingridge(1980)]{collingridge1980social}
 Collingridge, D.
 \newblock \emph{The Social Control of Technology}.
 \newblock St.\ Martin's Press, New York, 1980.
-
-\bibitem[Doshi \& Hauser(2024)Doshi and Hauser]{doshi2024homogeneity}
-Doshi, A.~R. and Hauser, O.~P.
-\newblock Generative {AI} enhances individual creativity but reduces the
-  collective diversity of novel content.
-\newblock \emph{Science Advances}, 10\penalty0 (28):\penalty0 eadn5290, 2024.
-\newblock \doi{10.1126/sciadv.adn5290}.
 
 \bibitem[Edelman et~al.(2025)Edelman, Zhi-Xuan, Lowe, Klingefjord,
   Wang-Mascianica, Franklin, Kearns, Hain, Sarkar, Bakker, Barez, Duvenaud,
@@ -94,6 +80,13 @@ Ehsani, R., Pathak, S., Rawal, S., {Al Mujahid}, A., Imran, M.~M., and
 Ghaleb, T.~A.
 \newblock Fingerprinting {AI} coding agents on {G}it{H}ub, 2026.
 \newblock URL \url{https://arxiv.org/abs/2601.17406}.
+
+\bibitem[{Github-Infisical}(2026)]{githubinfisical2026}
+{Github-Infisical}.
+\newblock {Infisical/infisical pull request \#5273}: merged by
+  \texttt{devin-ai-integration[bot]} after human approval, 2026.
+\newblock URL \url{https://github.com/Infisical/infisical/pull/5273}.
+\newblock Merged 2026-01-26.
 
 \bibitem[{Glasswing}(2026)]{glasswing2026}
 {Glasswing}.
@@ -121,7 +114,7 @@ Huang, H., Jaisri, P., Shimizu, S., Chen, L., Nakashima, S., and
 
 \bibitem[Hume(1757)]{hume1757taste}
 Hume, D.
-\newblock \emph{Of the Standard of Taste}.
+\newblock \emph{Of the Standard of Taste}, chapter~4.
 \newblock A.\ Millar, London, 1757.
 
 \bibitem[Ibrahim et~al.(2025)Ibrahim, Collins, Kim, Reuel, Lamparth, Feng,
@@ -203,8 +196,7 @@ Nanda, N.
   project.
 \newblock GitHub project, version 2.0, 2024.
 \newblock URL \url{https://github.com/ossf/criticality_score}.
-\newblock Accessed snapshot:
-  \texttt{gs://ossf-criticality-score/2025.07.25/010355/all.csv}.
+\newblock Accessed snapshot: \texttt{2025.07.25}.
 
 \bibitem[Panickssery et~al.(2024)Panickssery, Bowman, and
   Feng]{panickssery2024evaluators}
@@ -272,13 +264,6 @@ Tversky, A. and Kahneman, D.
 \newblock Judgment under uncertainty: Heuristics and biases.
 \newblock \emph{Science}, 185\penalty0 (4157):\penalty0 1124--1131, 1974.
 \newblock \doi{10.1126/science.185.4157.1124}.
-
-\bibitem[van~der Weij et~al.(2024)van~der Weij, Hofst{\"a}tter, Jaffe, Brown,
-  and Ward]{vanderweij2024sandbagging}
-van~der Weij, T., Hofst{\"a}tter, F., Jaffe, O., Brown, S.~F., and Ward, F.~R.
-\newblock {AI} sandbagging: Language models can strategically underperform on
-  evaluations, 2024.
-\newblock URL \url{https://arxiv.org/abs/2406.07358}.
 
 \bibitem[Watanabe et~al.(2025)Watanabe, Li, Kashiwa, Reid, Iida, and
   Hassan]{watanabe2025agentic}
