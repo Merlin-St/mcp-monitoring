@@ -1,4 +1,4 @@
-% Appendix G — Robustness: anchoring of humans on AI verdicts
+% Appendix F — Robustness: anchoring of humans on AI verdicts
 % Companion to RQ3. Tests whether the within-PR DiD (\S\ref{sec:results}) is
 % driven by humans deferring to AI's prior verdict (anchoring), rather than
 % by AI bots' actual differential preference.
@@ -10,7 +10,7 @@
 \item \textbf{Stratum B (anchoring-prone):} 37,137{} PRs where the AI bot's first comment/review event preceded any human engagement, with at least one explicit human review. AI-author cell: 94.91\%{} approval rate (n=2,278{}); H-author cell: 93.46\%{} approval rate (n=34,859{}). Human-side gap: +1.45{}~pp.
 \end{itemize}
 
-\paragraph{Result.} Cross-stratum DiD ($B - A$) $= +2.28{}$~pp (95\% CI [+1.31, +3.26]{}). AI's prior review nudges humans toward approving AI-authored PRs by less than one percentage point relative to the no-AI-reviewer baseline. The within-PR DiD reported in \S\ref{sec:results} ($\widehat{\rbt^A - \rbt^H} = -14.17{}$~pp) is more than an order of magnitude larger than this anchoring effect, and the two CIs do not overlap. Anchoring is therefore not the main driver of the headline result.
+\paragraph{Result.} Cross-stratum DiD ($B - A$) $= +2.28{}$~pp (95\% CI [+1.31, +3.26]{}). AI's prior review nudges humans toward approving AI-authored PRs by less than 1~pp relative to the no-AI-reviewer baseline. The within-PR DiD reported in \S\ref{sec:results} ($\widehat{\rbt^A - \rbt^H} = -14.17{}$~pp) is more than an order of magnitude larger than this anchoring effect, and the two CIs do not overlap. Anchoring is therefore not the main driver of the headline result.
 
 \paragraph{What this rules out.} The most plausible alternative interpretation of the negative DiD --- that AI bots simply observe (correctly or not) more issues in AI-authored PRs and humans defer to their verdict --- predicts a \emph{positive} anchoring DiD: humans should align more with AI's harshness on AI-authored content. The data instead show that humans show essentially the same approval pattern by author whether or not an AI bot has reviewed the PR. The mechanism producing the negative within-PR DiD lives on the AI side (AI bots' own threshold differs by author), not on the human side (humans deferring to AI).
 

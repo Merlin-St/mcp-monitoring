@@ -1,4 +1,4 @@
-% Appendix F — AI bot verdict regex catalogue
+% Appendix B — AI bot verdict regex catalogue
 % Companion to RQ3 / Figure 2. Documents the per-bot regex used to extract
 % approve/reject verdicts from the structured-format headers each bot writes
 % in its `COMMENTED` review bodies.
@@ -34,4 +34,4 @@ Gemini Code Assist & --- & free-prose; no stable structured header, left unclass
 \end{tabular}
 \end{table*}
 
-\paragraph{Coverage (\% of each bot's COMMENTED reviews classified).} Cubic 100\%, CodeRabbit 86\%, Cursor Bugbot 79\%, Sourcery 79\%, Copilot PR Reviewer 57\%, Greptile 54\%, Claude 69\% (the rest are \texttt{\#\# Claude Code Review} setup messages, correctly excluded as no-opinion), Gemini Code Assist 0\% (free-prose only). Aggregate over all AI bot \texttt{COMMENTED} reviews: 13.3\% parsed-approve, 48.4\% parsed-reject, 37.6\% unmatched (mostly Gemini and non-template Copilot prose reviews, left unclassified).
+\paragraph{Coverage (\% of each bot's COMMENTED reviews classified).} Cubic 100\%, CodeRabbit 86\%, Cursor Bugbot 79\%, Sourcery 79\%, Copilot PR Reviewer 57\%, Greptile 54\%, Claude 69\% (the rest are \texttt{\#\# Claude Code Review} setup messages, correctly excluded as no-verdict), Gemini Code Assist 0\% (free-prose only). Aggregate over all AI bot \texttt{COMMENTED} reviews: 13.3\% parsed-approve, 48.4\% parsed-reject, 37.6\% unmatched (mostly Gemini and non-template Copilot prose reviews, left unclassified).
