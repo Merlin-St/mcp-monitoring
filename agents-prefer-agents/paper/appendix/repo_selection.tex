@@ -1,19 +1,15 @@
-% Appendix E --- Repository-selection pipeline (v2, replication)
+% Appendix --- Sample-selection pipeline
 
 \paragraph{Overview.} The repository universe is selected via the OpenSSF
-\emph{criticality\_score} \citep{ossf-criticality}
-rather than by raw GitHub stars. The score is a published, replicable
+\emph{criticality\_score} \citep{ossf-criticality}.
+The score is a published, replicable
 ranking of GitHub projects by their structural importance to the open-source
 ecosystem; using it directly addresses the well-known critique that
 star-based selection over-weights short-lived viral projects relative to
 load-bearing infrastructure
 \citep{borges2018github, kalliamvakou2014promises, munaiah2017curating}.
-The selection is implemented in \texttt{scripts/01a\_download\_criticality.py}
-(downloads a pinned snapshot of the published score CSV) and
-\texttt{scripts/01\_build\_repo\_list.py} (filters and enriches). The legacy
-v1 implementation, which used a star-bucket sweep, is preserved at
-\texttt{scripts/old\_01\_build\_repo\_list.py}; the resulting v1 universe
-is preserved at \texttt{data/old\_phase1/repos.json}.
+We pin a published criticality snapshot, then filter and enrich it via the
+GitHub REST API.
 
 \paragraph{The OpenSSF criticality score.} For each project, the score is a
 weighted arithmetic mean over normalised signals
@@ -39,16 +35,7 @@ pipeline reproduces the same universe.
 \paragraph{Step 1 --- Pin the criticality snapshot.} We use the
 \PLACEHOLDERSNAPSHOT{} snapshot (\texttt{all.csv} variant, no deps.dev
 dependent counts), which contains \PLACEHOLDERSNAPSHOTROWS{} scored
-projects. The download script verifies the file by SHA-256 and writes a
-provenance record to
-\texttt{data/criticality/ossf-criticality-\PLACEHOLDERSNAPSHOT{}-all.csv.provenance.json}
-recording the source URL, byte size, hash, row count, and download
-timestamp. Concretely:
-\begin{verbatim}
-python scripts/01a_download_criticality.py \
-    --snapshot-prefix 2025.07.25/010355 \
-    --variant all.csv
-\end{verbatim}
+projects.
 
 \paragraph{Step 2 --- Filter \& sort by score.} From the
 \PLACEHOLDERSNAPSHOTROWS{} rows we keep those with a numeric
@@ -73,30 +60,16 @@ reject:
 \item \texttt{fork == true} (forks contribute no independent PR activity);
 \item \texttt{archived == true};
 \item \texttt{disabled == true};
-\item \texttt{pushed\_at} strictly before \texttt{2025-04-01} (no chance of
-in-window PRs).
+\item \texttt{pushed\_at} strictly before \texttt{2025-04-01} (no
+in-window PRs);
+\item zero in-window PRs on GitHub (canonical development happens off GitHub --- LKML, git.apache.org, git.eclipse.org, etc.).
 \end{itemize}
 
-\paragraph{Step 5 --- Final cap.} Of the survivors, we keep the top
-\PLACEHOLDERFINALCAP{} by criticality score and write
-\texttt{data/repos.json}. Each row carries the GitHub-API fields plus the
-score, the within-snapshot rank, the snapshot date, and the raw OpenSSF
-signal columns (so any downstream re-weighting is possible without
-re-fetching the CSV).
-
-\paragraph{Why \PLACEHOLDERFINALCAP{} (not 10{,}000)?} The v2 sample is
-set to the top \PLACEHOLDERFINALCAP{} repositories by criticality score.
-The intermediate top-10{,}000 enrichment is preserved at
-\texttt{data/repos.top10k.json} for sensitivity analyses and for future
-scaling. The cost driver is Phase~2: collecting all PRs in the analysis
-window for 10{,}000 repos under the GitHub GraphQL rate limit takes
-multiple days, whereas \PLACEHOLDERFINALCAP{} repos finishes within ${\sim}24$~h.
-Top-by-criticality is also the regime in which the score is most
-internally consistent (the long tail flattens out below
-\PLACEHOLDERSCOREMIN{}). Extending to a wider universe is one parameter
-change away (\texttt{data/repos.json} can be regenerated from
-\texttt{data/repos.top10k.json} by sorting on \texttt{criticality\_rank}
-and slicing to the desired N).
+\paragraph{Step 5 --- Final cap.} Of the remaining \PLACEHOLDERPOSTACTIVITY{}, we keep the top
+\PLACEHOLDERFINALCAP{} by criticality score as the final repo list.
+Each row carries the GitHub-API fields plus the score, the within-snapshot
+rank, the snapshot date, and the raw OpenSSF signal columns (so any
+downstream re-weighting is possible without re-fetching the CSV).
 
 \paragraph{Sample characteristics.}
 \begin{itemize}
@@ -108,61 +81,13 @@ $\to$ \PLACEHOLDERPOSTACTIVITY{} after activity filter $\to$
 \item Criticality-score range: max \PLACEHOLDERSCOREMAX{}, min \PLACEHOLDERSCOREMIN{}.
 \item Stars: min \PLACEHOLDERSTARMIN{}, median \PLACEHOLDERSTARMED{}, max \PLACEHOLDERSTARMAX{}.
 \item Top languages: \PLACEHOLDERLANGTOP{}.
-\item GitHub API requests consumed during enrichment: \PLACEHOLDERENRICHREQS{}.
 \end{itemize}
 
-\paragraph{PR volume in the v2 sample.} Phase~2
-(\texttt{scripts/02\_fetch\_prs.py}) collects every PR opened, updated,
-merged, or closed within the analysis window for each repository in
-\texttt{data/repos.json}, capped at \PLACEHOLDERPRSCAP{} PRs per repo.
-The script records the true in-window count
-(\texttt{data/prs/\_repo\_pr\_counts.json}) before any subsampling, so
-that the sample's PR-volume distribution is itself a reportable
-characteristic of the universe.
-
-\paragraph{Off-GitHub workflows.} Of the \PLACEHOLDERFINALCAP{}
-repositories in the criticality-defined universe,
-\PLACEHOLDERPRINACTIVE{} (\PLACEHOLDERPRINACTIVEPCT{}) have zero
-in-window PRs. Inspection reveals these are predominantly Linux-kernel
-mirrors and Foundation-hosted projects whose canonical development
-happens off GitHub (LKML, git.apache.org, git.eclipse.org, etc.). The
-top-ranked example is \texttt{torvalds/linux} itself — ranked \#2 by
-criticality with 230{,}982 GitHub stars but zero PRs, because Linux uses
-mailing-list patch submission. We retain such repositories in
-\texttt{data/repos.json} to faithfully report the criticality-derived
-universe, but they contribute no rows to downstream PR-event analyses.
-The \emph{PR-active subsample} of \PLACEHOLDERPRACTIVE{} repositories is
-the analytic universe for Phases~3--7 of the pipeline; all PR-volume,
-chain-length, and merge-rate statistics in the body of this paper are
-computed over this subsample.
+\paragraph{Analysed PRs.}
 \begin{itemize}
-\item Total in-window PRs across the v2 sample:
-\PLACEHOLDERPRSTOTAL{} (mean \PLACEHOLDERPRSMEAN{}, median
-\PLACEHOLDERPRSMEDIAN{} per repo; p90 \PLACEHOLDERPRSP90{}, max
-\PLACEHOLDERPRSMAX{}).
-\item Share of repositories with $>\PLACEHOLDERPRSCAP{}$ in-window PRs
-(i.e.\ those subsampled to the cap): \PLACEHOLDERPRSSATPCT{} of the
-sample (\PLACEHOLDERPRSSATN{} of \PLACEHOLDERFINALCAP{} repos). For these
-repositories the sampled rows are weighted toward the centre of the
-window by week-uniform subsampling rather than the most-recent months.
-\item Repositories at or below the cap have their full PR history within
-the window analysed; saturated repositories have $\PLACEHOLDERPRSCAP{}$
-rows uniformly drawn over weeks.
+\item Total PRs analysed: 3,109,979 (mean 311.0, median 93 per repo; p90 843, max 7,321).
+\item Per-repo cap of \PLACEHOLDERPRSCAP{} PRs: 2 of \PLACEHOLDERFINALCAP{} repos (0.0\%) saturate the cap; for these the sampled rows are weighted toward the centre of the window by week-uniform subsampling rather than the most-recent months. All other repos have their full in-window PR history analysed.
 \end{itemize}
-
-\paragraph{Comparison with the v1 universe.} The v1 selection (preserved at
-\texttt{data/old\_phase1/repos.json}; see
-\texttt{paper/appendix/old\_repo\_selection.tex}) targeted 3{,}000 GitHub
-repositories that gained $\geq 1{,}000$ stars during 2025 and concentrated
-on hyper-popular consumer-visible projects. The v2 universe is broader:
-criticality emphasises long-lived, multi-org, heavily-cross-referenced
-projects, which includes many language and tooling foundations that have
-modest absolute star counts but are disproportionately depended-upon. The
-v2 sample therefore has a much wider star range and is closer to a
-defensible proxy for ``the open-source ecosystem'' than the v1 sample. The
-trade-off is that headline numbers computed on v1 do not transfer; Phases~2--7
-must be re-run against \texttt{data/repos.json} for any results we report
-on the v2 sample.
 
 \paragraph{Known selection biases.} The criticality score is itself an
 opinionated metric: it favours older projects with multi-org contributor
@@ -177,34 +102,4 @@ their dependents' commit messages.
 \item The score is computed over GitHub-visible signals only; non-GitHub
 mirrors of important projects (e.g.\ many Apache and Eclipse Foundation
 projects whose canonical home is elsewhere) are absent or under-counted.
-\end{itemize}
-We do not attempt to correct for these. They are documented in §Limitations.
-
-\paragraph{Reproducing \texttt{data/repos.json}.} With a valid
-\texttt{GH\_TOKEN} (or \texttt{gh auth login}) and the subproject's
-virtualenv activated:
-\begin{verbatim}
-python scripts/01a_download_criticality.py
-python scripts/01_build_repo_list.py \
-    --snapshot-date 2025.07.25 \
-    --variant all.csv \
-    --candidate-cap 13000 \
-    --final-cap 10000 \
-    --window-start 2025-04-01
-\end{verbatim}
-Runtime: $\sim$30~s for the CSV download and parse,
-$\sim$30--120~min for the GitHub enrichment depending on rate-limit reset
-behaviour (each contiguous burst of $\approx$5{,}000 requests consumes the
-core hourly quota and is followed by a wait of up to one hour).
-8-way concurrency keeps the per-burst wall clock under 5~minutes. The
-output is byte-for-byte reproducible up to GitHub's own indexing churn
-(a small number of borderline-archived repos may flip across reruns).
-
-\paragraph{Replication artefacts.} The pipeline writes:
-\begin{itemize}
-\item \texttt{data/criticality/ossf-criticality-\PLACEHOLDERSNAPSHOT{}-all.csv} --- raw OSSF CSV.
-\item \texttt{data/criticality/ossf-criticality-\PLACEHOLDERSNAPSHOT{}-all.csv.provenance.json} --- snapshot metadata, byte size, SHA-256, row count.
-\item \texttt{data/repos.json} --- final \PLACEHOLDERFINALCAP{}-row repo list (downstream-compatible schema).
-\item \texttt{results/phase1\_stats.json} --- counts at every filtering step plus score and star distributions.
-\item \texttt{logs/01a\_download\_criticality.log} and \texttt{logs/01\_build\_repo\_list.log} --- per-script execution logs.
 \end{itemize}

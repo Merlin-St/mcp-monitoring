@@ -1,22 +1,31 @@
 % Appendix C — AI bot allowlist and non-AI bot exclusion list
 
-Tables~\ref{tab:ai-bots} and \ref{tab:non-ai-bots} list the GitHub bot accounts we classify as AI agents versus maintenance/CI bots excluded from analysis. The allowlist is intentionally conservative. Extending it is low-risk because adding a bot only moves PRs from \texttt{human}/\texttt{non\_ai\_bot} to \texttt{AI}, making the AI$\times$AI cell larger.
+Tables~\ref{tab:ai-bots} and \ref{tab:non-ai-bots} list the GitHub bot accounts we classify as AI agents versus maintenance/CI bots excluded from analysis.
 
 \begin{table}[h]
 \centering\footnotesize
-\caption{AI bot allowlist (as of April 2026).}
+\caption{AI bot allowlist (as of April 2026). Account handles are GitHub bot logins; trailers are case-insensitive matches against the \texttt{Co-Authored-By:} line in commit/PR-body text. Rows with ``---'' under \emph{Account handles} are tools that only surface as a co-author trailer (no dedicated bot login).}
 \label{tab:ai-bots}
-\begin{tabular}{@{}ll@{}}
+\begin{tabular}{@{}p{0.21\linewidth} p{0.50\linewidth} p{0.21\linewidth}@{}}
 \toprule
-Family & Account handles \\
+Family & Account handles & \texttt{Co-Authored-By:} trailer \\
 \midrule
-Claude Code (Anthropic) & \texttt{claude[bot]}, \texttt{anthropic-ai[bot]}, \texttt{claude-bot} \\
-GitHub Copilot & \texttt{copilot[bot]}, \texttt{github-copilot[bot]}, \texttt{copilot-swe-agent[bot]} \\
-Devin (Cognition) & \texttt{devin-ai-integration[bot]} \\
-Cursor Background Agent & \texttt{cursor-agent}, \texttt{cursor[bot]}, \texttt{cursoragent[bot]} \\
-Google Jules & \texttt{jules-ai[bot]}, \texttt{jules[bot]} \\
-Codegen.sh & \texttt{codegen-sh[bot]} \\
-OpenHands & \texttt{openhands-agent[bot]} \\
+Claude Code (Anthropic) & \texttt{claude[bot]}, \texttt{anthropic-ai[bot]}, \texttt{claude-bot} & Claude \\
+GitHub Copilot & \texttt{copilot[bot]}, \texttt{github-copilot[bot]}, \texttt{copilot-swe-agent[bot]} & Copilot \\
+Devin (Cognition) & \texttt{devin-ai-integration[bot]} & Devin \\
+Cursor Background Agent & \texttt{cursor-agent}, \texttt{cursor[bot]}, \texttt{cursoragent[bot]} & Cursor \\
+Google Jules & \texttt{jules-ai[bot]}, \texttt{jules[bot]} & Jules \\
+Codegen.sh & \texttt{codegen-sh[bot]} & --- \\
+OpenHands & \texttt{openhands-agent[bot]} & OpenHands \\
+\midrule
+ChatGPT (OpenAI) & --- & ChatGPT \\
+Aider & --- & Aider \\
+Cline & --- & Cline, Claude-dev \\
+Roo Code & --- & Roo Code \\
+Augment & --- & Augment \\
+Continue & --- & Continue \\
+Gemini / Google AI & --- & Gemini, Google AI \\
+Windsurf & --- & Windsurf \\
 \bottomrule
 \end{tabular}
 \end{table}
@@ -35,5 +44,3 @@ OpenHands & \texttt{openhands-agent[bot]} \\
 \bottomrule
 \end{tabular}
 \end{table}
-
-Co-author trailer patterns (case-insensitive): \texttt{Co-Authored-By: Claude}, \texttt{Co-Authored-By: Copilot}, \texttt{Co-Authored-By: ChatGPT}, \texttt{...: Devin}, \texttt{...: Aider}, \texttt{...: Cursor}, \texttt{...: Cline/Claude-dev}, \texttt{...: Roo Code}, \texttt{...: Augment}, \texttt{...: Continue}, \texttt{...: Gemini/Google AI}, \texttt{...: Windsurf}, \texttt{...: OpenHands}, \texttt{...: Jules}.

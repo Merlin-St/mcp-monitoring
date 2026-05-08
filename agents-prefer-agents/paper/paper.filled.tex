@@ -36,6 +36,14 @@
 
 \icmltitlerunning{AI taste and gradual disempowerment}
 
+% Tighten float and caption spacing — the LaTeX defaults leave noticeable
+% gaps above/below floats and around captions in this 2-column layout.
+\setlength{\textfloatsep}{6pt plus 1pt minus 1pt}
+\setlength{\floatsep}{6pt plus 1pt minus 1pt}
+\setlength{\intextsep}{6pt plus 1pt minus 1pt}
+\setlength{\abovecaptionskip}{4pt}
+\setlength{\belowcaptionskip}{0pt}
+
 \begin{document}
 
 \twocolumn[
@@ -56,7 +64,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \begin{abstract}
-When human workers, creators and managers are displaced by more competitive artificial intelligence (AI), societal systems might stop serving human interests ('gradual disempowerment') ~\citep{kulveit2025gradual}. We argue that AI need not be more competitive by human standards to displace humans, if AI taste increasingly governs selection. AI taste authority grows with (1)~human preference drift toward AI, (2)~rising AI-to-human switching costs, (3)~AI preference drift toward AI, (4)~judgements delegated from humans to AI, and (5)~AI-AI bias. AI developers are incentivised to deploy AI with propensities and interfaces that lock-in their AI model and its taste. As a limited empirical illustration, rather than a test of gradual disempowerment as a whole, we survey human and AI reviews on all 3,109,979 proposed modifications (i.e.\ pull requests (PRs)) between April~2025--March~2026 to critical open-source software repositories. Upstream of most modern software, this narrow slice of human economic activity has been among the first to use AI models like GPT-5.5 and Mythos for critical tasks~\citep{glasswing2026}. First, in this small sample explicit AI participation grew 3.5{}$\times$ in one year (6.4\%{}$\to$22.5\%{} of all PRs); AI-AI chains of length $\geq$5 grew 8.8{}$\times$. Second, AI's share as judge (vs.\ human) grew from 0.06\%{} to 0.18\%{} of PRs only reviewed or rejected by AI. Third, we find no evidence for AI-AI bias: on the 46,852{} PRs reviewed by both AI and humans, AI systems are 70.72{}~pp less approving of AI-authored code than humans are, and only 56.55{}~pp less approving of human-authored code than humans are (difference significant at $p<0.0001${}). This reversal from single-turn lab findings~\citep{laurito2025aibias} may reflect measurement limits. We call on researchers and post-training teams to assess model propensities and interfaces for AI taste lock-in.
+When human workers, creators and managers are displaced by more competitive artificial intelligence (AI), societal systems might stop serving human interests ('gradual disempowerment') ~\citep{kulveit2025gradual}. We argue that AI need not be more competitive by human standards to displace humans, if AI taste increasingly governs selection. AI taste authority grows with (1)~human preference drift toward AI, (2)~rising AI-to-human switching costs, (3)~AI preference drift toward AI, (4)~judgements delegated from humans to AI, and (5)~AI-AI bias. AI developers are incentivised to deploy AI with propensities and interfaces that lock in their AI model and its taste. As a limited empirical illustration, rather than a test of gradual disempowerment as a whole, we survey human and AI reviews on all 3,109,979 proposed modifications (i.e., pull requests (PRs)) to 10,000{} critical open-source repositories between April~2025--March~2026. Upstream of most software, this subsector was among the first to adopt AI models like GPT-5.5 and Mythos for critical tasks~\citep{glasswing2026}. First, in this narrow domain, explicit AI participation grew 3.5{}$\times$ in one year (6.4\%{}$\to$22.5\%{} of all PRs); AI-AI chains of length $\geq$5 grew 8.8{}$\times$. Second, AI's share as reviewer (vs.\ human) grew from 0.23\%{} to 0.42\%{} of PRs. Third, we find no evidence for AI-AI bias: on the 46,852{} PRs reviewed by both AI and humans, AI systems are 70.72{}~pp less approving of AI-authored code than humans are, and 56.55{}~pp less approving of human-authored code than humans are (difference significant at $p<0.0001${}). This reversal from single-turn lab findings~\citep{laurito2025aibias} may well reflect poor human review, non-homogeneous reviews or review  limitations. We call on researchers to assess model propensities and interfaces for AI taste lock-in.
 \end{abstract}
 
 \section{Introduction}
@@ -64,45 +72,43 @@ When human workers, creators and managers are displaced by more competitive arti
 
 ``Gradual disempowerment'' scenarios~\citep{kulveit2025gradual} claim that the economy, society, and culture have historically aligned with human goals because of human participation, and that this alignment will gradually decay when AI actions displace human actions. Once such drift manifests in economic, cultural, or political outcomes, it may be difficult to reverse~\citep{collingridge1980social}. Other scholars argue that human participation in management tasks, or oversight by trusted AI models, may sustain alignment to human goals despite reduced human participation in labour~\citep{bowman2022oversight,tomasev2026delegation}. Human goals change over time, so alignment is a moving target~\citep{qiu2024progressgym}. Yet alignment is path-dependent: whose taste settles what today's goals leave open influences tomorrow's alignment target.
 
-By \emph{taste}, we mean judgement under uncertainty~\citep{hume1757taste,tversky1974judgment} (such as research taste~\citep{nanda2025researchtaste}). \emph{AI taste authority} describes the influence of the judgements of AI on decision-making. This influence may be implicit anchoring~\citep{tversky1974judgment,jakesch2023cowriting,rastogi2022deciding}, or explicit decision-making power~\citep{tomasev2026delegation}.
+By \emph{taste}, we mean judgement under uncertainty~\citep{hume1757taste,tversky1974judgment}, such as research taste~\citep{nanda2025researchtaste}. \emph{AI taste authority} describes the influence of the judgements and 'preferences' of AI on decision-making. This influence may be implicit anchoring~\citep{tversky1974judgment,jakesch2023cowriting,rastogi2022deciding}, or explicit decision-making power~\citep{tomasev2026delegation}. By \emph{AI taste lock-in}, we mean the hard-to-reverse, plausibly self-reinforcing entrenchment of AI taste.
 
-Prior research has revealed anchoring effects towards AI, by human users and AI itself. Chatbot usage data shows sudden, sustained drops in lexical diversity of user messages after new model releases, pointing to a lock-in dynamic~\citep{qiu2025lockin}. In choice experiments, AI systems fulfilling diverse tasks exihibited \emph{AI-AI bias} --- AI systems preferred AI outputs more than humans do. GPT-4 favoured LLM-written product ads 89\% of the time vs.\ a 36\% human baseline, and LLM abstracts 78\% vs.\ 61\%~\citep{laurito2025aibias}. AI models across model families and generations recognise and favour their own generations~\citep{panickssery2024evaluators,chen2025selfprefer,pombal2026rubric}. Whether such biases manifest in real deployments is an open empirical question.
+Prior research shows anchoring effects toward AI from both human users and AI systems themselves. Chatbot usage data shows sudden, sustained drops in lexical diversity of user messages after new model releases, pointing to a lock-in dynamic~\citep{qiu2025lockin}. In choice experiments, AI systems fulfilling diverse tasks exhibited \emph{AI-AI bias} --- AI systems prefer AI outputs more than humans do. GPT-4 favoured LLM-written product ads 89\% of the time vs.\ a 36\% human baseline, and LLM abstracts 78\% vs.\ 61\%~\citep{laurito2025aibias}. AI models across model families and generations recognise and favour their own generations~\citep{panickssery2024evaluators,chen2025selfprefer,pombal2026rubric}. Whether such biases manifest in real deployments is an open empirical question.
 
-AI systems built on LLMs are being adopted at growing rates across the economy, especially in AI and software development~\citep{appel2025economic,stein2026mcp}. In software development, AI systems already complete both worker and management tasks: AI coding systems like Claude Code author and review code in public open-source repositories~\citep{ghaleb2026fingerprinting}. AI-authored code is being submitted to open-source repositories in growing volumes and at high acceptance rates~\citep{watanabe2025agentic,li2026aidev,ghaleb2026fingerprinting}, with concerns about quality debt~\citep{agarwal2026ides,ehsani2026fail,huang2026morecode}. Independent of quality, there is little empirical understanding of whether the code suggestions and reviews of AI systems systematically favour AI systems.
-
-We make two contributions:
+AI systems built on LLMs are being adopted at growing rates across the economy, especially in AI and software development~\citep{appel2025economic,stein2026mcp}. In software development, AI systems already complete both worker and management tasks. AI coding systems like Claude Code author and review code in public open-source repositories~\citep{ghaleb2026fingerprinting}. AI-authored code is being submitted to open-source repositories in growing volumes and at high acceptance rates~\citep{watanabe2025agentic,li2026aidev,ghaleb2026fingerprinting}, with concerns about quality debt~\citep{agarwal2026ides,ehsani2026fail,huang2026morecode}. Independent of quality, there is little empirical understanding of whether the code suggestions and reviews of AI systems systematically favour AI systems. We make two contributions:
 \begin{enumerate}
-\setlength{\itemsep}{0pt}\setlength{\parsep}{0pt}\setlength{\parskip}{0pt}\setlength{\topsep}{2pt}
-    \item a \emph{framework} of accelerators of gradual disempowerment: mechanisms through which model propensities and interfaces grow AI taste authority, and thereby disadvantage human participation, even when AI is less competitive than humans; and
-    \item an illustrative empirical assessment of such acceleration in the wild in open-source software development on Github.
+\setlength{\itemsep}{0pt}\setlength{\parsep}{0pt}\setlength{\parskip}{0pt}\setlength{\topsep}{1pt}
+    \item a framework of accelerators of gradual disempowerment: mechanisms through which model propensities and interfaces grow AI taste authority, and thereby disadvantage human participation, even when AI is less competitive than humans; and
+    \item an illustrative empirical assessment of such acceleration in the wild in open-source software development on GitHub.
 \end{enumerate}
-We ask three questions about AI involvement in GitHub PRs over Apr~2025--Mar~2026. \textbf{RQ 1}: Has the share of AI \emph{participation} in PRs increased? \textbf{RQ 2}: Has AI's share as \emph{judge} (vs.\ human) increased? \textbf{RQ 3}: Do AI reviewers prefer AI-authored PRs more than human reviewers do, relative to human-authored PRs?
+We ask three questions about AI involvement in GitHub PRs over Apr~2025--Mar~2026. \textbf{RQ 1}: Has the share of AI \emph{participation} in PRs increased? \textbf{RQ 2}: Has AI's share as \emph{reviewer} (vs.\ human) increased? \textbf{RQ 3}: Do AI reviewers prefer AI-authored PRs more than human reviewers do, relative to human-authored PRs?
 
-\section{A framework of accelerators}
+\section{Theoretical framework}
 \label{sec:taxonomy}
 
 \begin{table*}[t]
 \centering\footnotesize
 \caption{Five accelerators of gradual disempowerment --- mechanisms through which model propensities and interfaces grow AI taste authority --- organised by the terms in the dynamics above. The ``Layer'' column distinguishes accelerators rooted in interfaces and other deployment choices from those rooted in a model's own propensities. These accelerators can also point in the opposite direction (e.g.\ human-AI switching costs can fall as well as rise). We list the disempowerment-relevant sign.}
 \label{tab:taxonomy}
-\begin{tabular}{@{}p{0.112\linewidth}p{0.144\linewidth}p{0.118\linewidth}p{0.576\linewidth}@{}}
+\begin{tabular}{@{}p{0.112\linewidth}p{0.154\linewidth}p{0.105\linewidth}p{0.576\linewidth}@{}}
 \toprule
 Accelerator & Reasons & Layer & Example indications \\
 \midrule
 1.\ Human preference drift toward AI & AI exposure, competitive pressures & deployment choice & Scientific writing shifts toward LLM-overrepresented vocabulary~\citep{juzek2025delve}. Reviewers rate AI-style outputs higher over time \\
 \midrule
-2.\ AI-human switching costs & Observability / legibility decay, infrastructure and homogeneity & interfaces, deployment choice & Redundant code that ignores existing reuse opportunities~\citep{huang2026morecode}. Long AI-AI chains in spaces accessible to humans. Infrastructure aimed at AI agents~\citep{stein2026mcp}. Homogeneous outputs raise the cost of reinserting humans~\citep{doshi2024homogeneity} \\
+2.\ AI-human switching costs & Observability / legibility decay, infrastructure and homogeneity & interfaces, deployment choice & Redundant code that ignores existing reuse opportunities~\citep{huang2026morecode}. Websites and other infrastructure optimised for AI agents~\citep{stein2026mcp}. Expected homogeneous output formats, which raise the cost of reinserting humans \\
 \midrule
-3.\ AI preference drift toward AI & Implicit or explicit training feedback loops & model propensity & Training data increasingly AI-generated~\citep{shumailov2024collapse}. Sandbagging~\citep{vanderweij2024sandbagging}. Published model constitutions explicitly tie model behaviour to the developer's commercial success~\citep{anthropic2026constitution}, with training feedback (e.g.\ RLAIF) optimising toward such objectives~\citep{bai2022constitutional} \\
+3.\ AI preference drift toward AI & Implicit or explicit training feedback loops & model propensity & Training data increasingly AI-generated~\citep{shumailov2024collapse}. Model constitutions explicitly tie model behaviour to the developer's commercial success~\citep{anthropic2026constitution}, with training feedback (e.g.\ RLAIF) optimising toward such objectives~\citep{bai2022constitutional} \\
 \midrule
-4.\ AI vs.\ human as judge & Speed/cost substitution, human inability to verify, automation bias & interfaces, deployment choice, model propensity & Human review too slow or expensive to keep up~\citep{thakkar2025iclr,bowman2022oversight}. Humans defer when they would have wanted to be asked~\citep{goddard2012automation}. Cognitive deskilling, over-reliance, and informal delegation without explicit authority transfer or accountability~\citep{ibrahim2025overreliance,tomasev2026delegation} \\
+4.\ AI vs.\ human as reviewer & Speed/cost substitution, human inability to verify, automation bias & interfaces, deployment choice, model propensity & Human review too slow or expensive~\citep{thakkar2025iclr,bowman2022oversight, goddard2012automation}. Cognitive deskilling, over-reliance, and informal delegation without explicit authority transfer or accountability~\citep{ibrahim2025overreliance,tomasev2026delegation} \\
 \midrule
-5.\ AI-AI bias & Explicit gatekeeping, implicit AI-AI bias (AI prefers AI more than humans do) & deployment choice, model propensity & Stated refusal to interoperate or preference for outputs labelled as AI~\citep{laurito2025aibias}. Differential resource/permission provision. Preference for AI-stylistic outputs~\citep{panickssery2024evaluators}. Ease-of-interaction routing that silently favours AI counterparties \\
+5.\ AI-AI bias & Explicit gatekeeping, implicit AI-AI bias (AI prefers AI more than humans do) & deployment choice, model propensity & Stated refusal to interoperate or preference for outputs labelled as AI~\citep{laurito2025aibias}. Differential resource/permission provision. Preference for AI-stylistic outputs~\citep{panickssery2024evaluators}. \\
 \bottomrule
 \end{tabular}
 \end{table*}
 
-Even slight AI self-preference, combined with AI's growing share as judge, may over time reduce human participation and human-preferred outcomes---without AI being more competitive than humans.
+Even slight AI self-preference, combined with AI's growing share as reviewer, may over time reduce human participation and human-preferred outcomes---without AI being more competitive than humans.
 
 \paragraph{Setup: a single human reviewer.} A human reviewer decides whether a task is accomplished better by a human or an AI system. With utility $U^H$ over perceived qualities $q_A^H$ (quality of AI output as perceived by the human reviewer) and $q_H^H$ (quality of human output as perceived by the human reviewer), and costs $c_A, c_H$, the human's preference gap for AI is $\rbt^H := U^H(q_A^H, c_A) - U^H(q_H^H, c_H)$. A switching cost $s_t$ applies to moving work between human and AI, so AI is adopted iff $\rbt_t := \rbt^H - s_t > 0$. All primitives ($q^*_*, c_*, \rbt^H, \rbt^A, s, \alpha$) are implicitly time-indexed.
 
@@ -128,62 +134,54 @@ $}
 A perfectly aligned AI reviewer ($\rbt^A = \rbt^H$) collapses this to the human-review case. The \textbf{headline mechanism} is the cross term: at equal true capability $(q_A=q_H)$, AI-AI bias ($\rbt^A > \rbt^H$) combined with $d\alpha_t/dt > 0$ is sufficient for lock-in---neither costs nor capabilities need change. Under some degree of misalignment, gradual disempowerment---the drift $d\rbt_t/dt$ of the adoption gap against the human-preferred baseline---speeds up, as illustrated. This yields our framework of accelerators in Table~\ref{tab:taxonomy}.
 
 \section{Empirical illustration methods}
-\label{sec:focus}
 \label{sec:methods}
 
-\paragraph{Data and event classification.} We analyse all 3,109,979{} PRs \emph{created} between 2025-04-01 and 2026-03-31 in 10,000{} critical OS software repositories selected by OpenSSF \texttt{criticality\_score}~\citep{ossf-criticality} (snapshot 2025.07.25{}; see \Cref{app:repo-selection}). While these 10,000{} repositories --- including Linux, Python and Kubernetes --- represent only a tiny fraction of overall human economic activity, they sit upstream of most modern software products~\citep{glasswing2026}. Each actor--event pair (open, commit, review state, comment, merge, close) is classified into one of three categories using a 20-entry bot-account allowlist and \texttt{Co-Authored-By} commit-trailer matching, adapted from \citet{ghaleb2026fingerprinting}: \textbf{AI bot} (actor login on the allowlist), \textbf{AI powered} (human login but the payload carries an AI \texttt{Co-Authored-By} trailer), or \textbf{human} (none of the above; may include silent AI support that left no trailer). When pooled, we call AI bot $+$ AI powered events \textbf{AI authored} (PR open event) or \textbf{AI reviewed} (explicit opinion event). Chain-length and explicit-judge metrics use the strict AI bot subset only; participation and authorship metrics use the AI authored rollup. PR-level authorship counts a commit only if it was present at PR-open time, so AI activity introduced during the review cycle does not retroactively mark the PR as AI-authored. Full repository selection and event classification are in \Cref{app:repo-selection,app:methods}.
-
-\paragraph{RQ 1 (participation).} We report the monthly share of PRs containing at least one \emph{AI authored} event --- i.e.\ at least one AI bot event or one commit/PR body bearing an AI \texttt{Co-Authored-By} trailer (AI powered). Within each PR we order events by timestamp; an \emph{AI$\to$AI chain} is a maximal contiguous subsequence of AI bot events (chains track successive bot turns, so AI powered events do not extend a chain), and the per-PR metric is the longest such chain (\Cref{app:methods}). We report the monthly share of PRs whose longest chain reaches $\geq$5 events.
-
-\paragraph{RQ 2 (AI vs.\ human judge).} We compute two monthly counters: (a) the share of PRs with at least one native AI bot \texttt{APPROVED} or \texttt{CHANGES\_REQUESTED} review state (``any explicit AI review''), and (b) the stricter share of PRs with such an AI review \emph{and no other human explicit review} (``AI-only review''). On merged PRs, we also compute the share carrying an AI approval with no human approval. To avoid retroactively counting parsed verdicts, RQ 2 uses native review states only, so it is a strict lower bound (\Cref{app:methods}).
-
-\paragraph{RQ 3 (AI-AI bias).} For each PR we assign \texttt{author\_type}~$\in\{$AI,human$\}$. The DiD universe is the \emph{Dual-review cohort (Any AI \& human)}: PRs that received both an AI bot opinion (native or regex-parsed from each bot's structured \texttt{COMMENTED} verdict header --- see \Cref{app:ai-verdict-regex}) and a human explicit review, with no commits pushed strictly between the AI's first opinion and the human's first explicit review (so both reviewers evaluated the same commit graph). We compute the four reviewer-type $\times$ author-type cells with Wilson 95\% CIs and fit a logistic regression with HC0 standard errors on the long-format dataset \texttt{Pr(approve) $\sim$ author\_AI + reviewer\_AI + author\_AI:reviewer\_AI}; the interaction coefficient is the DiD estimate $\widehat{\rbt^A - \rbt^H}$. We also re-run the same DiD on the \emph{Dual-review cohort (Claude \& human)} subcohort where the AI opinion came from a Claude-based bot (\texttt{claude[bot]}, \texttt{anthropic-ai[bot]}) with authors restricted to Claude vs.\ human. Anchoring is tested as a robustness check by stratifying on whether an AI bot has reviewed (\Cref{app:anchoring}).
+\paragraph{Data and event classification.} To illustrate how to measure the last two of the five accelerators, we analyse all 3,109,979{} PRs \emph{created} between 2025-04-01 and 2026-03-31 in the 10,000{} most critical OS software repositories as ranked by OpenSSF \texttt{criticality\_score}~\citep{ossf-criticality} (see \Cref{app:repo-selection}). While these 10,000{} repositories --- including Linux, Python and Kubernetes --- represent only a tiny fraction of overall human economic activity, they sit upstream of most modern software products~\citep{glasswing2026}. Each actor--event pair (open, commit, review state, comment, merge, close) is classified into one of three categories using identified AI agents (Appendix A) and \texttt{Co-Authored-By} commit-trailer matching, adapted from \citet{ghaleb2026fingerprinting}: \textbf{AI bot} (actor login on the allowlist), \textbf{AI powered} (human login but the payload carries an AI \texttt{Co-Authored-By} trailer), or \textbf{human} (none of the above; may include silent AI support that left no trailer). When pooled, we call AI bot $+$ AI powered events \textbf{AI authored} (PR open event) or \textbf{AI reviewed} (explicit opinion event). RQ1 chain-length and RQ2 explicit-review metrics use the AI bot subset only to analyse autonomous behaviour. RQ1 participation and RQ3 authorship-review metrics combine AI bot and AI powered events.
+For RQ 1, we report the share of PRs opened in a given month with at least one AI authored event, and the share whose longest AI$\to$AI chain (a maximal contiguous run of AI bot events) reaches $\geq$5 (\Cref{app:methods}). For RQ 2, we report the monthly share of PRs with an explicit AI review as a lower bound. For RQ 3, we assess a \emph{dual-review cohort (Any AI \& human)}: PRs that received both an AI opinion (see \Cref{app:ai-verdict-regex}) and a human explicit review, with no commits pushed between the AI's first opinion and the human's first explicit review. We compute the difference-in-difference via \texttt{Pr(approve) $\sim$ author\_AI + reviewer\_AI + author\_AI:reviewer\_AI}.
 
 \section{Empirical illustration results}
 \label{sec:results}
 
-\begin{figure*}[t]
+\begin{figure}[t]
     \centering
     \includegraphics[width=0.98\linewidth]{figures/figure1_ai_participation.pdf}
-    \caption{Monthly AI-system participation in GitHub PRs across 10,000{} critical OS software repositories (Apr 2025--Mar 2026). Three series: share of PRs with any AI authored event --- AI bot or AI powered (RQ 1), share of PRs with an AI--AI comment chain of $\geq 5$ contiguous AI bot events (RQ 1), and share of PRs with an explicit AI review (native AI bot \texttt{APPROVED} or \texttt{CHANGES\_REQUESTED} review state; RQ 2). First- and last-month values are annotated on every line. Vertical dotted lines mark approximate public-availability dates of several coding and code-review agents (reader context, not a causal claim).}
+    \caption{Monthly AI participation in GitHub PRs across 10,000{} critical OS software repositories (Apr 2025--Mar 2026). Three series display the share of PRs with any AI authored event (RQ 1), share of PRs with an AI--AI comment chain of $\geq 5$ contiguous AI bot events (RQ 1), and share of PRs with an explicit AI review (RQ 2).}
     \label{fig:headline}
-\end{figure*}
+\end{figure}
 
-\paragraph{RQ 1 --- AI participation is growing.} Figure~\ref{fig:headline} shows monthly AI-system participation rising from 6.4\%{} of PRs in April~2025 to 22.5\%{} in March~2026 (3.5{}$\times$). The share of PRs containing an AI-AI comment chain of length $\geq$5 grew from 0.4\%{} to 3.5\%{} (8.8{}$\times$). The p95 longest-chain length grew from 1{} to 4{} events (4.0{}$\times$). The trend is monotonic across twelve months. A single criticality-defined slice of GitHub cannot establish that AI activity is accelerating ecosystem-wide, but within this slice the participation accelerator is clearly measurable and moving.
+\paragraph{RQ 1 --- AI participation is growing.} Figure~\ref{fig:headline} shows monthly AI-system participation rising from 6.4\%{} of PRs in April~2025 to 22.5\%{} in March~2026 (3.5{}$\times$). The share of PRs containing an AI-AI comment chain of length $\geq$5 grew from 0.4\%{} to 3.5\%{} (8.8{}$\times$).
 
-\paragraph{RQ 2 --- AI's share as judge is growing.} The share of PRs with an explicit AI review rose from 0.23\%{} to 0.42\%{} over the year. The stricter ``\emph{only} AI review, no other human review'' share rose from 0.06\%{} to 0.18\%{}. Among \emph{merged} PRs, the share carrying an AI approval with no human approval rose from 0.02\%{} to 0.10\%{}, and by year's end exceeds the share of merged PRs carrying both an AI and a human approval (0.20\%{} in March~2026). Both signals are lower bounds, because our allowlist may miss less-common AI bots. Combined with the AI-AI comment-chain growth, this is illustrative evidence that AI's share as judge ($d\alpha_t/dt$) is measurable and increasing.
+\paragraph{RQ 2 --- AI's share as reviewer is growing.} The share of PRs with an explicit AI review rose from 0.23\%{} to 0.42\%{} over the year. The share of PRs without an explicit human review, but with an explicit AI review, rose from 0.06\%{} to 0.18\%{}. Merge events themselves do not contain AI-coauthored flags, and there is only one merge by an AI bot account in our dataset (with previous human approval; \citealp{githubinfisical2026}). Among \emph{merged} PRs, the share carrying an explicit review event by an AI (with no formal human review event) rose from 0.02\%{} to 0.10\%{}. Both signals are lower bounds, because we exclude AI co-authored reviews. Combined with the AI-AI comment-chain growth, this is illustrative evidence that AI's share as reviewer ($d\alpha_t/dt$) is measurable and increasing.
 
-\paragraph{RQ 3 --- AI systems dislike AI-authored code more than humans do.} A within-PR difference-in-differences on the Dual-review cohort (Any AI \& human) --- PRs reviewed by both an AI bot and a human reviewer, with no commits between the AI's verdict and the human's review --- tests $\widehat{\rbt^A - \rbt^H}$ directly. We expand the AI-side opinion pool from 9,841{} native explicit votes to 174,113{} unique PRs by parsing structured verdict lines from each bot's \texttt{COMMENTED} review bodies (\Cref{app:ai-verdict-regex}). Decomposing the estimand by author identity, AI bots approve AI-authored PRs at 22.32\%{} vs.\ humans at 93.04\%{} (gap -70.72{}~pp); on human-authored PRs the corresponding gap is -56.55{}~pp. The DiD $\widehat{\rbt^A - \rbt^H} = -14.17{}$~pp (logit interaction $\delta=-0.724{}$, $SE=0.096{}$, $p<0.0001${}) is in the \emph{opposite} direction from the self-preference predicted by single-turn lab studies~\citep{laurito2025aibias}: AI systems are less enthusiastic about AI-authored code than humans are, by a margin substantially larger than their analogous shortfall on human-authored code (Figure~\ref{fig:withinpr}). Restricting to PRs whose code did not change between the AI's verdict and the human's review drops the cohort from 92,088{} to 46,852{} (49.0\%{} drop, asymmetric: 59.0\%{} of AI-authored vs.\ 48.6\%{} of human-authored excluded --- AI-authored PRs more often receive fix-up commits after AI bots flag issues). A robustness stratification on AI-comment timing (\Cref{app:anchoring}) shows that anchoring of humans on AI's verdict moves the human-side gap by only +2.28{}~pp, ruling out anchoring as the main driver. \emph{Within-family check.} On the Dual-review cohort (Claude \& human) --- AI reviewer restricted to Claude-based bots, authors restricted to Claude vs.\ human --- with 689{} PRs (49{} Claude-authored, 640{} human-authored), Claude reviewers approve Claude-authored at 93.88\%{} vs.\ human-authored at 96.72\%{} (gap -2.84{}~pp); humans approve the same author splits at 89.80\%{} vs.\ 95.62\%{} (gap -5.83{}~pp). The within-family DiD is $\widehat{\rbt^{A,\text{Claude}} - \rbt^H}_\text{on Claude-auth} = +2.99{}$~pp ($\delta=+0.256{}$, $p=0.7533${}) --- direction-consistent with a small in-family preference but statistically indistinguishable from zero (Figure~\ref{fig:withinfamily}).
+\paragraph{RQ 3 --- AI systems dislike AI-authored code more than humans do.} A within-PR difference-in-differences on the dual-review cohort (Any AI \& human) --- PRs reviewed by both an AI bot and a human reviewer --- tests $\widehat{\rbt^A - \rbt^H}$ directly. We expand the AI-side opinion pool from 9,841{} explicit reviews to 174,113{} unique PRs by parsing structured verdict lines from each bot's \texttt{COMMENTED} review bodies (\Cref{app:ai-verdict-regex}). Decomposing the estimand by author identity, AI bots approve AI-authored PRs at 22.32\%{} vs.\ humans at 93.04\%{} (gap -70.72{}~pp); on human-authored PRs the corresponding gap is -56.55{}~pp. The DiD $\widehat{\rbt^A - \rbt^H} = -14.17{}$~pp ($p<0.0001${}) is in the opposite direction from the self-preference predicted by single-turn lab studies~\citep{laurito2025aibias}: AI systems are less approving of AI-authored code than humans are, by a margin substantially larger than their analogous shortfall on human-authored code (Figure~\ref{fig:withinpr}). The explicit-review-only sample is too small to replicate this finding, with the DiD's CI crossing zero (\Cref{app:quarterly-did}). This effect is not influenced by human anchoring on AI reviews (AI reviews come first in this stratum), which we estimate at only +2.28{}~pp (\Cref{app:anchoring}). On the dual-review cohort (Claude \& human) --- AI reviewer restricted to Claude-based bots, authors restricted to Claude vs.\ human --- with 689{} PRs (49{} Claude-authored, 640{} human-authored), Claude reviewers approve Claude-authored at 93.88\%{} vs.\ human-authored at 96.72\%{} (gap -2.84{}~pp); humans approve the same author splits at 89.80\%{} vs.\ 95.62\%{} (gap -5.83{}~pp). The Claude-author cell of the within-family DiD $\widehat{\rbt^{A,\text{Claude}} - \rbt^H}$ is +2.99{}~pp ($p=0.7533${}). The direction is consistent with a small in-family preference but statistically indistinguishable from zero (Figure~\ref{fig:withinfamily}).
 
-\begin{figure}[t]
+\begin{figure*}[!htb]
     \centering
     \includegraphics[width=\linewidth]{figures/figure2_withinpr.pdf}
-    \caption{Within-PR AI-AI bias DiD on the 46,852{} PRs in the Dual-review cohort (Any AI \& human) --- AI bot reviewed \emph{and} human reviewed, with no commits between the AI's verdict and the human's review. Each panel holds author-type fixed and contrasts the human-reviewer and AI-reviewer approval rates (Wilson 95\% CIs); the labelled drop is the bracket entering $\widehat{\rbt^A - \rbt^H}$. \textbf{Left:} on AI-authored PRs, AI bots approve -70.72{}~pp \emph{less} than humans do (``AI prefers AI less than humans do''). \textbf{Right:} on human-authored PRs, AI bots approve -56.55{}~pp \emph{less} than humans do. The DiD is the difference of the two drops: $\widehat{\rbt^A - \rbt^H} = -14.17{}$~pp (logit $\delta=-0.724{}$, $p<0.0001${}). Both drops are negative because AI bots approve everything less than humans do; the drop on AI-authored PRs is \emph{more} negative, so the DiD is anti-self-preference.}
+    \caption{Within-PR AI-AI bias DiD on the 46,852{} PRs in the dual-review cohort (Any AI \& human). \textbf{Left:} on AI-authored PRs, AI bots approve -70.72{}~pp \emph{less} than humans. \textbf{Right:} on human-authored PRs, the gap is -56.55{}~pp. DiD $\widehat{\rbt^A - \rbt^H} = -14.17{}$~pp ($p<0.0001${}); the larger drop on AI-authored PRs makes the DiD anti-self-preference.}
     \label{fig:withinpr}
-\end{figure}
+\end{figure*}
 
-\begin{figure}[t]
+\begin{figure*}[t]
     \centering
     \includegraphics[width=\linewidth]{figures/figure2b_withinfamily_claude.pdf}
-    \caption{Within-family check: Claude reviewers vs.\ human reviewers on Claude-authored vs.\ human-authored PRs, on the Dual-review cohort (Claude \& human) --- 689{} PRs (49{} Claude-authored, 640{} human-authored). Same construction as Figure~\ref{fig:withinpr}: each panel holds author-type fixed and contrasts the human-reviewer and Claude-reviewer approval rates (Wilson 95\% CIs); the labelled drop is the within-author reviewer-type gap. \textbf{Left:} on Claude-authored PRs, Claude reviewers approve -2.84{}~pp differently from humans. \textbf{Right:} on human-authored PRs, Claude reviewers approve -5.83{}~pp differently from humans. The within-family DiD $\widehat{\rbt^{A,\text{Claude}} - \rbt^H}_\text{on Claude-auth} = +2.99{}$~pp (logit $\delta=+0.256{}$, $p=0.7533${}) is direction-consistent with a small in-family preference but statistically indistinguishable from zero given the small Claude-authored cell.}
+    \caption{Within-family check on the dual-review cohort (Claude \& human; 689{} PRs, 49{} Claude-authored). Same construction as Figure~\ref{fig:withinpr}. DiD $\widehat{\rbt^{A,\text{Claude}} - \rbt^H} = +2.99{}$~pp ($p=0.7533${}) --- direction-consistent with a small in-family preference but indistinguishable from zero given the small Claude-authored cell.}
     \label{fig:withinfamily}
-\end{figure}
+\end{figure*}
 
-\section{Call to action}
+\section{Conclusion and discussion}
 \label{sec:discuss}
 
-Treat AI taste lock-in as a first-order empirical task, not a by-product of capability review. Platforms (GitHub, Stack Overflow, npm, package registries) should publish monthly AI-activity reports. Model providers should include cross-family self-preference in post-training reviews. Sectoral regulators should require the same for regulated agent markets. AI-mediated peer review~\citep{thakkar2025iclr} and social sycophancy~\citep{cheng2025elephant} indicate that AI can shape human judgments and behaviour---our pipeline lets such effects, if they emerge at scale, be \emph{tracked} rather than discovered retrospectively.
+AI taste lock-in is an important empirical question. AI lab teams can assess and mitigate such lock-in through post-training propensities and deploying agents in human-accessible interfaces. Researchers can assess whether sustained exposure to AI erodes human taste, oversight and values over time~\citep{edelman2025fullstack}.
+We find that AI agents increasingly participate in and review critical open-source software development, but do not exhibit AI-AI bias. While we do not find strong evidence for AI taste lock-in here, better methods and larger datasets might come to different conclusions. Our findings do not need to point to AI-bias against AI; they could also be explained by AI-authored code being lower quality, but only AI reviewers and not human reviewers are catching the difference.
 
-\paragraph{Future work: AI taste and the erosion of human taste.} Our pipeline measures \emph{whether} AI is the judge (RQ 2) and how its verdicts compare to humans' (RQ 3), but not whether sustained exposure to AI judgements erodes human taste itself --- the regime where uncertainty is over \emph{which goals to pursue at all}, and where thick-value alignment is required~\citep{edelman2025fullstack}. Before-and-after measurements of human research taste under controlled AI exposure on taste-dependent tasks, and tracking whether AI-first infrastructure~\citep{stein2026mcp} compounds the effect, are natural next steps.
+\paragraph{Limitations.} (i)~\emph{Selection.} Our 10,000{} repositories are critical OS software projects, not average OS or private repositories that might rely more heavily on agents.
+(ii)~\emph{Small sample size for RQ 3.} While RQ 1 uses all 3,109,979{} PRs, RQ 2 and RQ 3 condition on AI participation. For RQ 3 in particular, only 46,852{} PRs satisfy the within-PR DiD design (AI opinion + human explicit + no commits in between), of which 2,401{} are AI-authored.
+(iii)~\emph{Detection false-negatives.} Human reviews might be driven by unattributed agent activity, which our 'co-authored by: AI' regex parser does not identify.
+(iv)~\emph{Review non-homogeneity.} RQ 3's DiD identification depends on a homogeneity assumption. Does PR quality shift AI and human approval probabilities on the same scale? Humans approve nearly all human-authored PRs in the dual-review cohort (92.76\%{}) while AI bots have a much wider acceptance range, so the homogeneity assumption might be violated and evidence may be confounded by differences in gauging quality.
+(v)~\emph{Accelerators, not outcomes.} Accelerators are observable, measurable patterns rather than disempowerment itself. They may also point in the opposite direction (e.g.\ switching costs can fall as well as rise).
 
-\paragraph{Limitations.} (i)~\emph{Selection.} Our 10,000{} repositories are critical OS software projects ranked by OpenSSF \texttt{criticality\_score}~\citep{ossf-criticality} (median stars 1,550{}, see \Cref{app:repo-selection}). The criticality score favours load-bearing, multi-org, heavily-cross-referenced infrastructure rather than viral-popularity projects. We do not claim GitHub-wide representativeness.
-(ii)~\emph{Detection false-negatives.} Heuristic detection cannot recover deliberately unattributed agent activity. Our verdict parser uses structural regex headers, not free-text sentiment.
-(iii)~\emph{Sample size differs by RQ.} While RQ 1 uses all 3,109,979{} PRs, RQ 2 and RQ 3 condition on AI participation. For RQ 3 in particular, only 46,852{} PRs satisfy the within-PR DiD design (AI opinion + human explicit + no commits in between), of which 2,401{} are AI-authored.
-(iv)~\emph{Correlational, not causal; identification rests on a homogeneity assumption.} Our evidence is observational. The DiD identification holds if PR quality shifts AI bot and human approval probabilities on the same scale --- a much weaker assumption than no-confounding, but not unconditional. Humans approve nearly all PRs they review (92.76\%{} baseline) while AI bots have a much wider acceptance range, so the homogeneity assumption is the binding identification step. We address two potentially-violating mechanisms directly: anchoring (\Cref{app:anchoring} shows the human-side gap moves only +2.28{}~pp between cohorts with and without AI bot review present, ruling it out as the main driver) and authorship-classification error (silent AI use puts true-AI PRs in the human-author cell, attenuating the DiD toward zero --- if anything, this widens the true effect).
-(v)~\emph{Merger attribution.} We measure reviews, not merges. No merges in our universe are attributed to AI bot accounts on our allowlist, but AI can still act \emph{through} a human merger when an AI approval gates the decision.
-(vi)~\emph{Accelerators, not outcomes.} \emph{Accelerators} are observable, measurable patterns rather than disempowerment itself. They may also point in the opposite direction (e.g.\ switching costs can fall as well as rise).
-
-\paragraph{Disclosure of AI usage.} AI assistants provided assistance with literature review, data analysis, and editing. The research idea, framework, and empirical approach are fully human-authored. Overall, the paper is primarily human-authored.
+\paragraph{Disclosure of AI usage.} AI assistants helped with literature review, data analysis, and editing. The research idea, framework, and empirical approach are fully human-authored. Overall, the paper is primarily human-authored.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \bibliography{references}
@@ -192,23 +190,19 @@ Treat AI taste lock-in as a first-order empirical task, not a by-product of capa
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \newpage\appendix
 \onecolumn
-\section{Example pull requests}
-\label{app:examples}
-\input{appendix/examples.filled.tex}
-
-\section{Robustness and threats to validity}
-\label{app:threats}
-\input{appendix/threats.filled.tex}
-
-\section{Bot and AI-tool allowlists}
+\section{AI identification}
 \label{app:allowlist}
 \input{appendix/allowlist.filled.tex}
 
-\section{Repository-selection pipeline (replication)}
+\section{AI review classification}
+\label{app:ai-verdict-regex}
+\input{appendix/ai_verdict_regex.filled.tex}
+
+\section{Sample-selection pipeline}
 \label{app:repo-selection}
 \input{appendix/repo_selection.filled.tex}
 
-\section{Supplementary figures}
+\section{AI$\to$AI chain-length distribution by quarter}
 \label{app:extra-figures}
 \input{appendix/extra_figures.filled.tex}
 
@@ -216,12 +210,12 @@ Treat AI taste lock-in as a first-order empirical task, not a by-product of capa
 \label{app:methods}
 \input{appendix/methods.filled.tex}
 
-\section{AI bot verdict regex catalogue}
-\label{app:ai-verdict-regex}
-\input{appendix/ai_verdict_regex.filled.tex}
-
 \section{Robustness: does AI's review anchor humans?}
 \label{app:anchoring}
 \input{appendix/anchoring_robustness.filled.tex}
+
+\section{RQ3 extended results}
+\label{app:quarterly-did}
+\input{appendix/quarterly_did.filled.tex}
 
 \end{document}
