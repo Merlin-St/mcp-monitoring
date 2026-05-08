@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.5.5)  8 MAY 2026 00:02
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023/Debian) (preloaded format=pdflatex 2026.5.5)  8 MAY 2026 02:45
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -702,34 +702,50 @@ Package microtype Info: Loading generic protrusion settings for font family
 (microtype)             `pcr' (encoding: OT1).
 (microtype)             For optimal results, create family-specific settings.
 (microtype)             See the microtype manual for details.
- [2{/usr/share/texlive/texmf-dist/fonts/enc/dvips/fontawesome5/fa5free2.enc}]
-<figures/figure1_ai_participation.pdf, id=158, 236.9343pt x 241.71468pt>
+
+Underfull \hbox (badness 1221) in paragraph at lines 139--141
+\OT1/ptm/m/n/10 (+20) and Ku-ber-netes --- rep-re-sent only a tiny frac-tion of
+
+ []
+
+
+Underfull \hbox (badness 1097) in paragraph at lines 139--141
+\OT1/ptm/m/n/10 (+20) (Ap-pendix A) and \OT1/pcr/m/n/10 Co-Authored-By \OT1/ptm
+/m/n/10 (+20) commit-trailer
+ []
+
+
+Underfull \hbox (badness 10000) in paragraph at lines 139--141
+\OT1/ptm/b/n/10 (+20) re-views \OT1/ptm/m/n/10 (+20) (na-tive \OT1/pcr/m/n/10 A
+PPROVED\OT1/ptm/m/n/10 (+20) /\OT1/pcr/m/n/10 CHANGES[]REQUESTED\OT1/ptm/m/n/10
+ (+20) )
+ []
+
+
+Underfull \hbox (badness 2285) in paragraph at lines 139--141
+\OT1/ptm/m/n/10 (+20) thread \OT1/pcr/m/n/10 issue[]comment\OT1/ptm/m/n/10 (+20
+) s car-ry-ing a regex-parseable
+ []
+
+[2{/usr/share/texlive/texmf-dist/fonts/enc/dvips/fontawesome5/fa5free2.enc}]
+<figures/figure1_ai_participation.pdf, id=166, 236.9343pt x 241.71468pt>
 File: figures/figure1_ai_participation.pdf Graphic file (type pdf)
 <use figures/figure1_ai_participation.pdf>
 Package pdftex.def Info: figures/figure1_ai_participation.pdf  used on input li
 ne 147.
 (pdftex.def)             Requested size: 230.17894pt x 234.83176pt.
 
-Underfull \vbox (badness 5077) has occurred while \output is active []
+Underfull \vbox (badness 10000) has occurred while \output is active []
 
 
-Underfull \vbox (badness 5878) has occurred while \output is active []
+Underfull \vbox (badness 2521) has occurred while \output is active []
 
  [3]
-<figures/figure2_withinpr.pdf, id=191, 476.03282pt x 171.85881pt>
+<figures/figure2_withinpr.pdf, id=199, 476.03282pt x 171.85881pt>
 File: figures/figure2_withinpr.pdf Graphic file (type pdf)
 <use figures/figure2_withinpr.pdf>
 Package pdftex.def Info: figures/figure2_withinpr.pdf  used on input line 160.
 (pdftex.def)             Requested size: 487.8225pt x 176.11446pt.
-<figures/figure2b_withinfamily_claude.pdf, id=192, 476.03282pt x 171.85881pt>
-File: figures/figure2b_withinfamily_claude.pdf Graphic file (type pdf)
-<use figures/figure2b_withinfamily_claude.pdf>
-Package pdftex.def Info: figures/figure2b_withinfamily_claude.pdf  used on inpu
-t line 167.
-(pdftex.def)             Requested size: 487.8225pt x 176.11446pt.
-
-Underfull \vbox (badness 10000) has occurred while \output is active []
-
 
 (./paper.filled.bbl
 Underfull \hbox (badness 1442) in paragraph at lines 15--21
@@ -748,8 +764,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 85--90
 +20) .
  []
 
-[5 <./figures/figure2_withinpr.pdf> <./figures/figure2b_withinfamily_claude.pdf
->]
+[5 <./figures/figure2_withinpr.pdf>]
 Underfull \hbox (badness 1281) in paragraph at lines 140--146
 \OT1/ptm/m/n/10 (+20) ``delve'' so much? Ex-plor-ing the sources of lex-i-
  []
@@ -802,9 +817,7 @@ Underfull \hbox (badness 1789) in paragraph at lines 194--200
 hub . com /
  []
 
-[6]) [7
-
-] (./appendix/allowlist.filled.tex
+) [6] (./appendix/allowlist.filled.tex
 Underfull \hbox (badness 10000) in paragraph at lines 11--12
 []\OT1/pcr/m/n/9 Co-Authored-By:
  []
@@ -879,7 +892,7 @@ Underfull \hbox (badness 10000) in paragraph at lines 31--31
 ues\OMS/cmsy/m/n/9 g
  []
 
-) (./appendix/repo_selection.filled.tex [8
+) (./appendix/repo_selection.filled.tex [7
 
 ]
 LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 1
@@ -887,22 +900,22 @@ LaTeX Font Info:    Trying to load font information for TS1+ptm on input line 1
 
 (/usr/share/texlive/texmf-dist/tex/latex/psnfss/ts1ptm.fd
 File: ts1ptm.fd 2001/06/04 font definitions for TS1/ptm.
-) [9]
+) [8]
 LaTeX Font Info:    Font shape `OMS/pcr/m/n' in size <10> not available
 (Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 54.
 )
 (./appendix/extra_figures.filled.tex
-<figures/figure2_chain_length.pdf, id=380, 238.49101pt x 195.129pt>
+<figures/figure2_chain_length.pdf, id=350, 238.49101pt x 195.129pt>
 File: figures/figure2_chain_length.pdf Graphic file (type pdf)
 <use figures/figure2_chain_length.pdf>
 Package pdftex.def Info: figures/figure2_chain_length.pdf  used on input line 5
 .
 (pdftex.def)             Requested size: 268.30385pt x 219.5404pt.
- [10]) (./appendix/methods.filled.tex)
-[11 <./figures/figure2_chain_length.pdf>]
+ [9]) (./appendix/methods.filled.tex)
+[10 <./figures/figure2_chain_length.pdf>]
 (./appendix/anchoring_robustness.filled.tex)
-(./appendix/quarterly_did.filled.tex [12]
-<figures/figure2_withinpr_native.pdf, id=423, 482.47704pt x 171.85881pt>
+(./appendix/quarterly_did.filled.tex
+<figures/figure2_withinpr_native.pdf, id=386, 482.47704pt x 171.85881pt>
 File: figures/figure2_withinpr_native.pdf Graphic file (type pdf)
 <use figures/figure2_withinpr_native.pdf>
 Package pdftex.def Info: figures/figure2_withinpr_native.pdf  used on input lin
@@ -912,7 +925,20 @@ e 15.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
-) [13 <./figures/figure2_withinpr_native.pdf>] [14] (./paper.filled.aux)
+<figures/figure2b_withinfamily_claude.pdf, id=391, 476.03282pt x 171.85881pt>
+File: figures/figure2b_withinfamily_claude.pdf Graphic file (type pdf)
+<use figures/figure2b_withinfamily_claude.pdf>
+Package pdftex.def Info: figures/figure2b_withinfamily_claude.pdf  used on inpu
+t line 22.
+(pdftex.def)             Requested size: 487.8225pt x 176.11446pt.
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+) [11] [12 <./figures/figure2_withinpr_native.pdf> <./figures/figure2b_withinfa
+mily_claude.pdf>] [13] (./paper.filled.aux)
  ***********
 LaTeX2e <2023-11-01> patch level 1
 L3 programming layer <2024-01-22>
@@ -921,13 +947,13 @@ Package rerunfilecheck Info: File `paper.filled.out' has not changed.
 (rerunfilecheck)             Checksum: D41D8CD98F00B204E9800998ECF8427E;0.
  ) 
 Here is how much of TeX's memory you used:
- 20407 strings out of 476106
- 356219 string characters out of 5793934
- 1960975 words of memory out of 5000000
+ 20410 strings out of 476106
+ 356251 string characters out of 5793934
+ 1962975 words of memory out of 5000000
  41702 multiletter control sequences out of 15000+600000
- 602746 words of font info for 335 fonts, out of 8000000 for 9000
+ 603010 words of font info for 338 fonts, out of 8000000 for 9000
  59 hyphenation exceptions out of 8191
- 75i,17n,79p,2248b,633s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 75i,17n,79p,2247b,629s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </usr/share/texlive/texmf-dist/fonts/type1/public/fontawesome5/FontAwesome5Fr
 ee-Solid.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmex
 10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi10.pfb
@@ -936,20 +962,19 @@ share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi6.pfb></usr/share/t
 exlive/texmf-dist/fonts/type1/public/amsfonts/cm/cmmi7.pfb></usr/share/texlive/
 texmf-dist/fonts/type1/public/amsfonts/cm/cmmi9.pfb></usr/share/texlive/texmf-d
 ist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/share/texlive/texmf-dist/fon
-ts/type1/public/amsfonts/cm/cmr6.pfb></usr/share/texlive/texmf-dist/fonts/type1
-/public/amsfonts/cm/cmr9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/
-amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfon
-ts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/cm/c
-msy9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msa
-m10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symbols/msbm
-10.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pfb></usr/
-share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/texlive/t
-exmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-dist/fonts
-/type1/urw/times/utmri8a.pfb>
-Output written on paper.filled.pdf (14 pages, 400802 bytes).
+ts/type1/public/amsfonts/cm/cmr9.pfb></usr/share/texlive/texmf-dist/fonts/type1
+/public/amsfonts/cm/cmsy10.pfb></usr/share/texlive/texmf-dist/fonts/type1/publi
+c/amsfonts/cm/cmsy7.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfo
+nts/cm/cmsy9.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/sym
+bols/msam10.pfb></usr/share/texlive/texmf-dist/fonts/type1/public/amsfonts/symb
+ols/msbm10.pfb></usr/share/texlive/texmf-dist/fonts/type1/urw/courier/ucrr8a.pf
+b></usr/share/texlive/texmf-dist/fonts/type1/urw/times/utmb8a.pfb></usr/share/t
+exlive/texmf-dist/fonts/type1/urw/times/utmr8a.pfb></usr/share/texlive/texmf-di
+st/fonts/type1/urw/times/utmri8a.pfb>
+Output written on paper.filled.pdf (13 pages, 394056 bytes).
 PDF statistics:
- 569 PDF objects out of 1000 (max. 8388607)
+ 566 PDF objects out of 1000 (max. 8388607)
  450 compressed objects within 5 object streams
- 77 named destinations out of 1000 (max. 500000)
+ 76 named destinations out of 1000 (max. 500000)
  56858 words of extra memory for PDF output out of 61914 (max. 10000000)
 
