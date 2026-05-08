@@ -193,16 +193,17 @@ def figure1_headline(granularity: str = "month"):
     grp["date"] = grp["period"].apply(period_to_date)
     grp = grp.dropna(subset=["date"]).sort_values("date").reset_index(drop=True)
 
+    # Palette: AISI red + black + grey.
     SERIES = [
-        ("share_any_ai",                   "#d62728", "o",
-         "share of PRs with any AI authored event"),
-        ("share_chain_ge5",                "#8c564b", "^",
-         r"share of PRs with AI bot--AI bot comment chain $\geq 5$"),
-        ("share_ai_decision",              "#9467bd", "v",
-         "share of PRs with explicit AI bot review"),
+        ("share_any_ai",                   "#E0203A", "o",
+         "any AI authored event"),
+        ("share_chain_ge5",                "#000000", "^",
+         r"AI--AI comment chain $\geq 5$"),
+        ("share_ai_decision",              "#7f7f7f", "v",
+         "explicit AI bot review"),
     ]
 
-    fig, ax = plt.subplots(figsize=(6.5, 4.2))
+    fig, ax = plt.subplots(figsize=(3.3, 3.4))
     for col, color, marker, label in SERIES:
         ax.plot(grp["date"], grp[col], color=color, lw=1.3, marker=marker, ms=3.5, label=label)
 
@@ -214,44 +215,58 @@ def figure1_headline(granularity: str = "month"):
         # Match paper-text precision: sub-1% values are reported to 2 decimals,
         # larger values to 1 decimal.
         return f"{pct:.2f}%" if pct < 1 else f"{pct:.1f}%"
+    xlim_lo = datetime(2025, 4, 1)
+    xlim_hi = datetime(2026, 4, 1)
+    in_window = grp[(grp["date"] >= xlim_lo) & (grp["date"] <= xlim_hi)]
+    # First-month label y-offsets per series. The chain_ge5 line at ~0.4%
+    # and the ai_decision line at ~0.23% sit on top of each other on a
+    # 0-30% y-axis, so we push the middle line's label well above them.
+    FIRST_DY = {
+        "share_any_ai":      5,
+        "share_chain_ge5":   14,
+        "share_ai_decision": 5,
+    }
     for col, color, _, _ in SERIES:
-        vals = grp[col]
-        nz = vals.dropna()
-        if nz.empty:
+        sub = in_window.dropna(subset=[col])
+        if sub.empty:
             continue
-        first_i = nz.index[0]
-        last_i = nz.index[-1]
-        ax.annotate(_fmt(vals.iloc[first_i]),
-                    (grp["date"].iloc[first_i], vals.iloc[first_i]),
-                    textcoords="offset points", xytext=(-4, 5),
-                    ha="right", va="bottom", fontsize=5.5, color=color)
-        ax.annotate(_fmt(vals.iloc[last_i]),
-                    (grp["date"].iloc[last_i], vals.iloc[last_i]),
-                    textcoords="offset points", xytext=(4, 5),
-                    ha="left", va="bottom", fontsize=5.5, color=color)
-
-    # Tool launch reference lines.
-    for name, d in LAUNCH_MARKS:
-        dt = datetime.strptime(d, "%Y-%m-%d")
-        if dt < datetime(2025, 4, 1) or dt > datetime(2026, 3, 31):
-            continue
-        ax.axvline(dt, color="grey", lw=0.5, ls=":", alpha=0.6)
-        ax.text(dt, 0.98, name, rotation=90, va="top", ha="right",
-                fontsize=5, color="grey", alpha=0.8)
+        first_row = sub.iloc[0]
+        last_row = sub.iloc[-1]
+        ax.annotate(_fmt(first_row[col]),
+                    (first_row["date"], first_row[col]),
+                    textcoords="offset points",
+                    xytext=(5, FIRST_DY.get(col, 5)),
+                    ha="left", va="bottom", fontsize=8, color=color)
+        # Last-month labels sit to the right of the data point so they do
+        # not crowd the line itself.
+        ax.annotate(_fmt(last_row[col]),
+                    (last_row["date"], last_row[col]),
+                    textcoords="offset points", xytext=(7, 0),
+                    ha="left", va="center", fontsize=8, color=color)
 
     series_max = max((grp[c].max() or 0) for c, *_ in SERIES)
-    ax.set_ylim(0, max(0.35, series_max * 1.15))
+    ax.set_ylim(0, max(0.30, series_max * 1.10))
     ax.set_xlim(datetime(2025, 4, 1), datetime(2026, 4, 1))
-    ax.set_xlabel(f"PR opened ({granularity})")
-    ax.set_ylabel("Share of PRs")
-    ax.set_title(r"AI-agent participation in GitHub PRs, monthly — Apr 2025 to Mar 2026")
-    ax.legend(loc="upper left", frameon=False, fontsize=6.5)
+    # Cleaner ticks: only the y-grid 0/10/20/30% and three x-anchors
+    # (window start, mid-window, window end).
+    ax.set_yticks([0, 0.1, 0.2, 0.3])
+    ax.set_xticks([datetime(2025, 4, 1), datetime(2025, 10, 1), datetime(2026, 3, 1)])
+    ax.set_xticklabels(["2025-04", "2025-10", "2026-03"])
+    # Drop the top and right spines so only the L-shaped x/y axes remain.
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.set_xlabel(f"PR opened ({granularity})", fontsize=10)
+    ax.set_ylabel("Share of PRs", fontsize=10)
+    ax.set_title("AI agent participation in Github PRs\nof critical repositories",
+                 fontsize=10)
+    ax.tick_params(axis="both", labelsize=9)
+    ax.legend(loc="upper left", frameon=False, fontsize=8.5)
     from matplotlib.ticker import PercentFormatter
     ax.yaxis.set_major_formatter(PercentFormatter(xmax=1.0, decimals=0))
-    fig.autofmt_xdate()
+    plt.setp(ax.get_xticklabels(), rotation=0, ha="center")
     fig.tight_layout()
     out = PAPER_FIG_DIR / "figure1_ai_participation.pdf"
-    fig.savefig(out)
+    fig.savefig(out, bbox_inches="tight")
     plt.close(fig)
     logger.info("Wrote %s", out)
 
@@ -329,6 +344,9 @@ def _render_two_panel_didfig(
     treat_xtick: str = "AI\nreviewer",
     ref_xtick: str = "Human\nreviewer",
     did_xlabel: str = r"$\Delta^A - \Delta^H$",
+    did_title: str | None = None,
+    y_min: float = 0.0,
+    y_max: float = 1.1,
 ):
     """Black-and-white two-panel renderer for the within-PR DiD figures.
 
@@ -349,8 +367,9 @@ def _render_two_panel_didfig(
     for p in panels:
         p["_dir"] = _direction_word(p["gap_pp"])
 
-    fig = plt.figure(figsize=(7.4, 3.8))
-    gs = fig.add_gridspec(1, 3, width_ratios=[4, 4, 1.2], wspace=0.12)
+    fig = plt.figure(figsize=(7.4, 1.7))
+    # DiD column slightly wider so the "AI anti-AI bias" title fits on one line.
+    gs = fig.add_gridspec(1, 3, width_ratios=[4, 4, 1.6], wspace=0.12)
     axA = fig.add_subplot(gs[0])
     axB = fig.add_subplot(gs[1], sharey=axA)
     axD = fig.add_subplot(gs[2], sharey=axA)
@@ -407,16 +426,17 @@ def _render_two_panel_didfig(
                     color="black")
 
         ax.set_xticks([x_ref, x_treat, x_gap])
-        ax.set_xticklabels([ref_xtick, treat_xtick, r"$\Delta$"], fontsize=8.5)
+        gap_xtick = p.get("delta_label", r"$\Delta$")
+        ax.set_xticklabels([ref_xtick, treat_xtick, gap_xtick], fontsize=8.5)
         ax.set_xlim(-0.6, 2.6)
-        ax.set_ylim(0, 1.1)
+        ax.set_ylim(y_min, y_max)
         ax.yaxis.set_major_formatter(PercentFormatter(xmax=1.0, decimals=0))
         ax.set_xlabel(p["cohort_sublabel"], fontsize=8.5, labelpad=8)
         ax.grid(axis="y", lw=0.3, alpha=0.3, color="black")
         ax.spines["top"].set_visible(False)
         ax.spines["right"].set_visible(False)
 
-    axA.set_ylabel("Approval rate (Wilson 95% CI)", fontsize=8.8)
+    axA.set_ylabel("Approval rate (95% CI)", fontsize=8.8)
 
     # Drop the y-axis on panel B and the DiD panel: hide tick labels and
     # left spine.
@@ -437,12 +457,18 @@ def _render_two_panel_didfig(
     bar_bot = min(a_A, a_B)
     bar_top = max(a_A, a_B)
 
-    # Dashed horizontal guide lines across the side panels.
-    for ax in (axA, axB):
-        ax.axhline(a_A, ls=(0, (4, 3)), color="black", lw=0.6, alpha=0.55,
-                   zorder=0)
-        ax.axhline(a_B, ls=(0, (4, 3)), color="black", lw=0.6, alpha=0.55,
-                   zorder=0)
+    # Dashed horizontal guide line in each side panel: only the panel's own
+    # AI-reviewer rate (a_A in panel A, a_B in panel B), clipped to start at
+    # the gap (delta) bar's left edge and run to the panel's right edge.
+    # Showing the OTHER panel's value would point at a y-level with no
+    # corresponding data in that panel, which reads as misleading.
+    side_xlim_lo, side_xlim_hi = -0.6, 2.6
+    side_bar_left = x_gap - bar_w / 2
+    xmin_dash_side = (side_bar_left - side_xlim_lo) / (side_xlim_hi - side_xlim_lo)
+    axA.axhline(a_A, xmin=xmin_dash_side, xmax=1.0,
+                ls=(0, (4, 3)), color="black", lw=0.6, alpha=0.55, zorder=0)
+    axB.axhline(a_B, xmin=xmin_dash_side, xmax=1.0,
+                ls=(0, (4, 3)), color="black", lw=0.6, alpha=0.55, zorder=0)
 
     # In the DiD column, draw the dashed lines only from the left edge up to
     # the DiD bar's left edge so they don't cut through the bar.
@@ -455,30 +481,27 @@ def _render_two_panel_didfig(
     axD.axhline(a_B, xmin=0, xmax=xmax_dash, ls=(0, (4, 3)),
                 color="black", lw=0.6, alpha=0.55)
 
+    if did_title:
+        axD.set_title(did_title, fontsize=8.8)
     axD.bar(0, bar_top - bar_bot, bottom=bar_bot, width=bar_w,
             color="black", edgecolor="black", lw=0.5)
-    # The signed DiD value goes in the xlabel below the bar (set later).
-    # Inside the bar, only show the magnitude when there is room.
-    if (bar_top - bar_bot) >= 0.06:
-        axD.text(0, (bar_bot + bar_top) / 2, f"{did_pp:+.2f}\npp",
-                 ha="center", va="center", fontsize=8.5, fontweight="bold",
-                 color="white")
+    # DiD value + CI sit OUTSIDE the bar, above its top edge. We do not
+    # write inside the bar and we do not put the CI below the x-axis.
+    axD.text(0, bar_top + 0.02,
+             f"{did_pp:+.2f} pp\n[{ci_lo:+.1f}, {ci_hi:+.1f}]",
+             ha="center", va="bottom", fontsize=8, fontweight="bold",
+             color="black")
     axD.set_xticks([0])
     axD.set_xticklabels([did_xlabel], fontsize=9)
     axD.set_xlim(xlim_lo, xlim_hi)
-    axD.set_xlabel(
-        f"{did_pp:+.2f} pp\n[95% CI: {ci_lo:+.2f}, {ci_hi:+.2f}]",
-        fontsize=8, labelpad=8,
-    )
+    axD.set_xlabel("")
     axD.grid(axis="y", lw=0.3, alpha=0.3, color="black")
 
-    fig.suptitle(
-        f"{cohort_label} (n={n_total:,})",
-        fontsize=9, y=1.02,
-    )
+    # Cohort label is in the figure caption already; no suptitle on the
+    # figure itself.
 
     fig.tight_layout()
-    fig.savefig(out_path, bbox_inches="tight")
+    fig.savefig(out_path, bbox_inches="tight", pad_inches=0.15)
     plt.close(fig)
     logger.info("Wrote %s", out_path)
 
@@ -499,18 +522,20 @@ def figure2_withinpr():
     n_AI = did["n_AI_auth"]; n_H = did["n_H_auth"]
     panels = [
         {
-            "title_template": "AI prefers AI {direction} than humans do",
+            "title_template": "AI prefers AI code {direction}",
             "cohort_sublabel": f"(AI-authored, n={n_AI:,})",
             "ref_cell":   cells["H_x_AI"],
             "treat_cell": cells["AI_x_AI"],
             "gap_pp":     did["bracket1_pp"],
+            "delta_label": r"$\Delta$",
         },
         {
-            "title_template": "AI prefers humans {direction} than humans do",
+            "title_template": "AI prefers human code {direction}",
             "cohort_sublabel": f"(human-authored, n={n_H:,})",
             "ref_cell":   cells["H_x_H"],
             "treat_cell": cells["AI_x_H"],
             "gap_pp":     did["bracket2_pp"],
+            "delta_label": r"$\Delta$",
         },
     ]
     _render_two_panel_didfig(
@@ -521,6 +546,55 @@ def figure2_withinpr():
         did_pp=did["did_pp"],
         delta=did["logit_delta"],
         pval=did["logit_p"],
+        did_title="AI anti-AI bias",
+    )
+
+
+def figure2_withinpr_native():
+    """Companion to figure2_withinpr, but on the *native-only* AI opinion pool
+    (APPROVED / CHANGES_REQUESTED states only — symmetric with the human
+    side). Pooled across all four quarters in the analysis window.
+    """
+    import json as _json
+    q_path = RESULTS_DIR / "within_pr_quarterly.json"
+    if not q_path.exists():
+        logger.warning("No within_pr_quarterly.json; skipping native within-PR figure.")
+        return
+    qd = _json.loads(q_path.read_text())
+    pooled = qd.get("cross_family_native_pooled")
+    if not pooled:
+        logger.warning("No 'cross_family_native_pooled' block; skipping native within-PR figure.")
+        return
+    cells = pooled["cells"]
+    n_AI = pooled["n_AI_auth"]
+    n_H = pooled["n_H_auth"]
+    panels = [
+        {
+            "title_template": "AI prefers AI code {direction}",
+            "cohort_sublabel": f"(AI-authored, n={n_AI:,})",
+            "ref_cell":   cells["HA"],   # human reviewer × AI author
+            "treat_cell": cells["AA"],   # AI reviewer    × AI author
+            "gap_pp":     pooled["bracket1_pp"],
+            "delta_label": r"$\Delta$",
+        },
+        {
+            "title_template": "AI prefers human code {direction}",
+            "cohort_sublabel": f"(human-authored, n={n_H:,})",
+            "ref_cell":   cells["HH"],   # human reviewer × H author
+            "treat_cell": cells["AH"],   # AI reviewer    × H author
+            "gap_pp":     pooled["bracket2_pp"],
+            "delta_label": r"$\Delta$",
+        },
+    ]
+    _render_two_panel_didfig(
+        out_path=PAPER_FIG_DIR / "figure2_withinpr_native.pdf",
+        panels=panels,
+        cohort_label="Dual-review cohort, native AI reviews only",
+        n_total=pooled["n"],
+        did_pp=pooled["did_pp"],
+        delta=0.0,
+        pval=None,
+        did_title="Insign. AI-AI bias",
     )
 
 
@@ -543,18 +617,20 @@ def figure2_withinfamily_claude():
     bracket2 = (cells["C_rev_x_X_auth"]["rate"] - cells["R_rev_x_X_auth"]["rate"]) * 100
     panels = [
         {
-            "title_template": "Claude prefers Claude {direction} than humans do",
+            "title_template": "Claude prefers Claude code {direction}",
             "cohort_sublabel": f"(Claude-authored, n={n_C:,})",
             "ref_cell":   cells["R_rev_x_C_auth"],
             "treat_cell": cells["C_rev_x_C_auth"],
             "gap_pp":     bracket1,
+            "delta_label": r"$\Delta$",
         },
         {
-            "title_template": "Claude prefers humans {direction} than humans do",
+            "title_template": "Claude prefers human code {direction}",
             "cohort_sublabel": f"(human-authored, n={n_H:,})",
             "ref_cell":   cells["R_rev_x_X_auth"],
             "treat_cell": cells["C_rev_x_X_auth"],
             "gap_pp":     bracket2,
+            "delta_label": r"$\Delta$",
         },
     ]
     _render_two_panel_didfig(
@@ -568,6 +644,10 @@ def figure2_withinfamily_claude():
         treat_xtick="Claude\nreviewer",
         ref_xtick="Human\nreviewer",
         did_xlabel=r"$\Delta^{A,\mathrm{Claude}} - \Delta^H$",
+        # Zoom y-axis: all Claude-cohort rates are above ~88%, so a 0-100%
+        # range wastes space and hides the within-family DiD bar.
+        y_min=0.75,
+        y_max=1.02,
     )
 
 
@@ -625,7 +705,7 @@ def figure2():
     tail = pivot_pct.drop(columns=["0 (no AI event)"])
 
     fig, ax = plt.subplots(figsize=(3.3, 2.7))
-    colors = ["#fee5d9", "#fcae91", "#fb6a4a", "#de2d26", "#a50f15"]
+    colors = ["#d9d9d9", "#bdbdbd", "#969696", "#636363", "#252525"]
     bottom = np.zeros(len(tail))
     for col, color in zip(tail.columns, colors):
         vals = tail[col].values
@@ -689,6 +769,7 @@ def main():
 
     figure1_headline(granularity=args.granularity)
     figure2_withinpr()
+    figure2_withinpr_native()
     figure2_withinfamily_claude()
     figure2()
     logger.info("=== FIGURES DONE ===")

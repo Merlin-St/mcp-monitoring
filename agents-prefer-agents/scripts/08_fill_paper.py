@@ -636,6 +636,81 @@ def main():
         subs[r"\PLACEHOLDERREGRESSIONTABLE"] = "[Regression pending]"
         subs[r"\PLACEHOLDERREGRESSIONINTERPRETATION"] = "[Interpretation pending]"
 
+    # ---- Quarterly RQ3 DiD (06e_within_pr_quarterly.py) ----
+    quarterly_path = RESULTS_DIR / "within_pr_quarterly.json"
+
+    def _fmt_pp(v) -> str:
+        if v is None or (isinstance(v, float) and (v != v)):
+            return "--"
+        return f"{v:+.2f}"
+
+    def _fmt_rate(v) -> str:
+        if v is None or (isinstance(v, float) and (v != v)):
+            return "--"
+        return f"{100*v:.1f}\\%"
+
+    def _fmt_ci(lo, hi) -> str:
+        if lo is None or hi is None:
+            return "--"
+        if (isinstance(lo, float) and lo != lo) or (isinstance(hi, float) and hi != hi):
+            return "--"
+        return f"[{lo:+.2f}, {hi:+.2f}]"
+
+    if quarterly_path.exists():
+        qd = json.loads(quarterly_path.read_text())
+        for prefix, rows in [("CF", qd.get("cross_family_by_quarter", [])),
+                             ("WF", qd.get("within_family_by_quarter", [])),
+                             ("CFN", qd.get("cross_family_native_by_quarter", [])),
+                             ("WFN", qd.get("within_family_native_by_quarter", []))]:
+            for i, row in enumerate(rows[:4], start=1):
+                cells = row.get("cells", {})
+                # n totals
+                subs[fr"\PLACEHOLDERRQ3Q{prefix}N{i}"] = _num(row.get("n", 0))
+                if prefix in ("CF", "CFN"):
+                    subs[fr"\PLACEHOLDERRQ3Q{prefix}NAI{i}"] = _num(row.get("n_AI_auth", 0))
+                    subs[fr"\PLACEHOLDERRQ3Q{prefix}NH{i}"] = _num(row.get("n_H_auth", 0))
+                else:
+                    subs[fr"\PLACEHOLDERRQ3Q{prefix}NC{i}"] = _num(row.get("n_C_auth", 0))
+                    subs[fr"\PLACEHOLDERRQ3Q{prefix}NH{i}"] = _num(row.get("n_H_auth", 0))
+                # Brackets and DiD
+                subs[fr"\PLACEHOLDERRQ3Q{prefix}B1{i}"] = _fmt_pp(row.get("bracket1_pp"))
+                subs[fr"\PLACEHOLDERRQ3Q{prefix}B1CI{i}"] = _fmt_ci(
+                    row.get("bracket1_ci_lo_pp"), row.get("bracket1_ci_hi_pp")
+                )
+                subs[fr"\PLACEHOLDERRQ3Q{prefix}B2{i}"] = _fmt_pp(row.get("bracket2_pp"))
+                subs[fr"\PLACEHOLDERRQ3Q{prefix}B2CI{i}"] = _fmt_ci(
+                    row.get("bracket2_ci_lo_pp"), row.get("bracket2_ci_hi_pp")
+                )
+                subs[fr"\PLACEHOLDERRQ3Q{prefix}DID{i}"] = _fmt_pp(row.get("did_pp"))
+                subs[fr"\PLACEHOLDERRQ3Q{prefix}DIDCI{i}"] = _fmt_ci(
+                    row.get("did_ci_lo_pp"), row.get("did_ci_hi_pp")
+                )
+                subs[fr"\PLACEHOLDERRQ3Q{prefix}DIDLO{i}"] = _fmt_pp(row.get("did_ci_lo_pp"))
+                subs[fr"\PLACEHOLDERRQ3Q{prefix}DIDHI{i}"] = _fmt_pp(row.get("did_ci_hi_pp"))
+                # Per-cell approval rates (4 cells per quarter): AA / HA / AH / HH.
+                for cell_key in ("AA", "HA", "AH", "HH"):
+                    cell = cells.get(cell_key, {})
+                    subs[fr"\PLACEHOLDERRQ3Q{prefix}{cell_key}{i}"] = _fmt_rate(cell.get("rate"))
+
+        # Pooled-across-quarters native-only DiD (figure caption).
+        pooled = qd.get("cross_family_native_pooled", {})
+        if pooled:
+            subs[r"\PLACEHOLDERRQ3QCFNPOOLN"] = _num(pooled.get("n", 0))
+            subs[r"\PLACEHOLDERRQ3QCFNPOOLNAI"] = _num(pooled.get("n_AI_auth", 0))
+            subs[r"\PLACEHOLDERRQ3QCFNPOOLNH"] = _num(pooled.get("n_H_auth", 0))
+            subs[r"\PLACEHOLDERRQ3QCFNPOOLB1"] = _fmt_pp(pooled.get("bracket1_pp"))
+            subs[r"\PLACEHOLDERRQ3QCFNPOOLB1CI"] = _fmt_ci(
+                pooled.get("bracket1_ci_lo_pp"), pooled.get("bracket1_ci_hi_pp")
+            )
+            subs[r"\PLACEHOLDERRQ3QCFNPOOLB2"] = _fmt_pp(pooled.get("bracket2_pp"))
+            subs[r"\PLACEHOLDERRQ3QCFNPOOLB2CI"] = _fmt_ci(
+                pooled.get("bracket2_ci_lo_pp"), pooled.get("bracket2_ci_hi_pp")
+            )
+            subs[r"\PLACEHOLDERRQ3QCFNPOOLDID"] = _fmt_pp(pooled.get("did_pp"))
+            subs[r"\PLACEHOLDERRQ3QCFNPOOLDIDCI"] = _fmt_ci(
+                pooled.get("did_ci_lo_pp"), pooled.get("did_ci_hi_pp")
+            )
+
     # Apply to paper.tex and each appendix/*.tex. Sort by descending key length
     # so longer placeholders (e.g. \PLACEHOLDERWITHINAINPCT) are replaced before
     # their prefixes (\PLACEHOLDERWITHINAIN).

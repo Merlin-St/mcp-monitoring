@@ -22,6 +22,9 @@ python scripts/06c_within_pr.py
 echo "=== Phase 6a-bis: within-family Claude DiD (RQ3b) ==="
 python scripts/06d_within_family_claude.py
 
+echo "=== Phase 6a-ter: quarterly within-PR DiD trend ==="
+python scripts/06e_within_pr_quarterly.py
+
 echo "=== Phase 6b: figures ==="
 python scripts/07_make_figures.py --all --granularity month --min-cell-n 3
 
