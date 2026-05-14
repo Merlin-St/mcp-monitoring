@@ -1,13 +1,17 @@
 """
 Query GitHub Commit Search API for Claude Code commits.
-Samples the 1st of each month from Nov 2024 to Mar 2026.
+Samples the 1st of each month from Nov 2024 to Apr 2026.
 
 Usage:
   export GITHUB_TOKEN=ghp_your_token_here
   python gh-claude-activity.py
   python gh-claude-activity.py --alldays                # Every day, not just 1st of month
   python gh-claude-activity.py --coauthored-only        # Only "Co-authored-by: Claude"
-  python gh-claude-activity.py --alldays --coauthored-only
+  python gh-claude-activity.py --with-totals            # Also fetch total commits per day for % calc
+  python gh-claude-activity.py --alldays --coauthored-only --with-totals
+
+By default the script is incremental: existing dates in the output file are skipped.
+Pass --refetch to re-query everything.
 
 You need a GitHub personal access token (classic) with no special scopes.
 The commit search API is rate-limited to 30 requests/minute for authenticated users.
@@ -50,6 +54,7 @@ MONTHLY_DATES = [
     "2026-01-01",
     "2026-02-01",
     "2026-03-01",
+    "2026-04-01",
 ]
 
 # Search queries that identify Claude Code commits
@@ -65,7 +70,7 @@ COAUTHORED_ONLY_QUERIES = [
 ]
 
 
-def generate_all_days(start="2025-02-01", end="2026-03-04"):
+def generate_all_days(start="2025-02-01", end="2026-04-30"):
     """Generate every date from start to end (inclusive)."""
     dates = []
     current = datetime.strptime(start, "%Y-%m-%d")
@@ -106,10 +111,37 @@ def search_commits(query, date):
         return 0
 
 
+TOTAL_KEY = "total_github_commits"
+
+
+def total_commits(date):
+    """Count total commits on GitHub for a given date (denominator for %)."""
+    params = {"q": f"committer-date:{date}", "per_page": 1}
+    try:
+        resp = requests.get(SEARCH_URL, headers=HEADERS, params=params)
+        if resp.status_code == 403:
+            reset_time = int(resp.headers.get("X-RateLimit-Reset", 0))
+            wait = max(reset_time - int(time.time()), 10)
+            print(f"  Rate limited. Waiting {wait}s...")
+            time.sleep(wait)
+            return total_commits(date)
+        if resp.status_code == 422:
+            print(f"  Total query not supported for {date}")
+            return 0
+        resp.raise_for_status()
+        return resp.json().get("total_count", 0)
+    except requests.exceptions.RequestException as e:
+        print(f"  Error: {e}")
+        return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description="Query GitHub for Claude Code commits")
     parser.add_argument("--alldays", action="store_true", help="Query every day, not just 1st of each month")
     parser.add_argument("--coauthored-only", action="store_true", help="Only search for 'Co-authored-by: Claude'")
+    parser.add_argument("--with-totals", action="store_true", help="Also fetch total commits per day (for % calc)")
+    parser.add_argument("--refetch", action="store_true", help="Re-query dates already in the output file")
+    parser.add_argument("--output", default="data/internal-cl/gh-claude-activity.json", help="Output JSON path")
     args = parser.parse_args()
 
     if not GITHUB_TOKEN:
@@ -119,36 +151,68 @@ def main():
     dates = generate_all_days() if args.alldays else MONTHLY_DATES
     queries = COAUTHORED_ONLY_QUERIES if args.coauthored_only else ALL_QUERIES
 
+    # Load existing results for incremental updates
+    existing = {}
+    if os.path.exists(args.output) and not args.refetch:
+        with open(args.output) as f:
+            for r in json.load(f):
+                existing[r["date"]] = r
+        print(f"Loaded {len(existing)} existing records from {args.output}")
+
     print(f"Dates: {len(dates)} {'(all days)' if args.alldays else '(monthly)'}")
     print(f"Queries: {len(queries)} {'(co-authored only)' if args.coauthored_only else '(all)'}")
-
-    results = []
+    print(f"With totals: {args.with_totals}")
 
     for date in dates:
+        existing_record = existing.get(date)
+        needs_queries = existing_record is None or any(q not in existing_record for q in queries)
+        needs_total = args.with_totals and (existing_record is None or TOTAL_KEY not in existing_record)
+
+        if not needs_queries and not needs_total:
+            continue
+
         print(f"\n--- {date} ---")
-        day_total = 0
-        query_counts = {}
+        record = dict(existing_record) if existing_record else {"date": date}
 
-        for query in queries:
-            count = search_commits(query, date)
-            print(f"  {query}: {count}")
-            query_counts[query] = count
-            day_total += count
-            time.sleep(2)  # Stay under rate limit
+        if needs_queries:
+            day_total = 0
+            for query in queries:
+                count = search_commits(query, date)
+                print(f"  {query}: {count}")
+                record[query] = count
+                day_total += count
+                time.sleep(2)  # Stay under rate limit
+            record["total"] = day_total
+            print(f"  TOTAL (may have duplicates): {day_total}")
 
-        # Note: there may be overlap between queries (same commit matching multiple patterns)
-        # The total is an upper bound
-        print(f"  TOTAL (may have duplicates): {day_total}")
-        results.append({"date": date, "total": day_total, **query_counts})
+        if needs_total:
+            t = total_commits(date)
+            record[TOTAL_KEY] = t
+            print(f"  {TOTAL_KEY}: {t}")
+            time.sleep(2)
+
+        existing[date] = record
+
+    # Sort by date and save
+    results = [existing[d] for d in sorted(existing.keys())]
 
     print("\n\n=== SUMMARY ===")
-    print(f"{'Date':<15} {'Commits':>10}")
-    print("-" * 27)
+    header = f"{'Date':<15} {'Claude':>10}"
+    if args.with_totals:
+        header += f" {'AllGH':>12} {'Pct':>8}"
+    print(header)
+    print("-" * len(header))
     for r in results:
-        print(f"{r['date']:<15} {r['total']:>10}")
+        line = f"{r['date']:<15} {r.get('total', 0):>10}"
+        if args.with_totals and TOTAL_KEY in r:
+            tot = r[TOTAL_KEY]
+            pct = (r.get("total", 0) / tot * 100) if tot else 0
+            line += f" {tot:>12} {pct:>7.4f}%"
+        print(line)
 
     # Save results
-    output_path = "data/internal-cl/gh-claude-activity.json"
+    output_path = args.output
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     with open(output_path, "w") as f:
         json.dump(results, f, indent=2)
     print(f"\nResults saved to {output_path}")
